@@ -1,0 +1,163 @@
+anchors: []
+schema:
+  fields:
+    - facility
+    - level
+    - time
+    - host
+    - app
+    - pid
+    - source
+    - extradata
+    - log
+    - class
+    - task
+    - vhost
+    - pnum
+inputs:
+  - type: syslog
+    address: localhost:5140
+    levelMapping:
+      - "off"
+      - fatal
+      - crit
+      - error
+      - warn
+      - notice
+      - info
+      - debug
+    extractions:
+      - type: extractHead
+        key: log
+        pattern: '\[*\] - '
+        maxLen: 100
+        destKey: class
+      - type: extractTail
+        key: source
+        pattern: :[0-9a-f-]
+        maxLen: 41
+        destKey: task
+      - type: extractTail
+        key: app
+        pattern: /*
+        maxLen: 100
+        destKey: vhost
+      - type: addFields
+        fields:
+          pnum: ${task[-1:]}
+      - type: if
+        match:
+          class: not-nil
+          task: not-nil
+        then:
+          - type: addFields
+            fields:
+              task: $task:$class
+      - type: delFields
+        keys:
+          - facility
+          - pid
+          - extradata
+orchestration:
+  type: byKeySet
+  keys:
+    - app
+    - level
+    - pnum
+  tag: development.$app
+  num: 2
+metricKeys:
+  - host
+  - vhost
+  - source
+transformations:
+  - type: switch
+    cases:
+      - match:
+          app: == appServ
+        then:
+          - type: drop
+            match:
+              level: '!= fatal'
+              source: == auth.log
+            label: app-auth
+          - type: switch
+            cases:
+              - match:
+                  source: == access.log
+                then:
+                  - type: if
+                    match:
+                      log: ~= P[OU][ST]** params=**
+                    then:
+                      - type: truncate
+                        key: log
+                        maxLen: 180
+                        suffix: ' ... (cut)'
+              - match:
+                  task: len < 1
+                then:
+                  - type: redactEmail
+                    key: log
+                    label: redacted
+      - match:
+          app: == abandoned
+        then:
+          - type: addFields
+            fields:
+              log: task=$task $log
+          - type: unescape
+            key: log
+          - type: replace
+            key: log
+            pattern: ^(P(OS|U)T ".*".*params=.{145}).{15,}$
+            replacement: $1 ... (cut)
+      - match:
+          app: '*= server'
+          facility: == kern
+          host: $= .com
+          level: '!= notice'
+          log: ~= ^(P(OS|U)T)\s
+          pid: len > 5
+          source: len < 2
+          task: not-nil
+          time: ˆ= 2020/
+          vhost: ~= api.*.{com,.co.uk}
+        then:
+          - type: addFields
+            fields:
+              host: ${host[:-4]}
+  - type: block
+    steps:
+      - type: parseTime
+        key: time
+        errorLabel: timeError
+      - type: delFields
+        keys:
+          - time
+buffer:
+  type: hybridBuffer
+  rootPath: $TMPDIR/slog-buffer
+  maxBufSize: 1GB
+output:
+  type: fluentdForward
+  serialization:
+    environmentFields:
+      - host
+      - vhost
+      - app
+      - source
+    hiddenFields:
+      - task
+      - class
+      - pnum
+    rewriteFields:
+      log:
+        - type: inline
+          field: class
+        - type: unescape
+  messageMode: CompressedPackedForward
+  upstream:
+    address: my-upstream-server.net:24224
+    tls: true
+    secret: my-secret

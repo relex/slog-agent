@@ -1,0 +1,156 @@
+[
+[
+  "basic-2",
+  1604303730.112,
+  {
+    "environment": {
+      "app": "appServ",
+      "host": "basic-2",
+      "source": "user.log",
+      "vhost": "foo.com"
+    },
+    "level": "info",
+    "log": "Page loaded: {\"queryDuration\":5.1, \"pageId\":81306300647, \"renderCpuTime\":0.01}"
+  }
+],
+[
+  "basic-2",
+  1604303730.112,
+  {
+    "environment": {
+      "app": "appServ",
+      "host": "basic-2",
+      "source": "user.log",
+      "vhost": "foo.com"
+    },
+    "level": "info",
+    "log": "Read report v1:\n    queryDuration: 0.199\n    renderCpuTime: 0.14\n    userName: REDACTED\n    reportName: Test Report B\n    reportId: 78130040643\n    reportFolder: Demo\n    reportFolderId: 5030\n    reportModifiedNotSaved: true"
+  }
+],
+[
+  "basic-2",
+  1604303730.112,
+  {
+    "environment": {
+      "app": "appServ",
+      "host": "basic-2",
+      "source": "user.log",
+      "vhost": "foo.com"
+    },
+    "level": "info",
+    "log": "View loaded:\n    queryDuration: 0.2\n    renderCpuTime: 0.144\n    userName: demoUser\n    reportName: Test Report A\n    reportId: 13306440807\n    reportFolder: Demo\n    reportFolderId: 5030\n    reportModifiedNotSaved: true"
+  }
+],
+[
+  "basic-2",
+  1604308628.001,
+  {
+    "environment": {
+      "app": "appServ",
+      "host": "basic-2",
+      "source": "access.log",
+      "vhost": "bar.com"
+    },
+    "level": "warn",
+    "log": "POST \"/data/query\", status=200, remote_ip=0.0.0.1, user_id=123, duration=1.339, view=0.001, params={\"glossary\":{\"title\":\"example glossary\",\"GlossDiv\":{\"title\":\"S\",\"GlossList\":{\"Glo ... (cut)"
+  }
+],
+[
+  "basic-2",
+  1604310474.003,
+  {
+    "environment": {
+      "app": "appServ",
+      "host": "basic-2",
+      "source": "access.log",
+      "vhost": "bar.com"
+    },
+    "level": "warn",
+    "log": "PUT \"/notes/1\", status=200, remote_ip=1.2.3.4, user_id=123, duration=0.862, view=0.261, params=[{\"_id\":\"60b0ae514e4f7e517acca584\",\"index\":0,\"guid\":\"b9a2719a-d32a-48a8-9026-d0116556 ... (cut)"
+  }
+],
+[
+  "basic-2",
+  1604316964.127,
+  {
+    "environment": {
+      "app": "appServ",
+      "host": "basic-2",
+      "source": "auth.log",
+      "vhost": "bar.com"
+    },
+    "level": "fatal",
+    "log": "Error connecting to auth provider at 2020-11-02T13:36:04.116+02:00."
+  }
+],
+[
+  "basic-2",
+  1604316964.127,
+  {
+    "environment": {
+      "app": "appServ",
+      "host": "basic-2",
+      "source": "cron.log",
+      "vhost": "bar.com"
+    },
+    "level": "info",
+    "log": "class=DataSaver Commit changes, key: report_4942993256, user: foo.bar@notwhere.com"
+  }
+],
+[
+  "basic-2",
+  1604698264.191,
+  {
+    "environment": {
+      "app": "appServ",
+      "host": "basic-2",
+      "source": "main.log",
+      "vhost": "bar.com"
+    },
+    "level": "error",
+    "log": "class=BackupManager Unable to open /var/backup/appServ/bar: permission denied"
+  }
+],
+[
+  "basic-2",
+  1604756639.947,
+  {
+    "environment": {
+      "app": "appServ",
+      "host": "basic-2",
+      "source": "main.log",
+      "vhost": "bar.com"
+    },
+    "level": "info",
+    "log": "class=TaskRunner Created factory for type: EMAIL_TEST, factory: org.something.else.hidden.services.AsyncCallbackService@3b42121d, pool: java.util.concurrent.ThreadPoolExecutor@7a2ab862[Running, pool size = 0, active threads = 0, queued tasks = 0, completed tasks = 0]"
+  }
+],
+[
+  "basic-2",
+  1604756639.962,
+  {
+    "environment": {
+      "app": "appServ",
+      "host": "basic-2",
+      "source": "main.log",
+      "vhost": "bar.com"
+    },
+    "level": "error",
+    "log": "class=TaskRunnerSupervisor fail to create: Exception in thread \"main\" java.lang.RuntimeException: A test exception\n  at com.stackify.stacktrace.StackTraceExample.methodB(StackTraceExample.java:13)\n  at com.stackify.stacktrace.StackTraceExample.methodA(StackTraceExample.java:9)\n  at com.stackify.stacktrace.StackTraceExample.main(StackTraceExample.java:5)"
+  }
+],
+[
+  "basic-2",
+  1604841033.147,
+  {
+    "environment": {
+      "app": "appServ",
+      "host": "basic-2",
+      "source": "cron.log",
+      "vhost": "bar.com"
+    },
+    "level": "warn",
+    "log": "class=Contact Error generating contact: Root Exception stack trace:\njava.lang.IllegalArgumentException: Position exceeds a limit: 372\u003e77\n\tat org.glassfish.grizzly.memory.BuffersBuffer.setPosLim(BuffersBuffer.java:1732)\n\tat org.glassfish.grizzly.memory.BuffersBuffer.toStringContent(BuffersBuffer.java:1358)\n\tat org.glassfish.grizzly.http.util.BufferChunk.toString(BufferChunk.java:502)\n\tat org.glassfish.grizzly.http.util.DataChunk.toString(DataChunk.java:309)\n\tat com.ning.http.client.providers.grizzly.GrizzlyResponseHeaders.getHeaders(GrizzlyResponseHeaders.java:59)\n\tat com.ning.http.client.ResponseBase.hasResponseHeaders(ResponseBase.java:115)\n\tat org.mule.module.http.internal.request.grizzly.GrizzlyHttpClient.createMuleResponse(GrizzlyHttpClient.java:366)\n\tat org.mule.module.http.internal.request.grizzly.GrizzlyHttpClient.send(GrizzlyHttpClient.java:288)\n\tat com.mulesoft.mule.http.request.grizzly.EEGrizzlyHttpClient.send(EEGrizzlyHttpClient.java:105)\n\tat org.mule.module.http.internal.request.DefaultHttpRequester.innerProcess(DefaultHttpRequester.java:370)"
+  }
+]
+]

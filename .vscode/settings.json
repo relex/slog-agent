@@ -1,0 +1,15 @@
+{
+    "yaml.customTags": [
+        "tag:yaml.org,2002:glob scalar",
+        "tag:yaml.org,2002:len-gt scalar",
+        "tag:yaml.org,2002:len-lt scalar",
+        "tag:yaml.org,2002:regex scalar",
+        "tag:yaml.org,2002:str scalar",
+        "tag:yaml.org,2002:str-any scalar",
+        "tag:yaml.org,2002:str-contain scalar",
+        "tag:yaml.org,2002:str-end scalar",
+        "tag:yaml.org,2002:str-eq scalar",
+        "tag:yaml.org,2002:str-not scalar",
+        "tag:yaml.org,2002:str-start scalar"
+    ]
+}
