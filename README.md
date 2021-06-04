@@ -83,7 +83,7 @@ make gen
 make test-gen
 ```
 
-## Runtime diagnosis
+## Runtime Diagnosis
 
 Prometheus listener address (default *:9335*) exposes go's `debug/pprof` in addition to metrics,
 which can dump goroutine stacks.
@@ -117,20 +117,21 @@ fluentd forward message files can be examined by [fluentlibtool](https://github.
 
 See [DESIGN](DESIGN.md)
 
-#### Dependencies
+#### Key dependencies
 
-- [klauspost' compress library](github.com/klauspost/compress) for fast gzip compression which is absolutely critical in the agent: benchmark & upgrade for new releasees
+- [fluentlib](https://github.com/relex/fluentlib) for fluentd forward protocol, fake server and dump tool for testing.
+- [klauspost' compress library](github.com/klauspost/compress) for fast gzip compression which is absolutely critical to the agent: always benchmark before upgrade. *compression takes 1/2 to 1/3 of CPU time in our environments*
 - [YAML v3](gopkg.in/yaml.v3) required for custom tags in configuration. `KnownFields` is still not working and it cannot check non-existent or misspelled properties.
 
 #### Go upgrades
 
 Some code is based on the internal behaviors of go runtime and marked as `GO_INTERNAL` in comments:
 
-- util/syncmutex.go: `TryLockMutex()` (try to lock without waiting)
-- util/syncwaitgroup.go: `PeekWaitGroup()` (peek the count number)
-- util/strings.go: `StringFromBytes()` (make string from mutable bytes without copying)
+- util/syncmutex.go `TryLockMutex()`: try to lock without waiting
+- util/syncwaitgroup.go `PeekWaitGroup()`: peek the count number
+- util/strings.go `StringFromBytes()`: make string from mutable bytes without copying
 
-They need to re-checked for any major upgrade of go for compatibility
+They need to be re-checked for any major upgrade of go for compatibility
 
 ## Authors
 
