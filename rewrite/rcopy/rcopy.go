@@ -6,6 +6,7 @@ package rcopy
 import (
 	"fmt"
 
+	"github.com/relex/gotils/logger"
 	"github.com/relex/slog-agent/base"
 	"github.com/relex/slog-agent/base/bconfig"
 )
@@ -26,7 +27,7 @@ func NewRewriter() base.LogRewriter {
 // NewRewriter creates copyRewriter
 func (c *Config) NewRewriter(schema base.LogSchema, next base.LogRewriter) base.LogRewriter {
 	if next != nil {
-		panic("'copy' must be the last rewriter")
+		logger.Panic("'copy' must be the last rewriter")
 	}
 	return &copyRewriter{}
 }

@@ -18,7 +18,9 @@ import (
 )
 
 // syslogparser parses RFC 5424 text to log records
+//
 // NOT thread-safe due to caching
+//
 // TODO: parse or skip extradata/metadata properly
 type syslogParser struct {
 	logger               logger.Logger
@@ -102,12 +104,14 @@ func (parser *syslogParser) Parse(input []byte, timestamp time.Time) *base.LogRe
 	record, remaining := parser.allocator.NewRecord(input)
 	record.RawLength = len(input)
 	record.Timestamp = timestamp // actual timestamp is to be parsed and filled by transform.parseTimeTransform
+
 	fields := record.Fields
 	if len(remaining) < 32 || remaining[0] != '<' {
 		parser.onMalformed(record, fmt.Sprintf("invalid syslog: %s", input)) // FIXME: trim input for logging
 		return nil
 	}
-	// pri: <163>1
+
+	// parse the pri field, e.g. "<163>"
 	if ok, val, next := nextFieldBySpace(remaining); ok {
 		if val[len(val)-2:] != ">1" {
 			parser.onMalformed(record, fmt.Sprintf("invalid syslog pri '%s': %s", val, input))
@@ -119,6 +123,8 @@ func (parser *syslogParser) Parse(input []byte, timestamp time.Time) *base.LogRe
 			parser.onMalformed(record, fmt.Sprintf("invalid syslog pri value '%s': %s", pri, input))
 			return nil
 		}
+
+		// extract facility from pri
 		{
 			facility := priVal >> 3
 			if facility < 0 || facility >= len(syslogprotocol.FacilityNames) {
@@ -128,6 +134,8 @@ func (parser *syslogParser) Parse(input []byte, timestamp time.Time) *base.LogRe
 			facilityName := syslogprotocol.FacilityNames[facility]
 			parser.fieldFacilityLocator.Set(fields, facilityName)
 		}
+
+		// extract severity (log level) from pri
 		{
 			severity := priVal & 0b111
 			severityName := parser.levelMapping[severity]
@@ -138,7 +146,8 @@ func (parser *syslogParser) Parse(input []byte, timestamp time.Time) *base.LogRe
 		parser.onMalformed(record, fmt.Sprintf("unfinished syslog: %s", input))
 		return nil
 	}
-	// rest
+
+	// rest of header fields delimited by whitespace
 	for _, locator := range parser.restFieldLocators {
 		ok, val, next := nextFieldBySpace(remaining)
 		if !ok {
@@ -148,13 +157,18 @@ func (parser *syslogParser) Parse(input []byte, timestamp time.Time) *base.LogRe
 		locator.Set(fields, val)
 		remaining = next
 	}
+
+	// all the rest of message goes to the "log" message field
 	if len(remaining) > defs.InputLogMaxMessageBytes {
 		parser.onOverflow(input)
 		remaining = remaining[:defs.InputLogMaxMessageBytes]
 	}
 	parser.fieldLogLocator.Set(fields, remaining)
+
+	// assume the message won't need un-escaping if there is a real newline
 	record.Unescaped = strings.IndexByte(remaining, '\n') != -1
 	parser.inputCounter.CountRecordPass(record)
+
 	return record
 }
 

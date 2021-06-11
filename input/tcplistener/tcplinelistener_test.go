@@ -26,7 +26,7 @@ func TestTCPLineListener(t *testing.T) {
 	lsnr.Launch()
 	conn, err := net.Dial("tcp", addr)
 	if !assert.Nil(t, err) {
-		panic(err)
+		t.Error(err)
 	}
 	_, err = conn.Write([]byte(line1 + "\n"))
 	assert.Nil(t, err)

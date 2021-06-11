@@ -13,6 +13,7 @@ func init() {
 	config.AddCmdWithArgs("run ...", "Run agent", &runCmd, runCmd.run)
 }
 
+// Execute parses the command line and runs the specified command
 func Execute() {
 	// trigger init
 

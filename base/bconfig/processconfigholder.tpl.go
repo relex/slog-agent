@@ -11,6 +11,7 @@ import (
 	"fmt"
 
 	"github.com/cheekybits/genny/generic"
+	"github.com/relex/gotils/logger"
 	"gopkg.in/yaml.v3"
 )
 
@@ -31,7 +32,7 @@ var ProcessConfigConstructors map[string]func() ProcessConfig
 // It can only be called once
 func RegisterProcessConfigConstructors(newMap map[string]func() ProcessConfig) {
 	if ProcessConfigConstructors != nil {
-		panic("already registered ProcessConfigConstructors")
+		logger.Panic("already registered ProcessConfigConstructors")
 	}
 	ProcessConfigConstructors = newMap
 }
@@ -48,7 +49,7 @@ func (holder ProcessConfigHolder) MarshalYAML() (interface{}, error) {
 // UnmarshalYAML provides custom unmarshalling for the implementations of Config
 func (holder *ProcessConfigHolder) UnmarshalYAML(value *yaml.Node) error {
 	if ProcessConfigConstructors == nil {
-		panic("ProcessConfigConstructors not initialized")
+		logger.Panic("ProcessConfigConstructors not initialized")
 	}
 	return unmarshalYAMLObjectHolder(value,
 		func(typ string) interface{} {

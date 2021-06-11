@@ -15,7 +15,7 @@ import (
 const tcpReadBufferMax = 8 * 1024 * 1024 // Less than /proc/sys/net/ipv4/tcp_mem
 const tcpReadBufferMin = 65536
 
-var tcpLastReadBufferSize = tcpReadBufferMax
+var tcpLastReadBufferSize = tcpReadBufferMax // shared for all connections. No need to sync access as it's just a cached number.
 
 // tcpLineListener is a TCP Listener for line-based, request-only text protocol, with support for multi-line messages.
 // The listener sends incoming messages into MultiChannelStringReceiver.
@@ -39,26 +39,33 @@ type tcpLineListener struct {
 }
 
 // NewTCPLineListener creates a socket listening on the given TCP address and returns a new tcpLineListener if successful
+//
 // The given address may use port zero, which would cause the port to be assigned by OS
+//
 // Returns the listener, actual address including final port, and error if failed
 func NewTCPLineListener(parentLogger logger.Logger, address string, testRecord func(ln []byte) bool,
 	receiver base.MultiChannelStringReceiver, stopRequest channels.Awaitable) (base.LogListener, string, error) {
+
 	// open TCP socket
 	socket, err := net.Listen("tcp", address)
 	if err != nil {
 		return nil, "", err
 	}
 	boundAddr := socket.Addr().String()
+
 	logger := parentLogger.WithFields(logger.Fields{
 		defs.LabelComponent: "TCPLineListener",
 		defs.LabelLocal:     boundAddr,
 	})
 	logger.Info("start listening")
-	// Init taskCounter with 1 for the listener; Can't wait for Launch() here because WaitGroupAwaitable would quit on zero.
+
+	// init taskCounter with 1 for the listener; Can't wait for Launch() because WaitGroupAwaitable below would quit immediately if it's zero.
 	taskCounter := &sync.WaitGroup{}
 	taskCounter.Add(1)
-	// Destroy receiver on taskCounter instead of at end of run(), as connections might still be closing by then.
+
+	// call receiver.Destroy after taskCounter instead of at end of run(), as some connections might still be closing by then.
 	fullyStopped := channels.NewWaitGroupAwaitable(taskCounter).Next(receiver.Destroy)
+
 	return &tcpLineListener{
 		logger:      logger,
 		socket:      socket.(*net.TCPListener),
@@ -92,6 +99,7 @@ func (lsnr *tcpLineListener) run() {
 		}).WaitForever()
 		lsnr.socket.Close()
 	}()
+
 	// main loop
 	lsnr.logger.Info("start accept loop")
 	for {
@@ -114,21 +122,27 @@ func (lsnr *tcpLineListener) run() {
 		go lsnr.runConnection(connLogger, conn)
 	}
 	lsnr.logger.Info("end accept loop")
+
+	// mark the listener itself as done, note there could still be established connections
 	lsnr.taskCounter.Done()
 }
 
 func (lsnr *tcpLineListener) runConnection(connLogger logger.Logger, conn *net.TCPConn) {
 	defer lsnr.taskCounter.Done()
 	connLogger.Info("started")
+
 	recvChan := lsnr.receiver.NewChannel(conn.RemoteAddr().String())
 	defer recvChan.Close()
-	connAbort := lsnr.launchConnectionCloser(connLogger, conn)
+
+	connAborter := lsnr.launchConnectionCloser(connLogger, conn)
+
 	// short timeout for periodic flushing
-	prevDeadline := time.Time{}
 	connReader := lsnr.createConnectionReader(connLogger, conn)
 	mlineReader := newMultiLineReader(connReader.Read, lsnr.testRecord,
 		defs.ListenerLineBufferSize, defs.InputLogMaxMessageBytes, recvChan.Accept)
+
 	emptyTime := time.Time{}
+	prevDeadline := time.Time{}
 	for {
 		err := mlineReader.Read()
 		if err == nil {
@@ -152,16 +166,17 @@ func (lsnr *tcpLineListener) runConnection(connLogger logger.Logger, conn *net.T
 		// error handling
 		mlineReader.FlushAll()
 		if util.IsNetworkClosed(err) && lsnr.stopRequest.Peek() {
-			// already closed by goroutine above
+			// already closed by connAborter
 			connLogger.Info("closed by stop request (delayed)")
 		} else {
 			if !util.IsNetworkClosed(err) {
 				connLogger.Warn("read() error: ", err)
 			}
-			connAbort.Signal()
+			connAborter.Signal()
 		}
 		break
 	}
+
 	recvChan.Flush()
 	connLogger.Info("ended")
 }
@@ -186,11 +201,13 @@ func (lsnr *tcpLineListener) createConnectionReader(connLogger logger.Logger, co
 	if err := conn.SetKeepAlive(true); err != nil {
 		connLogger.Warnf("error enabling keep-alive: %s", err.Error())
 	}
+
 	if sz, err := util.TrySetTCPReadBuffer(conn, tcpLastReadBufferSize, tcpReadBufferMin); err != nil {
 		connLogger.Warnf("error changing buffer size: %s", err.Error())
 	} else {
 		connLogger.Infof("set TCP buffer size: %d", sz)
 		tcpLastReadBufferSize = sz
 	}
+
 	return util.WrapNetConn(conn, defs.InputFlushInterval, 0)
 }

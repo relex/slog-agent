@@ -7,6 +7,7 @@ package bconfig
 import (
 	"fmt"
 
+	"github.com/relex/gotils/logger"
 	"gopkg.in/yaml.v3"
 )
 
@@ -24,7 +25,7 @@ var LogRewriterConfigConstructors map[string]func() LogRewriterConfig
 // It can only be called once
 func RegisterLogRewriterConfigConstructors(newMap map[string]func() LogRewriterConfig) {
 	if LogRewriterConfigConstructors != nil {
-		panic("already registered LogRewriterConfigConstructors")
+		logger.Panic("already registered LogRewriterConfigConstructors")
 	}
 	LogRewriterConfigConstructors = newMap
 }
@@ -41,7 +42,7 @@ func (holder LogRewriterConfigHolder) MarshalYAML() (interface{}, error) {
 // UnmarshalYAML provides custom unmarshalling for the implementations of Config
 func (holder *LogRewriterConfigHolder) UnmarshalYAML(value *yaml.Node) error {
 	if LogRewriterConfigConstructors == nil {
-		panic("LogRewriterConfigConstructors not initialized")
+		logger.Panic("LogRewriterConfigConstructors not initialized")
 	}
 	return unmarshalYAMLObjectHolder(value,
 		func(typ string) interface{} {

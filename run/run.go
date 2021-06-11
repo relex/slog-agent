@@ -17,10 +17,12 @@ import (
 func Run(configFile string) {
 	runLogger := logger.WithField(defs.LabelComponent, "Launcher")
 	agentLogger := logger.Root()
+
 	config, schema, cerr := LoadConfigFile(configFile)
 	if cerr != nil {
 		runLogger.Fatalf("config: %s", cerr.Error())
 	}
+
 	allocator := base.NewLogAllocator(schema)
 	pipelineArgs := bconfig.PipelineArgs{
 		Schema:              schema,
@@ -32,20 +34,25 @@ func Run(configFile string) {
 		NewConsumerOverride: nil,
 		SendAllAtEnd:        false,
 	}
-	mfactory := base.NewMetricFactory("slogagent_", nil, nil)
-	orchestrator := config.Orchestration.LaunchOrchestrator(agentLogger, pipelineArgs, mfactory)
+	metricFactory := base.NewMetricFactory("slogagent_", nil, nil)
+
+	// launch the orchestrator which manages pipelines
+	orchestrator := config.Orchestration.LaunchOrchestrator(agentLogger, pipelineArgs, metricFactory)
+
 	// launch inputs
 	inputShutdownSignals := make([]channels.Awaitable, 0, len(config.Inputs))
 	stopRequest := channels.NewSignalAwaitable()
+
 	for index, inputConfig := range config.Inputs {
-		input, ierr := inputConfig.NewInput(agentLogger, allocator, schema, orchestrator, mfactory, stopRequest)
+		input, ierr := inputConfig.NewInput(agentLogger, allocator, schema, orchestrator, metricFactory, stopRequest)
 		if ierr != nil {
 			runLogger.Fatalf("input[%d]: %s", index, ierr.Error())
 		}
 		input.Launch()
 		inputShutdownSignals = append(inputShutdownSignals, input.Stopped())
 	}
-	// wait for signal
+
+	// wait for shutdown signal
 	{
 		sigChan := make(chan os.Signal, 10)
 		signal.Notify(sigChan, syscall.SIGINT)
@@ -53,6 +60,7 @@ func Run(configFile string) {
 		s := <-sigChan
 		runLogger.Infof("received %s, shutting down", s)
 	}
+
 	// shutdown
 	stopRequest.Signal()
 	channels.AllAwaitables(inputShutdownSignals...).WaitForever()

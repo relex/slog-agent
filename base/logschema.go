@@ -20,7 +20,7 @@ type LogSchema struct {
 func MustNewLogSchema(fieldNames []string) LogSchema {
 	schema, err := NewLogSchema(fieldNames)
 	if err != nil {
-		panic(err)
+		logger.Panic("failed to create schema: ", err)
 	}
 	return schema
 }
@@ -117,7 +117,7 @@ func (s *LogSchema) GetFieldNames() []string {
 func (s *LogSchema) MustCreateFieldLocator(name string) LogFieldLocator {
 	loc, err := s.CreateFieldLocator(name)
 	if err != nil {
-		panic(name + ": " + err.Error())
+		logger.Panicf("failed to create locator for field [%s]: %s", name, err.Error())
 	}
 	return loc
 }
@@ -126,7 +126,7 @@ func (s *LogSchema) MustCreateFieldLocator(name string) LogFieldLocator {
 func (s *LogSchema) MustCreateFieldLocators(names []string) []LogFieldLocator {
 	locs, err := s.CreateFieldLocators(names)
 	if err != nil {
-		panic("[" + strings.Join(names, ",") + "]: " + err.Error())
+		logger.Panicf("failed to create locators for fields [%s]: %s", strings.Join(names, ","), err.Error())
 	}
 	return locs
 }

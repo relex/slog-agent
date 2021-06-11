@@ -28,7 +28,8 @@ type logParsingReceiverChannel struct {
 	inputCounter  *base.LogInputCounter
 }
 
-// NewLogParsingReceiver creates a MultiChannelStringReceiver to parse incoming logs and pass them to a buffer receiver
+// NewLogParsingReceiver creates a MultiChannelStringReceiver to parse incoming logs, buffer them and pass to a buffer receiver
+//
 // Actual parsers are created on demand for each of connections
 func NewLogParsingReceiver(parentLogger logger.Logger, createParser LogParserConstructor, nextReceiver base.MultiChannelBufferReceiver,
 	metricFactory *base.MetricFactory) base.MultiChannelStringReceiver {

@@ -12,6 +12,7 @@ package runescape
 import (
 	"fmt"
 
+	"github.com/relex/gotils/logger"
 	"github.com/relex/slog-agent/base"
 	"github.com/relex/slog-agent/base/bconfig"
 	"github.com/relex/slog-agent/base/bsupport"
@@ -30,7 +31,7 @@ var unescaper = bsupport.NewSyslogUnescaper()
 // NewRewriter creates unescapeRewriter
 func (c *Config) NewRewriter(schema base.LogSchema, next base.LogRewriter) base.LogRewriter {
 	if next != nil {
-		panic("'unescape' must be the last rewriter")
+		logger.Panic("'unescape' must be the last rewriter")
 	}
 	return &unescapeRewriter{}
 }

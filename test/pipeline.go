@@ -21,18 +21,22 @@ func preparePipeline(configFile string, tagOverride string, metricFactory *base.
 	if len(cfg.Inputs) != 1 {
 		logger.Fatal("only one source is supported")
 	}
-	inputConfig := cfg.Inputs[0].LogInputConfig
+
+	inputConfig := cfg.Inputs[0].LogInputConfig // we support only one input for testing
 	allocator := base.NewLogAllocator(schema)
 	inputCounter := base.NewLogInputCounter(metricFactory.NewSubFactory("input_", nil, nil))
+
 	parser, perr := inputConfig.NewParser(logger.Root(), allocator, schema, inputCounter)
 	if perr != nil {
-		panic(perr)
+		logger.Panic("failed to create parser: ", perr)
 	}
+
 	procCounter := base.NewLogProcessCounter(metricFactory.NewSubFactory("process_", nil, nil), schema, schema.MustCreateFieldLocators(cfg.MetricKeys))
 	transforms := bsupport.NewTransformsFromConfig(cfg.Transformations, schema, logger.Root(), procCounter)
 	serializer := cfg.Output.NewSerializer(logger.Root(), schema, allocator)
 	chunkMaker := cfg.Output.NewChunkMaker(logger.Root(), tagOverride)
-	now := time.Now()
+
+	now := time.Now() // fallback timestamp
 	process := func(s []byte) *base.LogChunk {
 		if s[len(s)-1] == '\n' {
 			s = s[:len(s)-1]
@@ -56,6 +60,7 @@ func preparePipeline(configFile string, tagOverride string, metricFactory *base.
 		}
 		return maybeChunk
 	}
+
 	endProcess := func() *base.LogChunk {
 		maybeChunk := chunkMaker.FlushBuffer()
 		if maybeChunk != nil {
@@ -65,6 +70,7 @@ func preparePipeline(configFile string, tagOverride string, metricFactory *base.
 		procCounter.UpdateMetrics()
 		return maybeChunk
 	}
+
 	return cfg.Output, process, endProcess
 }
 

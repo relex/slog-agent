@@ -6,6 +6,7 @@ package rinline
 import (
 	"fmt"
 
+	"github.com/relex/gotils/logger"
 	"github.com/relex/slog-agent/base"
 	"github.com/relex/slog-agent/base/bconfig"
 )
@@ -26,7 +27,7 @@ type inlineRewriter struct {
 // NewRewriter creates inlineRewriter
 func (c *Config) NewRewriter(schema base.LogSchema, next base.LogRewriter) base.LogRewriter {
 	if next == nil {
-		panic("'inline' cannot be the last rewriter")
+		logger.Panic("'inline' cannot be the last rewriter")
 	}
 	locator := schema.MustCreateFieldLocator(c.Field)
 	return &inlineRewriter{

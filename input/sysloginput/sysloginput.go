@@ -41,7 +41,8 @@ func init() {
 
 // NewInput creates a SyslogInput and starts the network listener
 func (cfg *Config) NewInput(parentLogger logger.Logger, allocator *base.LogAllocator, schema base.LogSchema,
-	logReceiver base.MultiChannelBufferReceiver, metricFactory *base.MetricFactory, stopRequest channels.Awaitable) (base.LogInput, error) {
+	logBufferReceiver base.MultiChannelBufferReceiver, metricFactory *base.MetricFactory,
+	stopRequest channels.Awaitable) (base.LogInput, error) {
 
 	if len(cfg.LevelMapping) == 0 {
 		return nil, fmt.Errorf(".levelMapping is empty")
@@ -50,22 +51,23 @@ func (cfg *Config) NewInput(parentLogger logger.Logger, allocator *base.LogAlloc
 		return nil, fmt.Errorf(".extractions is empty")
 	}
 
-	slogger := logger.WithField(defs.LabelComponent, "SyslogInput")
+	inputLogger := logger.WithField(defs.LabelComponent, "SyslogInput")
 
+	// createParser is for each of incoming connection to create their own parser instance (which contains buffer/cache)
 	createParser := func(parentLogger logger.Logger, inputCounter *base.LogInputCounter) base.LogParser {
 		parser, err := syslogparser.NewParser(parentLogger, allocator, schema, cfg.LevelMapping, inputCounter)
 		if err != nil {
-			panic(err)
+			parentLogger.Panic("failed to create parser: ", err)
 		}
-		extractionTransforms := bsupport.NewTransformsFromConfig(cfg.Extractions, schema, slogger, inputCounter)
+		extractionTransforms := bsupport.NewTransformsFromConfig(cfg.Extractions, schema, inputLogger, inputCounter)
 		return newCompositeParser(parser, extractionTransforms, allocator)
 	}
 
 	inputMetricFactory := metricFactory.NewSubFactory("input_", []string{"protocol"}, []string{"syslog"})
 
-	lineReceiver := bsupport.NewLogParsingReceiver(slogger, createParser, logReceiver, inputMetricFactory)
+	rawMessageReceiver := bsupport.NewLogParsingReceiver(inputLogger, createParser, logBufferReceiver, inputMetricFactory)
 
-	lsnr, addr, err := tcplistener.NewTCPLineListener(slogger, cfg.Address, syslogprotocol.TestRecordStart, lineReceiver, stopRequest)
+	lsnr, addr, err := tcplistener.NewTCPLineListener(inputLogger, cfg.Address, syslogprotocol.TestRecordStart, rawMessageReceiver, stopRequest)
 	if err != nil {
 		return nil, err
 	}

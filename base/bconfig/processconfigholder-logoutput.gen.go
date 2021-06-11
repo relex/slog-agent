@@ -7,6 +7,7 @@ package bconfig
 import (
 	"fmt"
 
+	"github.com/relex/gotils/logger"
 	"gopkg.in/yaml.v3"
 )
 
@@ -24,7 +25,7 @@ var LogOutputConfigConstructors map[string]func() LogOutputConfig
 // It can only be called once
 func RegisterLogOutputConfigConstructors(newMap map[string]func() LogOutputConfig) {
 	if LogOutputConfigConstructors != nil {
-		panic("already registered LogOutputConfigConstructors")
+		logger.Panic("already registered LogOutputConfigConstructors")
 	}
 	LogOutputConfigConstructors = newMap
 }
@@ -41,7 +42,7 @@ func (holder LogOutputConfigHolder) MarshalYAML() (interface{}, error) {
 // UnmarshalYAML provides custom unmarshalling for the implementations of Config
 func (holder *LogOutputConfigHolder) UnmarshalYAML(value *yaml.Node) error {
 	if LogOutputConfigConstructors == nil {
-		panic("LogOutputConfigConstructors not initialized")
+		logger.Panic("LogOutputConfigConstructors not initialized")
 	}
 	return unmarshalYAMLObjectHolder(value,
 		func(typ string) interface{} {

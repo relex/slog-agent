@@ -5,6 +5,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/relex/gotils/logger"
 	"github.com/relex/slog-agent/util"
 )
 
@@ -33,7 +34,7 @@ func NewCostTracker() *CostTracker {
 	{
 		var rusage syscall.Rusage
 		if err := syscall.Getrusage(syscall.RUSAGE_SELF, &rusage); err != nil {
-			panic(err)
+			logger.Panic("failed to get resource usage: ", err)
 		}
 		ct.initUserTime = util.TimeFromTimeval(rusage.Utime)
 		ct.initSystemTime = util.TimeFromTimeval(rusage.Stime)
@@ -56,7 +57,7 @@ func (ct *CostTracker) Report() CostReport {
 	{
 		var rusage syscall.Rusage
 		if err := syscall.Getrusage(syscall.RUSAGE_SELF, &rusage); err != nil {
-			panic(err)
+			logger.Panic("failed to get resource usage: ", err)
 		}
 		report.UserTime = util.TimeFromTimeval(rusage.Utime).Sub(ct.initUserTime)
 		report.SystemTime = util.TimeFromTimeval(rusage.Stime).Sub(ct.initSystemTime)

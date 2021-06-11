@@ -16,11 +16,14 @@ import (
 )
 
 func TestSyslogTCPInputConfig(t *testing.T) {
+	const testLogLine = "<163>1 2019-08-15T15:50:46.866915+03:00 local my-app 123 fn - Something\n"
+
 	schema := syslogprotocol.RFC5424Schema
 	allocator := base.NewLogAllocator(schema)
-	const line = "<163>1 2019-08-15T15:50:46.866915+03:00 local my-app 123 fn - Something"
+
 	selLevel := schema.MustCreateFieldLocator("level")
 	selLog := schema.MustCreateFieldLocator("log")
+
 	config := &Config{}
 	if !assert.Nil(t, util.UnmarshalYamlString(`
 type: syslog
@@ -32,17 +35,24 @@ extractions:
 `, config)) {
 		return
 	}
-	stop := channels.NewSignalAwaitable()
-	aggregator, outCh := baseinput.NewLogBufferAggregator(logger.Root())
-	mfactory := base.NewMetricFactory("test_", nil, nil)
-	src, err := config.NewInput(logger.Root(), allocator, schema, aggregator, mfactory, stop)
-	if !assert.Nil(t, err) {
+
+	stopInput := channels.NewSignalAwaitable()
+	logAggregator, outCh := baseinput.NewLogBufferAggregator(logger.Root())
+	inputMetricFactory := base.NewMetricFactory("test_", nil, nil)
+
+	// create and launch input (the server)
+	input, inputErr := config.NewInput(logger.Root(), allocator, schema, logAggregator, inputMetricFactory, stopInput)
+	if !assert.Nil(t, inputErr) {
 		return
 	}
-	src.Launch()
-	conn, _ := net.Dial("tcp", src.Address())
-	_, err = conn.Write([]byte(line + "\n"))
-	assert.Nil(t, err)
+	input.Launch()
+
+	// create client connection to send test logs
+	conn, _ := net.Dial("tcp", input.Address())
+	_, connErr := conn.Write([]byte(testLogLine))
+	assert.Nil(t, connErr)
+
+	// check resulting logs
 	{
 		r := readForTest(outCh)
 		if assert.Equal(t, 1, len(r)) {
@@ -50,10 +60,11 @@ extractions:
 			assert.Equal(t, "Something", selLog.Get(r[0].Fields))
 		}
 	}
-	stop.Signal()
-	assert.True(t, src.Stopped().Wait(defs.TestReadTimeout))
+
+	stopInput.Signal()
+	assert.True(t, input.Stopped().Wait(defs.TestReadTimeout))
 	assert.Nil(t, conn.Close())
-	if dump, err := mfactory.DumpMetrics(true); assert.Nil(t, err) {
+	if dump, err := inputMetricFactory.DumpMetrics(true); assert.Nil(t, err) {
 		assert.Equal(t, `test_input_dropped_record_bytes_total{protocol="syslog"} 0
 test_input_dropped_records_total{protocol="syslog"} 0
 test_input_labelled_record_bytes_total{label="overflow",protocol="syslog"} 0

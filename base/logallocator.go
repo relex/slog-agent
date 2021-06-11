@@ -4,6 +4,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/relex/gotils/logger"
 	"github.com/relex/slog-agent/defs"
 	"github.com/relex/slog-agent/util"
 )
@@ -56,7 +57,7 @@ func (alloc *LogAllocator) NewRecord(input []byte) (*LogRecord, string) {
 func (alloc *LogAllocator) Release(record *LogRecord) {
 	record._refCount--
 	if record._refCount < 0 {
-		panic(record)
+		logger.Panic("negative reference count in record: ", record)
 	}
 	for i := range record.Fields {
 		record.Fields[i] = ""

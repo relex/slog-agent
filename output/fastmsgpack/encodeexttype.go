@@ -1,6 +1,7 @@
 package fastmsgpack
 
 import (
+	"github.com/relex/gotils/logger"
 	"github.com/vmihailenco/msgpack/v4/codes"
 )
 
@@ -25,7 +26,7 @@ func EncodeExtLen(buffer []byte, start int, length int) int { // xx:inline
 	case 16:
 		buffer[start] = byte(codes.FixExt16)
 	default:
-		panic(length)
+		logger.Panic("unsupported extension type length: ", length)
 	}
 	return start + 1
 }

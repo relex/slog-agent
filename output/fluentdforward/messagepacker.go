@@ -60,7 +60,7 @@ func NewMessagePacker(parentLogger logger.Logger, tag string, mode forwardprotoc
 		asArray = false
 		compressed = true
 	default:
-		panic(mode)
+		logger.Panic("unsupported message mode: ", mode)
 	}
 	msgBuffer := bytes.NewBuffer(make([]byte, 0, messageBufferCapacity))
 	return &messagePacker{

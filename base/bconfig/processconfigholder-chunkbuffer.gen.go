@@ -7,6 +7,7 @@ package bconfig
 import (
 	"fmt"
 
+	"github.com/relex/gotils/logger"
 	"gopkg.in/yaml.v3"
 )
 
@@ -24,7 +25,7 @@ var ChunkBufferConfigConstructors map[string]func() ChunkBufferConfig
 // It can only be called once
 func RegisterChunkBufferConfigConstructors(newMap map[string]func() ChunkBufferConfig) {
 	if ChunkBufferConfigConstructors != nil {
-		panic("already registered ChunkBufferConfigConstructors")
+		logger.Panic("already registered ChunkBufferConfigConstructors")
 	}
 	ChunkBufferConfigConstructors = newMap
 }
@@ -41,7 +42,7 @@ func (holder ChunkBufferConfigHolder) MarshalYAML() (interface{}, error) {
 // UnmarshalYAML provides custom unmarshalling for the implementations of Config
 func (holder *ChunkBufferConfigHolder) UnmarshalYAML(value *yaml.Node) error {
 	if ChunkBufferConfigConstructors == nil {
-		panic("ChunkBufferConfigConstructors not initialized")
+		logger.Panic("ChunkBufferConfigConstructors not initialized")
 	}
 	return unmarshalYAMLObjectHolder(value,
 		func(typ string) interface{} {

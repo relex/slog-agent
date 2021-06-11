@@ -7,6 +7,7 @@ package bconfig
 import (
 	"fmt"
 
+	"github.com/relex/gotils/logger"
 	"gopkg.in/yaml.v3"
 )
 
@@ -24,7 +25,7 @@ var OrchestratorConfigConstructors map[string]func() OrchestratorConfig
 // It can only be called once
 func RegisterOrchestratorConfigConstructors(newMap map[string]func() OrchestratorConfig) {
 	if OrchestratorConfigConstructors != nil {
-		panic("already registered OrchestratorConfigConstructors")
+		logger.Panic("already registered OrchestratorConfigConstructors")
 	}
 	OrchestratorConfigConstructors = newMap
 }
@@ -41,7 +42,7 @@ func (holder OrchestratorConfigHolder) MarshalYAML() (interface{}, error) {
 // UnmarshalYAML provides custom unmarshalling for the implementations of Config
 func (holder *OrchestratorConfigHolder) UnmarshalYAML(value *yaml.Node) error {
 	if OrchestratorConfigConstructors == nil {
-		panic("OrchestratorConfigConstructors not initialized")
+		logger.Panic("OrchestratorConfigConstructors not initialized")
 	}
 	return unmarshalYAMLObjectHolder(value,
 		func(typ string) interface{} {
