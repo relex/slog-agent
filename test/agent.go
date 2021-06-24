@@ -1,12 +1,8 @@
 package test
 
 import (
-	"fmt"
-
-	"github.com/relex/gotils/channels"
 	"github.com/relex/gotils/logger"
 	"github.com/relex/slog-agent/base"
-	"github.com/relex/slog-agent/base/bconfig"
 	"github.com/relex/slog-agent/orchestrate/obykeyset"
 	"github.com/relex/slog-agent/orchestrate/osingleton"
 	"github.com/relex/slog-agent/run"
@@ -14,22 +10,20 @@ import (
 )
 
 type agent struct {
-	config      *run.Config
-	schema      base.LogSchema
-	mfactory    *base.MetricFactory
-	input       base.LogInput
-	stopReq     *channels.SignalAwaitable
-	runRecovery bool
+	loader         *run.Loader
+	inputAddresses []string
+	shutdownFn     func()
+	runRecovery    bool
 }
 
-func startAgent(config *run.Config, schema base.LogSchema, newChunkSaver base.ChunkConsumerConstructor, keysOverride []string, tagOverride string) (*agent, error) {
-	if len(config.Inputs) != 1 {
-		return nil, fmt.Errorf("only one input is supported - there are %d", len(config.Inputs))
+func startAgent(loader *run.Loader, newChunkSaver base.ChunkConsumerConstructor, keysOverride []string, tagOverride string) *agent {
+	if len(loader.Inputs) != 1 {
+		logger.Warnf("only the first input is used for testing - there are %d", len(loader.Inputs))
 	}
-	switch ocfg := config.Orchestration.OrchestratorConfig.(type) {
+	switch ocfg := loader.Orchestration.OrchestratorConfig.(type) {
 	case *obykeyset.Config:
 		if keysOverride != nil {
-			newMetricKeys := make([]string, 0, len(ocfg.Keys)+len(config.MetricKeys))
+			newMetricKeys := make([]string, 0, len(ocfg.Keys)+len(loader.MetricKeys))
 			// move original orchestration Keys to config.MetricKeys
 			for _, ok := range ocfg.Keys {
 				if util.IndexOfString(keysOverride, ok) == -1 {
@@ -37,13 +31,14 @@ func startAgent(config *run.Config, schema base.LogSchema, newChunkSaver base.Ch
 				}
 			}
 			ocfg.Keys = keysOverride
-			// remove dup keys from config.MetricKeys
-			for _, mk := range config.MetricKeys {
+			// remove dup keys from loader.MetricKeys
+			for _, mk := range loader.MetricKeys {
 				if util.IndexOfString(keysOverride, mk) == -1 {
 					newMetricKeys = append(newMetricKeys, mk)
 				}
 			}
-			config.MetricKeys = newMetricKeys
+			loader.MetricKeys = newMetricKeys
+			loader.PipelineArgs.MetricKeyLocators = loader.PipelineArgs.Schema.MustCreateFieldLocators(newMetricKeys)
 		}
 		if tagOverride != "" {
 			ocfg.TagTemplate = tagOverride
@@ -53,44 +48,45 @@ func startAgent(config *run.Config, schema base.LogSchema, newChunkSaver base.Ch
 			ocfg.Tag = tagOverride
 		}
 	}
-	allocator := base.NewLogAllocator(schema)
-	pipelineArgs := bconfig.PipelineArgs{
-		Schema:              schema,
-		Deallocator:         allocator,
-		MetricKeyLocators:   schema.MustCreateFieldLocators(config.MetricKeys),
-		TransformConfigs:    config.Transformations,
-		BufferConfig:        config.Buffer,
-		OutputConfig:        config.Output,
-		NewConsumerOverride: newChunkSaver,
-		SendAllAtEnd:        newChunkSaver != nil, // send everything is not a real forwarder client
-	}
-	mfactory := base.NewMetricFactory("testagent_", nil, nil)
-	orchestrator := config.Orchestration.LaunchOrchestrator(logger.Root(), pipelineArgs, mfactory)
 
-	stopRequest := channels.NewSignalAwaitable()
-	input, ierr := config.Inputs[0].NewInput(logger.Root(), allocator, schema, orchestrator, mfactory, stopRequest)
-	if ierr != nil {
-		return nil, fmt.Errorf("input[0]: %w", ierr)
+	// flush everything at the end if the output is not a real forwarder client
+	if newChunkSaver != nil {
+		loader.PipelineArgs.NewConsumerOverride = newChunkSaver
+		loader.PipelineArgs.SendAllAtEnd = true
 	}
-	input.Launch()
+
+	orchestrator := loader.LaunchOrchestrator(logger.Root())
+	inputAddresses, shutdownInputFn := loader.LaunchInputs(orchestrator)
 
 	return &agent{
-		config:      config,
-		schema:      schema,
-		mfactory:    mfactory,
-		input:       input,
-		stopReq:     stopRequest,
+		loader:         loader,
+		inputAddresses: inputAddresses,
+		shutdownFn: func() {
+			shutdownInputFn()
+			orchestrator.Shutdown()
+		},
 		runRecovery: newChunkSaver == nil,
-	}, nil
+	}
 }
 
 func (a *agent) Address() string {
-	return a.input.Address()
+	return a.inputAddresses[0]
+}
+
+func (a *agent) DumpMetrics() string {
+	dump, err := a.loader.MetricFactory.DumpMetrics(false)
+	if err != nil {
+		logger.Panic(err)
+	}
+	return dump
+}
+
+func (a *agent) MetricFactory() *base.MetricFactory {
+	return a.loader.MetricFactory
 }
 
 func (a *agent) StopAndWait() {
-	a.stopReq.Signal()
-	a.input.Stopped().WaitForever()
+	a.shutdownFn()
 
 	if !a.runRecovery {
 		return
@@ -99,29 +95,10 @@ func (a *agent) StopAndWait() {
 	rlogger := logger.WithField("phase", "recovery")
 	rlogger.Info("launch recovery orchestrator")
 
-	allocator := base.NewLogAllocator(a.schema)
-	pipelineArgs := bconfig.PipelineArgs{
-		Schema:              a.schema,
-		Deallocator:         allocator,
-		MetricKeyLocators:   a.schema.MustCreateFieldLocators(a.config.MetricKeys),
-		TransformConfigs:    a.config.Transformations,
-		BufferConfig:        a.config.Buffer,
-		OutputConfig:        a.config.Output,
-		NewConsumerOverride: nil,
-		SendAllAtEnd:        true,
-	}
+	a.loader.PipelineArgs.SendAllAtEnd = true
 
 	// run recovery to send previously unsent chunks
-	orchestrator := a.config.Orchestration.LaunchOrchestrator(rlogger, pipelineArgs, a.mfactory)
-
-	orchestrator.Destroy()
+	orchestrator := a.loader.LaunchOrchestrator(rlogger)
+	orchestrator.Shutdown()
 	rlogger.Info("recovery orchestrator done")
-}
-
-func (a *agent) DumpMetrics() string {
-	dump, err := a.mfactory.DumpMetrics(false)
-	if err != nil {
-		logger.Panic(err)
-	}
-	return dump
 }

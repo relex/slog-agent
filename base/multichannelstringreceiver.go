@@ -6,9 +6,6 @@ type MultiChannelStringReceiver interface {
 	// NewChannel creates a receiver for a new channel identified by the given id
 	// The id may be reused after the previous channel closes
 	NewChannel(id string) StringReceiverChannel
-
-	// Destroy performs cleanup
-	Destroy()
 }
 
 // StringReceiverChannel is under MultiChannelStringReceiver to receive input from e.g. a single TCP connection

@@ -172,6 +172,10 @@ func (factory *MetricFactory) DumpMetrics(includeZeroValues bool) (string, error
 	return strings.Join(linesFiltered, "\n"), nil
 }
 
+func (factory *MetricFactory) Prefix() string {
+	return factory.namePrefix
+}
+
 func (factory *MetricFactory) concatNameAndLabels(name string, labelNames []string, leftmostLabelValues []string) (string, []string, []string) {
 	if len(labelNames) < len(leftmostLabelValues) {
 		logger.Panicf("length of labelNames (%s) should be equal or greater than length of leftmostLabelValues (%s)",

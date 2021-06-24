@@ -29,7 +29,7 @@ func RunBenchmarkPipeline(inputPath string, outputPath string, repeat int, confi
 
 	totalInputCount := len(inputRecords) * repeat
 	totalInputLength := int64(inputLength) * int64(repeat)
-	costTracker := NewCostTracker()
+	costTracker := StartCostTracking()
 	runPipeline(process, endProcess, inputRecords, repeat, writeChunk)
 	closeOutput()
 
@@ -39,36 +39,39 @@ func RunBenchmarkPipeline(inputPath string, outputPath string, repeat int, confi
 
 // RunBenchmarkAgent benchmarks a fully configured agent outputting to file or null
 func RunBenchmarkAgent(inputPath string, outputPath string, repeat int, configFile string) {
-	config, schema, configErr := run.LoadConfigFile(configFile)
-	if configErr != nil {
-		logger.Fatal(configErr)
-	}
-	chunkSaver := openLogChunkSaver(outputPath, config.Output)
-	agt, agentErr := startAgent(config, schema, chunkSaver, nil, "")
-	if agentErr != nil {
-		logger.Fatal(agentErr)
+	// launch agent
+	loader, loaderErr := run.NewLoaderFromConfigFile(configFile, "testagent_")
+	if loaderErr != nil {
+		logger.Panic(loaderErr)
 	}
 
+	chunkSaver := openLogChunkSaver(outputPath, loader.Output)
+	agt := startAgent(loader, chunkSaver, nil, "")
+
+	// feed input
 	inputData, numRecords := loadInput(inputPath)
-
-	costTracker := NewCostTracker()
+	costTracker := StartCostTracking()
 	runBenchmarkInputSender(agt.Address(), inputData, repeat)
 	time.Sleep(1 * time.Second)
 
 	logger.Info("stopping...")
 	agt.StopAndWait()
-	reportBenchmarkResult("BenchmarkAgent", numRecords*repeat, int64(len(inputData))*int64(repeat), costTracker.Report(), agt.mfactory)
-	logger.Info(agt.mfactory.DumpMetrics(false))
+
+	reportBenchmarkResult("BenchmarkAgent", numRecords*repeat, int64(len(inputData))*int64(repeat), costTracker.Report(), agt.MetricFactory())
+	logger.Info(agt.DumpMetrics())
 }
 
 func runBenchmarkInputSender(agentAddress string, inputData []byte, repeat int) {
+	const minFrameSize = 1 * 1024 * 1024
+	const maxFrameSize = 1 * 1024 * 1024
+
 	runtime.LockOSThread()
-	minFrameSize := 1 * 1024 * 1024
-	maxFrameSize := 1 * 1024 * 1024
+
 	conn, err := net.Dial("tcp", agentAddress)
 	if err != nil {
 		logger.Fatal("connect: ", err.Error())
 	}
+
 	numSent := int64(0)
 	if len(inputData) >= minFrameSize {
 		for i := 0; i < repeat; i++ {
@@ -87,6 +90,7 @@ func runBenchmarkInputSender(agentAddress string, inputData []byte, repeat int) 
 				offset += copy(normalFrame[offset:], inputData)
 			}
 		}
+
 		lastFrameRepeat := repeat % normalFrameRepeat
 		lastFrame := normalFrame[:len(inputData)*lastFrameRepeat]
 		for i := 0; i < repeat/normalFrameRepeat; i++ {
@@ -102,10 +106,12 @@ func runBenchmarkInputSender(agentAddress string, inputData []byte, repeat int) 
 			numSent += int64(n)
 		}
 	}
+
 	if err := conn.Close(); err != nil {
 		logger.Fatal("close: ", err.Error())
 	}
 	logger.Infof("writer sent %d bytes", numSent)
+
 	runtime.UnlockOSThread()
 }
 

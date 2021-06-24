@@ -269,6 +269,6 @@ output:
                                                   # for (not running out of) disk space and IO performance.
 
   upstream:                                       # Forward destination, see https://docs.fluentd.org/input/forward for explanations
-    address: my-upstream-server.net:24224
+    address: localhost:24224
     tls: true
-    secret: my-secret
+    secret: guess

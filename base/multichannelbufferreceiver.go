@@ -6,9 +6,6 @@ type MultiChannelBufferReceiver interface {
 	// NewChannel creates a receiver for a new channel identified by the given id
 	// The id may be reused after the previous channel closes, e.g. a local TCP port
 	NewChannel(id string) BufferReceiverChannel
-
-	// Destroy performs cleanup
-	Destroy()
 }
 
 // BufferReceiverChannel is under MultiChannelBufferReceiver to receive input from e.g. a single TCP connection

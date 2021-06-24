@@ -26,8 +26,8 @@ type CostReport struct {
 	GCCPUFraction float64
 }
 
-// NewCostTracker creates a cost tracker and starts tracking
-func NewCostTracker() *CostTracker {
+// StartCostTracking creates a cost tracker and starts tracking
+func StartCostTracking() *CostTracker {
 	runtime.GC()
 	ct := &CostTracker{}
 	ct.initRealTime = time.Now()

@@ -58,11 +58,6 @@ func (recv *logParsingReceiver) NewChannel(id string) base.StringReceiverChannel
 	}
 }
 
-func (recv *logParsingReceiver) Destroy() {
-	recv.logger.Info("destroying next receiver")
-	recv.outputReceiver.Destroy()
-}
-
 func (sess *logParsingReceiverChannel) Accept(lines []byte) {
 	record := sess.parser.Parse(lines, sess.now)
 	if record == nil {

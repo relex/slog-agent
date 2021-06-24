@@ -82,31 +82,36 @@ func TestPipeline(t *testing.T) {
 
 func TestAgent(t *testing.T) {
 	regenOutput := util.IndexOfString(os.Args, TestOutputGenerationArg) != -1
-	inputDataByTag, expectedResultsByTag := buildInputsAndExpectedOutputs(t, "../testdata/development")
-	config, schema, configErr := run.LoadConfigFile("../testdata/config_sample.yml")
-	assert.Nil(t, configErr)
-	outputWritersByTag, newChunkSaver := prepareOutputWriters(t, config.Output.LogOutputConfig)
+
+	// launch agent
+	loader, loaderErr := run.NewLoaderFromConfigFile("../testdata/config_sample.yml", "testagent_")
+	assert.Nil(t, loaderErr)
+
+	outputWritersByTag, newChunkSaver := prepareOutputWriters(t, loader.Output)
 	// Override tag for output splitting and keys (labelsets) for distribution: order of logs would be messed up if keys are different
-	ag, aerr := startAgent(config, schema, newChunkSaver, []string{"host"}, "$host")
-	assert.Nil(t, aerr)
-	// Write input
+	agt := startAgent(loader, newChunkSaver, []string{"host"}, "$host")
+
+	// feed input
+	inputDataByTag, expectedResultsByTag := buildInputsAndExpectedOutputs(t, "../testdata/development")
 	inputWorkerCounter := &sync.WaitGroup{}
 	for tag, input := range inputDataByTag {
 		logger.Infof("launching writer for input tag=%s len=%d", tag, len(input))
 		inputWorkerCounter.Add(1)
 		go func(input []byte) {
-			runBenchmarkInputSender(ag.Address(), input, 1)
+			runBenchmarkInputSender(agt.Address(), input, 1)
 			inputWorkerCounter.Done()
 		}(input)
 	}
-	// Wait for ending
+
+	// wait for ending
 	logger.Infof("waiting for %d input writers...", len(inputDataByTag))
 	inputWorkerCounter.Wait()
 	time.Sleep(1 * time.Second) // TODO: find out why socket accept, receive and allow conn close before go code is invoked?
 	logger.Info("stopping agent...")
-	ag.StopAndWait()
+	agt.StopAndWait()
 	finalizeOutputWriters(t, outputWritersByTag)
-	// compare
+
+	// compare outputs
 	if !regenOutput {
 		t.Run("check known outputs", func(tt *testing.T) {
 			for tag, str := range expectedResultsByTag {
@@ -125,12 +130,12 @@ func TestAgent(t *testing.T) {
 		t.Run("check metrics", func(tt *testing.T) {
 			expectedMetrics, err := ioutil.ReadFile("../testdata/development/all-agent.prom")
 			if assert.Nil(tt, err) {
-				assert.Equal(tt, string(expectedMetrics), ag.DumpMetrics())
+				assert.Equal(tt, string(expectedMetrics), agt.DumpMetrics())
 			}
 		})
 	} else {
 		// output JSONs are to be generated from pipeline test, not here
-		assert.Nil(t, ioutil.WriteFile("../testdata/development/all-agent.prom", []byte(ag.DumpMetrics()), 0644))
+		assert.Nil(t, ioutil.WriteFile("../testdata/development/all-agent.prom", []byte(agt.DumpMetrics()), 0644))
 	}
 }
 
@@ -142,6 +147,7 @@ func buildInputsAndExpectedOutputs(t *testing.T, baseDir string) (map[string][]b
 	if len(inputFiles) == 0 {
 		assert.NotZero(t, len(inputFiles))
 	}
+
 	inputDataByTag := make(map[string][]byte, len(inputFiles))
 	expectedResultsByTag := make(map[string]string, len(inputFiles))
 	for _, inPath := range inputFiles {
@@ -163,6 +169,7 @@ func buildInputsAndExpectedOutputs(t *testing.T, baseDir string) (map[string][]b
 
 func prepareOutputWriters(t *testing.T, outputConfig bconfig.LogOutputConfig) (map[string]*bytes.Buffer, base.ChunkConsumerConstructor) {
 	outputWritersByTag := make(map[string]*bytes.Buffer, 100)
+
 	getOutputWriterByTag := func(tag string) *bytes.Buffer {
 		wrt, exists := outputWritersByTag[tag]
 		if !exists {
@@ -171,7 +178,9 @@ func prepareOutputWriters(t *testing.T, outputConfig bconfig.LogOutputConfig) (m
 		}
 		return wrt
 	}
+
 	mutex := &sync.Mutex{}
+
 	collectChunkJSON := func(chunk base.LogChunk) {
 		mutex.Lock()
 		defer mutex.Unlock()

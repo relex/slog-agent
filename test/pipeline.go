@@ -14,7 +14,7 @@ type logProcessor func(s []byte) *base.LogChunk
 type logProcessCloser func() *base.LogChunk
 
 func preparePipeline(configFile string, tagOverride string, metricFactory *base.MetricFactory) (bconfig.LogOutputConfig, logProcessor, logProcessCloser) {
-	cfg, schema, err := run.LoadConfigFile(configFile)
+	cfg, schema, err := run.ParseConfigFile(configFile)
 	if err != nil {
 		logger.Fatalf("config: %s", err.Error())
 	}

@@ -86,10 +86,10 @@ func (o *byKeySetOrchestrator) NewChannel(id string) base.BufferReceiverChannel 
 	}
 }
 
-func (o *byKeySetOrchestrator) Destroy() {
-	o.logger.Infof("destroying pipeline workers count=%d", util.PeekWaitGroup(o.workerMap.objectCounter))
+func (o *byKeySetOrchestrator) Shutdown() {
+	o.logger.Infof("shutting down pipeline workers count=%d", util.PeekWaitGroup(o.workerMap.objectCounter))
 	o.workerMap.Destroy()
-	o.logger.Info("destroyed all pipeline workers")
+	o.logger.Info("shut down all pipeline workers")
 }
 
 // newWorker creates channel and pipeline workers for a new key-set, must be protected by global mutex
