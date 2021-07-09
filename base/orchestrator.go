@@ -7,6 +7,9 @@ import (
 // Orchestrator takes log records and distribute them to internal pipelines
 type Orchestrator interface {
 	MultiChannelBufferReceiver
+
+	// Shutdown performs cleanup; should be called after all inputs have been stopped
+	Shutdown()
 }
 
 // PipelineWorkersLauncher represents a function to launch workers for a top-level pipeline under Orchestrator

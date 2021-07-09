@@ -17,7 +17,7 @@ func TestConfigDump(t *testing.T) {
 		return
 	}
 	t.Log("regenerate config dump...")
-	config, _, cerr := run.LoadConfigFile("../testdata/config_sample.yml")
+	config, _, cerr := run.ParseConfigFile("../testdata/config_sample.yml")
 	assert.Nil(t, cerr)
 	configDump, e := testMarshal(config)
 	assert.Nil(t, e)
@@ -28,7 +28,7 @@ func TestConfigParsing(t *testing.T) {
 	expectedDump, eerr := ioutil.ReadFile("../testdata/config_sample_dump.yml")
 	assert.Nil(t, eerr)
 
-	config, _, err := run.LoadConfigFile("../testdata/config_sample.yml")
+	config, _, err := run.ParseConfigFile("../testdata/config_sample.yml")
 	assert.Nil(t, err)
 	configDump, e := testMarshal(config)
 	assert.Nil(t, e)
@@ -36,7 +36,7 @@ func TestConfigParsing(t *testing.T) {
 	assert.Equal(t, string(expectedDump), string(configDump))
 }
 
-func testMarshal(config *run.Config) ([]byte, error) {
+func testMarshal(config run.Config) ([]byte, error) {
 	writer := &bytes.Buffer{}
 	encoder := yaml.NewEncoder(writer)
 	encoder.SetIndent(2)

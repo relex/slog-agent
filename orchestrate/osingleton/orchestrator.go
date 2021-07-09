@@ -46,7 +46,7 @@ func (o *singletonOrchestrator) NewChannel(id string) base.BufferReceiverChannel
 	}
 }
 
-func (o *singletonOrchestrator) Destroy() {
+func (o *singletonOrchestrator) Shutdown() {
 	close(o.inputChannel)
 	o.stopSignal.WaitForever()
 }

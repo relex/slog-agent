@@ -158,6 +158,6 @@ output:
         - type: unescape
   messageMode: CompressedPackedForward
   upstream:
-    address: my-upstream-server.net:24224
+    address: localhost:24224
     tls: true
-    secret: my-secret
+    secret: guess

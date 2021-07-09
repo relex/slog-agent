@@ -31,7 +31,8 @@ type Config struct {
 }
 
 // AnchorsConfig defines the anchors section in config file
-// The section is meant to provide anchors for other sections and doesn't need to be unmarshalled itself
+//
+// The section is meant to host user-defined YAML variables for other sections and doesn't need to be unmarshalled itself
 type AnchorsConfig struct {
 }
 
@@ -49,48 +50,48 @@ func init() {
 	transform.Register()
 }
 
-// LoadConfigFile loads config from the path, creates the schema and verify all configurations
-func LoadConfigFile(filepath string) (*Config, base.LogSchema, error) {
-	cref := &Config{}
-	if err := util.UnmarshalYamlFile(filepath, cref); err != nil {
-		return nil, base.LogSchema{}, err
+// ParseConfigFile loads config from the path, creates the schema and verify all configurations
+func ParseConfigFile(filepath string) (Config, base.LogSchema, error) {
+	cfg := Config{}
+	if err := util.UnmarshalYamlFile(filepath, &cfg); err != nil {
+		return cfg, base.LogSchema{}, err
 	}
-	if len(cref.Schema.Fields) == 0 {
-		return nil, base.LogSchema{}, fmt.Errorf("schema: no field defined")
+	if len(cfg.Schema.Fields) == 0 {
+		return cfg, base.LogSchema{}, fmt.Errorf("schema: no field defined")
 	}
-	logger.Infof("create schema with fields: [%s]", strings.Join(cref.Schema.Fields, ", "))
-	schema, schemaErr := base.NewLogSchema(cref.Schema.Fields)
+	logger.Infof("create schema with fields: [%s]", strings.Join(cfg.Schema.Fields, ", "))
+	schema, schemaErr := base.NewLogSchema(cfg.Schema.Fields)
 	if schemaErr != nil {
-		return nil, schema, fmt.Errorf("schema: %w", schemaErr)
+		return cfg, schema, fmt.Errorf("schema: %w", schemaErr)
 	}
-	if err := bsupport.VerifyInputConfigs(cref.Inputs, schema, "inputs"); err != nil {
-		return nil, schema, err
+	if err := bsupport.VerifyInputConfigs(cfg.Inputs, schema, "inputs"); err != nil {
+		return cfg, schema, err
 	}
-	metricLabelNames, orchErr := cref.Orchestration.VerifyConfig(schema)
+	metricLabelNames, orchErr := cfg.Orchestration.VerifyConfig(schema)
 	if orchErr != nil {
-		return nil, schema, fmt.Errorf("orchestration: %w", orchErr)
+		return cfg, schema, fmt.Errorf("orchestration: %w", orchErr)
 	}
-	if len(cref.MetricKeys) == 0 {
-		return nil, schema, fmt.Errorf("metricKeys is empty")
+	if len(cfg.MetricKeys) == 0 {
+		return cfg, schema, fmt.Errorf("metricKeys is empty")
 	}
-	if _, err := schema.CreateFieldLocators(cref.MetricKeys); err != nil {
-		return nil, schema, fmt.Errorf("metricKeys: %w", err)
+	if _, err := schema.CreateFieldLocators(cfg.MetricKeys); err != nil {
+		return cfg, schema, fmt.Errorf("metricKeys: %w", err)
 	}
-	for i, key := range cref.MetricKeys {
+	for i, key := range cfg.MetricKeys {
 		if util.IndexOfString(metricLabelNames, "key_"+key) != -1 {
-			return nil, schema, fmt.Errorf("metricKeys[%d]: key '%s' cannot exist in both .metricKeys and .orchestration", i, key)
+			return cfg, schema, fmt.Errorf("metricKeys[%d]: key '%s' cannot exist in both .metricKeys and .orchestration", i, key)
 		}
 	}
-	if err := bsupport.VerifyTransformConfigs(cref.Transformations, schema, "transforms"); err != nil {
-		return nil, schema, err
+	if err := bsupport.VerifyTransformConfigs(cfg.Transformations, schema, "transforms"); err != nil {
+		return cfg, schema, err
 	}
-	if err := cref.Buffer.VerifyConfig(); err != nil {
-		return nil, schema, fmt.Errorf("buffer: %w", err)
+	if err := cfg.Buffer.VerifyConfig(); err != nil {
+		return cfg, schema, fmt.Errorf("buffer: %w", err)
 	}
-	if err := cref.Output.VerifyConfig(schema); err != nil {
-		return nil, schema, fmt.Errorf("output: %w", err)
+	if err := cfg.Output.VerifyConfig(schema); err != nil {
+		return cfg, schema, fmt.Errorf("output: %w", err)
 	}
-	return cref, schema, nil
+	return cfg, schema, nil
 }
 
 // MarshalYAML provides custom marshalling to export readable document. The result is not reversible.

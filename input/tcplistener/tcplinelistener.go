@@ -63,9 +63,6 @@ func NewTCPLineListener(parentLogger logger.Logger, address string, testRecord f
 	taskCounter := &sync.WaitGroup{}
 	taskCounter.Add(1)
 
-	// call receiver.Destroy after taskCounter instead of at end of run(), as some connections might still be closing by then.
-	fullyStopped := channels.NewWaitGroupAwaitable(taskCounter).Next(receiver.Destroy)
-
 	return &tcpLineListener{
 		logger:      logger,
 		socket:      socket.(*net.TCPListener),
@@ -74,7 +71,7 @@ func NewTCPLineListener(parentLogger logger.Logger, address string, testRecord f
 		stopRequest: stopRequest,
 		stopTimeout: stopRequest.After(defs.IntermediateChannelTimeout),
 		taskCounter: taskCounter,
-		stopped:     fullyStopped,
+		stopped:     channels.NewWaitGroupAwaitable(taskCounter), // input is only fully stopped after all connections are closed
 	}, boundAddr, nil
 }
 

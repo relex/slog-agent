@@ -105,9 +105,11 @@ var (
 	ForwarderPingInterval = 20 * time.Second
 )
 
-// For tests
+// For testing and experiments
 const (
 	TestReadTimeout = 5 * time.Second
+
+	EnableConfigReload = false // WIP
 )
 
 // EnableTestMode turns on test mode with very short timeout and minimal retry delay

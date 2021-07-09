@@ -62,7 +62,8 @@ func TestByKeySetOrchestrator(t *testing.T) {
 		}(i)
 	}
 	producerWaiter.Wait()
-	orchestrator.Destroy()
+	orchestrator.Shutdown()
+
 	assert.Equal(t, 3, len(collectedLogsByTag))
 	if logs, ok := collectedLogsByTag["error-sshd"]; assert.True(t, ok) {
 		assert.Equal(t, producerCount*1, len(*logs))
