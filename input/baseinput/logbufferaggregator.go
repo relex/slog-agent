@@ -15,14 +15,14 @@ type logBufferAggregator struct {
 	outputChannel chan<- []*base.LogRecord
 }
 
-type logBufferAggregatorChannel struct {
+type logBufferAggregatorSink struct {
 	logger        logger.Logger
 	outputChannel chan<- []*base.LogRecord
 	sendTimeout   *time.Timer
 }
 
-// NewLogBufferAggregator creates a MultiChannelReceiver to collect incoming logs to a single channel for test purpose
-func NewLogBufferAggregator(parentLogger logger.Logger) (base.MultiChannelBufferReceiver, <-chan []*base.LogRecord) {
+// NewLogBufferAggregator creates a MultiSinkBufferReceiver to collect incoming logs to a single channel for test purpose
+func NewLogBufferAggregator(parentLogger logger.Logger) (base.MultiSinkBufferReceiver, <-chan []*base.LogRecord) {
 	ch := make(chan []*base.LogRecord, defs.IntermediateBufferedChannelSize)
 	return &logBufferAggregator{
 		logger:        parentLogger.WithField(defs.LabelComponent, "LogBufferAggregator"),
@@ -30,12 +30,9 @@ func NewLogBufferAggregator(parentLogger logger.Logger) (base.MultiChannelBuffer
 	}, ch
 }
 
-func (recv *logBufferAggregator) NewChannel(id string) base.BufferReceiverChannel {
-	slogger := recv.logger.WithFields(logger.Fields{
-		defs.LabelPart:   "channel",
-		defs.LabelRemote: id,
-	})
-	return &logBufferAggregatorChannel{
+func (recv *logBufferAggregator) NewSink(clientAddress string, clientNumber base.ClientNumber) base.BufferReceiverSink {
+	slogger := base.NewSinkLogger(recv.logger, clientAddress, clientNumber)
+	return &logBufferAggregatorSink{
 		logger:        slogger,
 		outputChannel: recv.outputChannel,
 		sendTimeout:   time.NewTimer(defs.IntermediateChannelTimeout),
@@ -47,7 +44,7 @@ func (recv *logBufferAggregator) Destroy() {
 	recv.logger.Infof("destroy channel, remaining=%d", len(recv.outputChannel))
 }
 
-func (sess *logBufferAggregatorChannel) Accept(buffer []*base.LogRecord) {
+func (sess *logBufferAggregatorSink) Accept(buffer []*base.LogRecord) {
 	if len(buffer) == 0 {
 		return
 	}
@@ -61,11 +58,11 @@ func (sess *logBufferAggregatorChannel) Accept(buffer []*base.LogRecord) {
 	}
 }
 
-func (sess *logBufferAggregatorChannel) Tick() {
+func (sess *logBufferAggregatorSink) Tick() {
 	util.ResetTimer(sess.sendTimeout, defs.IntermediateChannelTimeout)
 }
 
 // Close ends this channel
-func (sess *logBufferAggregatorChannel) Close() {
+func (sess *logBufferAggregatorSink) Close() {
 	sess.logger.Info("close")
 }

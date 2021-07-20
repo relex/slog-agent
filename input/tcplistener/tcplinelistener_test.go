@@ -19,7 +19,7 @@ func TestTCPLineListener(t *testing.T) {
 	const addrParam = "localhost:0"
 	rlogger := logger.WithField("test", t.Name())
 	stop := channels.NewSignalAwaitable()
-	recv, out := baseinput.NewLogStringAggregator(rlogger)
+	recv, out := baseinput.NewLogMessageAggregator(rlogger)
 	lsnr, addr, err := NewTCPLineListener(rlogger, addrParam, testLine, recv, stop)
 	assert.Nil(t, err)
 	assert.NotEqual(t, addrParam, addr)
@@ -47,7 +47,7 @@ func TestTCPLineListenerEnd(t *testing.T) {
 	const line2 = "<163>1 2019-08-15T15:50:46.866915+03:00 local my-app 123 fn - def"
 	rlogger := logger.WithField("test", t.Name())
 	stop := channels.NewSignalAwaitable()
-	recv, out := baseinput.NewLogStringAggregator(rlogger)
+	recv, out := baseinput.NewLogMessageAggregator(rlogger)
 	lsnr, addr, _ := NewTCPLineListener(rlogger, "localhost:0", testLine, recv, stop)
 	lsnr.Launch()
 	conn, _ := net.Dial("tcp", addr)
@@ -69,7 +69,7 @@ func TestTCPLineListenerMultiRead(t *testing.T) {
 	const line = "<163>1 2019-08-15T15:50:46.866915+03:00 local my-app 123 fn - Something"
 	rlogger := logger.WithField("test", t.Name())
 	stop := channels.NewSignalAwaitable()
-	recv, out := baseinput.NewLogStringAggregator(rlogger)
+	recv, out := baseinput.NewLogMessageAggregator(rlogger)
 	lsnr, addr, _ := NewTCPLineListener(rlogger, "localhost:0", testLine, recv, stop)
 	lsnr.Launch()
 	conn, _ := net.Dial("tcp", addr)

@@ -31,14 +31,14 @@ type distributionBatch struct {
 
 // NewDistributor creates Distributor
 func NewDistributor(parentLogger logger.Logger, input <-chan []*base.LogRecord, tag string, numWorkers int,
-	metricFactory *base.MetricFactory, launchWorkers base.OrderedPipelineWorkersLauncher) *Distributor {
+	metricFactory *base.MetricFactory, launchChildPipeline base.OrderedPipelineWorkersLauncher) *Distributor {
 	dlogger := parentLogger.WithField(defs.LabelComponent, "ParallelDistributor")
 	children := make([]chan<- base.OrderedLogBuffer, numWorkers)
 	childCounter := &sync.WaitGroup{}
 	for i := range children {
 		childCounter.Add(1)
 		childChannel := make(chan base.OrderedLogBuffer, defs.IntermediateBufferedChannelSize)
-		launchWorkers(dlogger.WithField("num", i), tag, i, childChannel, metricFactory, childCounter.Done)
+		launchChildPipeline(dlogger.WithField("child", i), tag, i, childChannel, metricFactory, childCounter.Done)
 		children[i] = childChannel
 	}
 	prevMutex := &sync.Mutex{}

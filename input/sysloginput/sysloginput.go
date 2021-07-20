@@ -41,7 +41,7 @@ func init() {
 
 // NewInput creates a SyslogInput and starts the network listener
 func (cfg *Config) NewInput(parentLogger logger.Logger, allocator *base.LogAllocator, schema base.LogSchema,
-	logBufferReceiver base.MultiChannelBufferReceiver, metricFactory *base.MetricFactory,
+	logBufferReceiver base.MultiSinkBufferReceiver, metricFactory *base.MetricFactory,
 	stopRequest channels.Awaitable) (base.LogInput, error) {
 
 	if len(cfg.LevelMapping) == 0 {

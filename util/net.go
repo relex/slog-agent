@@ -5,7 +5,37 @@ import (
 	"io"
 	"net"
 	"strings"
+
+	"github.com/relex/gotils/logger"
 )
+
+// GetFDFromTCPConnOrPanic tries to get socket FD from the given connection or panic
+//
+// The connection must have been established first
+func GetFDFromTCPConnOrPanic(conn *net.TCPConn) uintptr {
+	fd, err := GetFDFromTCPConn(conn)
+	if err != nil {
+		logger.WithFields(logger.Fields{
+			"local":  conn.LocalAddr().String(),
+			"remote": conn.RemoteAddr().String(),
+		}).Panic("failed to get FD from TCP connection: ", err)
+	}
+	return fd
+}
+
+// GetFDFromTCPConn reads socket FD from the given connection
+func GetFDFromTCPConn(conn *net.TCPConn) (uintptr, error) {
+	rawConn, connErr := conn.SyscallConn()
+	if connErr != nil {
+		return 0, connErr
+	}
+
+	var value uintptr
+	fdErr := rawConn.Control(func(fd uintptr) {
+		value = fd
+	})
+	return value, fdErr
+}
 
 // IsNetworkClosed checks if the given error tells closing of network connection
 func IsNetworkClosed(err error) bool {

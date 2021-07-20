@@ -15,18 +15,18 @@ type Config struct {
 	bconfig.Header `yaml:",inline"`
 	Keys           []string `yaml:"keys"` // Key field names
 	TagTemplate    string   `yaml:"tag"`  // Tag is evaluated at the creation of new pipeline and can only reference key fields
-	NumWorkers     int      `yaml:"num"`  // Numbers of workers. N > 1 creates N pipelines per key-set for parallel processing
+	NumChildren    int      `yaml:"num"`  // Numbers of child pipelines. N > 1 creates N child pipelines per key-set for parallel processing
 }
 
 // LaunchOrchestrator constructs and launches a by-keySet orchestrator and pipeline(s)
 func (cfg *Config) LaunchOrchestrator(parentLogger logger.Logger, args bconfig.PipelineArgs, metricFactory *base.MetricFactory) base.Orchestrator {
 	var launchPipeline base.PipelineWorkersLauncher
-	if cfg.NumWorkers == 1 {
+	if cfg.NumChildren == 1 {
 		launchPipeline = bsupport.NewSequentialPipelineLauncher(args)
 	} else {
 		launchDistributor := func(parentLogger logger.Logger, input <-chan []*base.LogRecord, tag string,
-			subMetricFactory *base.MetricFactory, launchChildWorkers base.OrderedPipelineWorkersLauncher, onStopped func()) {
-			distributor := obase.NewDistributor(parentLogger, input, tag, cfg.NumWorkers, subMetricFactory, launchChildWorkers)
+			subMetricFactory *base.MetricFactory, launchChildPipeline base.OrderedPipelineWorkersLauncher, onStopped func()) {
+			distributor := obase.NewDistributor(parentLogger, input, tag, cfg.NumChildren, subMetricFactory, launchChildPipeline)
 			distributor.Launch()
 			distributor.Stopped().Next(onStopped)
 		}
@@ -55,11 +55,11 @@ func (cfg *Config) VerifyConfig(schema base.LogSchema) ([]string, error) {
 		return nil, fmt.Errorf(".tag: %w", terr)
 	}
 
-	if cfg.NumWorkers == 0 {
+	if cfg.NumChildren == 0 {
 		return nil, fmt.Errorf(".num is unspecified")
 	}
-	if cfg.NumWorkers <= 0 {
-		return nil, fmt.Errorf(".num must be at least 1: %d", cfg.NumWorkers)
+	if cfg.NumChildren <= 0 {
+		return nil, fmt.Errorf(".num must be at least 1: %d", cfg.NumChildren)
 	}
 
 	metricKeyNames := make([]string, len(cfg.Keys))

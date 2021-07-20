@@ -34,13 +34,9 @@ func NewOrchestrator(parentLogger logger.Logger, tag string, metricFactory *base
 	return o
 }
 
-func (o *singletonOrchestrator) NewChannel(id string) base.BufferReceiverChannel {
-	plogger := o.logger.WithFields(logger.Fields{
-		defs.LabelPart:   "channel",
-		defs.LabelRemote: id,
-	})
+func (o *singletonOrchestrator) NewSink(clientAddress string, clientNumber base.ClientNumber) base.BufferReceiverSink {
 	return &singletonOrchestratorChild{
-		logger:       plogger,
+		logger:       base.NewSinkLogger(o.logger, clientAddress, clientNumber),
 		inputChannel: o.inputChannel,
 		sendTimeout:  time.NewTimer(defs.IntermediateChannelTimeout),
 	}

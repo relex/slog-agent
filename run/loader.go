@@ -26,6 +26,7 @@ type Loader struct {
 	PipelineArgs  bconfig.PipelineArgs // parameters for to run a pipeline, may be modified in-place
 }
 
+// NewLoaderFromConfigFile creates a new Loader from the given config file
 func NewLoaderFromConfigFile(filepath string, metricPrefix string) (*Loader, error) {
 	config, schema, configErr := ParseConfigFile(filepath)
 	if configErr != nil {
