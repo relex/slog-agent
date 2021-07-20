@@ -38,7 +38,7 @@ func TestByKeySetOrchestrator(t *testing.T) {
 		producerWaiter.Add(1)
 		go func(childNum int) {
 			id := fmt.Sprintf("conn=%d", childNum)
-			ch := orchestrator.NewChannel(id)
+			ch := orchestrator.NewSink(id, 123)
 			ch.Accept([]*base.LogRecord{
 				schema.NewTestRecord2(
 					time.Unix(int64(childNum)*10+1, 0),

@@ -24,9 +24,9 @@ type byKeySetOrchestrator struct {
 	launchWorkers  base.PipelineWorkersLauncher // start workers for new pipeline (one per key-set), invoked within globalPipelineChannelMap's mutex
 }
 
-// byKeySetOrchestratorChannel is created for each of input sessions or connections
+// byKeySetOrchestratorSink is created for each of input sessions or connections
 // It holds local cache of pending logs to a set of real (global) workers used by this channel and flushes on demand
-type byKeySetOrchestratorChannel struct {
+type byKeySetOrchestratorSink struct {
 	logger          logger.Logger
 	workerMap       *localPipelineChannelMap // append-only locac cache of byKeySetOrchestrator.workerMap
 	keySetExtractor base.FieldSetExtractor   // extractor to fetch keys from LogRecord(s)
@@ -73,13 +73,9 @@ func NewOrchestrator(parentLogger logger.Logger, schema base.LogSchema, keyField
 	return o
 }
 
-func (o *byKeySetOrchestrator) NewChannel(id string) base.BufferReceiverChannel {
-	plogger := o.logger.WithFields(logger.Fields{
-		defs.LabelPart:   "channel",
-		defs.LabelRemote: id,
-	})
-	return &byKeySetOrchestratorChannel{
-		logger:          plogger,
+func (o *byKeySetOrchestrator) NewSink(clientAddress string, clientNumber base.ClientNumber) base.BufferReceiverSink {
+	return &byKeySetOrchestratorSink{
+		logger:          base.NewSinkLogger(o.logger, clientAddress, clientNumber),
 		workerMap:       o.workerMap.MakeLocalMap(),
 		keySetExtractor: *base.NewFieldSetExtractor(o.keyLocators),
 		sendTimeout:     time.NewTimer(defs.IntermediateChannelTimeout),
@@ -111,7 +107,7 @@ func (o *byKeySetOrchestrator) newWorker(keys []string, onStopped func()) chan<-
 }
 
 // Accept accepts input logs from LogInput, the buffer is only usable within the function
-func (oc *byKeySetOrchestratorChannel) Accept(buffer []*base.LogRecord) {
+func (oc *byKeySetOrchestratorSink) Accept(buffer []*base.LogRecord) {
 	now := time.Now()
 	keySetExtractor := oc.keySetExtractor
 	workerMap := oc.workerMap
@@ -125,18 +121,18 @@ func (oc *byKeySetOrchestratorChannel) Accept(buffer []*base.LogRecord) {
 }
 
 // Tick renews internal timeout timer
-func (oc *byKeySetOrchestratorChannel) Tick() {
+func (oc *byKeySetOrchestratorSink) Tick() {
 	oc.flushAllLocalBuffers(false)
 	util.ResetTimer(oc.sendTimeout, defs.IntermediateChannelTimeout)
 }
 
 // Close flushes all pending logs
-func (oc *byKeySetOrchestratorChannel) Close() {
+func (oc *byKeySetOrchestratorSink) Close() {
 	oc.logger.Info("close")
 	oc.flushAllLocalBuffers(true)
 }
 
-func (oc *byKeySetOrchestratorChannel) flushAllLocalBuffers(forceAll bool) {
+func (oc *byKeySetOrchestratorSink) flushAllLocalBuffers(forceAll bool) {
 	now := time.Now()
 	for mergedKey, cache := range oc.workerMap.LocalMap() {
 		if len(cache.PendingLogs) == 0 {

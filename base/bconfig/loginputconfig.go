@@ -12,7 +12,7 @@ type LogInputConfig interface {
 	GetType() string
 
 	NewInput(parentLogger logger.Logger, allocator *base.LogAllocator, schema base.LogSchema,
-		logBufferReceiver base.MultiChannelBufferReceiver, metricFactory *base.MetricFactory,
+		logBufferReceiver base.MultiSinkBufferReceiver, metricFactory *base.MetricFactory,
 		stopRequest channels.Awaitable) (base.LogInput, error)
 
 	NewParser(parentLogger logger.Logger, allocator *base.LogAllocator, schema base.LogSchema,

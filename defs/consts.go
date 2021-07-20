@@ -6,8 +6,7 @@ const (
 	LabelName      = "name"
 	LabelPart      = "part"
 
-	LabelLocal  = "local"
-	LabelRemote = "remote"
-
-	LabelCounter = "counter"
+	LabelAddress      = "address"
+	LabelClient       = "client"
+	LabelClientNumber = "clientNum"
 )

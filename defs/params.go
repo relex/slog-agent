@@ -109,7 +109,7 @@ var (
 const (
 	TestReadTimeout = 5 * time.Second
 
-	EnableConfigReload = false // WIP
+	EnableConfigReload = false // TODO: turn this on when reloading is completed
 )
 
 // EnableTestMode turns on test mode with very short timeout and minimal retry delay

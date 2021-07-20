@@ -18,20 +18,21 @@ const tcpReadBufferMin = 65536
 var tcpLastReadBufferSize = tcpReadBufferMax // shared for all connections. No need to sync access as it's just a cached number.
 
 // tcpLineListener is a TCP Listener for line-based, request-only text protocol, with support for multi-line messages.
-// The listener sends incoming messages into MultiChannelStringReceiver.
 //
-// - All data received is buffered until a line can be recognized / with newline. Data after the last newline is buffered.
+// The listener sends incoming messages into MultiSinkMessageReceiver.
 //
-// - All lines are buffered until the latest line can be recognized as the start of a message, or passes certain timeout.
+// - Incoming bytes are buffered until a line can be recognized / with newline.
 //
-// - The resulting messages don't contain EOL at the end, but can have EOL(s) in the middle for multi-line messages.
+// - Incoming lines are buffered until the latest line can be recognized as the start of another message, or passes certain timeout.
+//
+// - The resulting messages don't contain newlines at the end, but can have newlines in the middle for multi-line messages.
 //
 // There is no request confirmation and the protocol is inheritantly unreliable.
 type tcpLineListener struct {
 	logger      logger.Logger
 	socket      *net.TCPListener
 	testRecord  func(ln []byte) bool
-	receiver    base.MultiChannelStringReceiver
+	receiver    base.MultiSinkMessageReceiver
 	stopRequest channels.Awaitable
 	stopTimeout channels.Awaitable // used by receiver; signaled X seconds after stopRequest to force shutdown
 	taskCounter *sync.WaitGroup    // counter to track connection tasks and the listener task itself
@@ -44,7 +45,7 @@ type tcpLineListener struct {
 //
 // Returns the listener, actual address including final port, and error if failed
 func NewTCPLineListener(parentLogger logger.Logger, address string, testRecord func(ln []byte) bool,
-	receiver base.MultiChannelStringReceiver, stopRequest channels.Awaitable) (base.LogListener, string, error) {
+	receiver base.MultiSinkMessageReceiver, stopRequest channels.Awaitable) (base.LogListener, string, error) {
 
 	// open TCP socket
 	socket, err := net.Listen("tcp", address)
@@ -55,7 +56,7 @@ func NewTCPLineListener(parentLogger logger.Logger, address string, testRecord f
 
 	logger := parentLogger.WithFields(logger.Fields{
 		defs.LabelComponent: "TCPLineListener",
-		defs.LabelLocal:     boundAddr,
+		defs.LabelAddress:   boundAddr,
 	})
 	logger.Info("start listening")
 
@@ -110,13 +111,22 @@ func (lsnr *tcpLineListener) run() {
 			}
 			break
 		}
+
+		clientNumber := base.ClientNumber(util.GetFDFromTCPConnOrPanic(conn))
 		connLogger := lsnr.logger.WithFields(logger.Fields{
-			defs.LabelPart:   "connection",
-			defs.LabelRemote: conn.RemoteAddr().String(),
+			defs.LabelPart:         "connection",
+			defs.LabelClient:       conn.RemoteAddr().String(),
+			defs.LabelClientNumber: clientNumber,
 		})
+		if clientNumber >= base.MaxClientNumber {
+			connLogger.Error("rejected connection: too many clients")
+			conn.Close()
+			continue
+		}
+
 		connLogger.Info("accepted connection")
 		lsnr.taskCounter.Add(1)
-		go lsnr.runConnection(connLogger, conn)
+		go lsnr.runConnection(connLogger, conn, clientNumber)
 	}
 	lsnr.logger.Info("end accept loop")
 
@@ -124,11 +134,11 @@ func (lsnr *tcpLineListener) run() {
 	lsnr.taskCounter.Done()
 }
 
-func (lsnr *tcpLineListener) runConnection(connLogger logger.Logger, conn *net.TCPConn) {
+func (lsnr *tcpLineListener) runConnection(connLogger logger.Logger, conn *net.TCPConn, clientNumber base.ClientNumber) {
 	defer lsnr.taskCounter.Done()
 	connLogger.Info("started")
 
-	recvChan := lsnr.receiver.NewChannel(conn.RemoteAddr().String())
+	recvChan := lsnr.receiver.NewSink(conn.RemoteAddr().String(), clientNumber)
 	defer recvChan.Close()
 
 	connAborter := lsnr.launchConnectionCloser(connLogger, conn)

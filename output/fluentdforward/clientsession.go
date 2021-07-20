@@ -39,7 +39,7 @@ func newClientSession(client *clientWorker, conn net.Conn, leftovers chan base.L
 	return &clientSession{
 		logger: client.logger.WithFields(logger.Fields{
 			defs.LabelPart:   "session",
-			defs.LabelRemote: conn.RemoteAddr(),
+			defs.LabelClient: conn.RemoteAddr(),
 		}),
 		inputChannel: client.inputChannel,
 		inputClosed:  client.inputClosed,

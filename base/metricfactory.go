@@ -172,6 +172,7 @@ func (factory *MetricFactory) DumpMetrics(includeZeroValues bool) (string, error
 	return strings.Join(linesFiltered, "\n"), nil
 }
 
+// Prefix is the prefix added to all metric names inside this factory
 func (factory *MetricFactory) Prefix() string {
 	return factory.namePrefix
 }

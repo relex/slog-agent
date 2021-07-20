@@ -14,25 +14,25 @@ type LogParserConstructor = func(parentLogger logger.Logger, inputCounter *base.
 type logParsingReceiver struct {
 	logger         logger.Logger
 	createParser   LogParserConstructor
-	outputReceiver base.MultiChannelBufferReceiver
+	outputReceiver base.MultiSinkBufferReceiver
 	metricFactory  *base.MetricFactory
 }
 
-type logParsingReceiverChannel struct {
+type logParsingReceiverSink struct {
 	logger        logger.Logger
 	parser        base.LogParser
-	outputChannel base.BufferReceiverChannel
+	outputSink    base.BufferReceiverSink
 	bufferedLogs  []*base.LogRecord
 	bufferedBytes int
 	now           time.Time
 	inputCounter  *base.LogInputCounter
 }
 
-// NewLogParsingReceiver creates a MultiChannelStringReceiver to parse incoming logs, buffer them and pass to a buffer receiver
+// NewLogParsingReceiver creates a MultiSinkMessageReceiver to parse incoming logs, buffer them and pass to a buffer receiver
 //
 // Actual parsers are created on demand for each of connections
-func NewLogParsingReceiver(parentLogger logger.Logger, createParser LogParserConstructor, nextReceiver base.MultiChannelBufferReceiver,
-	metricFactory *base.MetricFactory) base.MultiChannelStringReceiver {
+func NewLogParsingReceiver(parentLogger logger.Logger, createParser LogParserConstructor, nextReceiver base.MultiSinkBufferReceiver,
+	metricFactory *base.MetricFactory) base.MultiSinkMessageReceiver {
 	return &logParsingReceiver{
 		logger:         parentLogger.WithField(defs.LabelComponent, "LogParsingReceiver"),
 		createParser:   createParser,
@@ -41,16 +41,13 @@ func NewLogParsingReceiver(parentLogger logger.Logger, createParser LogParserCon
 	}
 }
 
-func (recv *logParsingReceiver) NewChannel(id string) base.StringReceiverChannel {
-	slogger := recv.logger.WithFields(logger.Fields{
-		defs.LabelPart:   "channel",
-		defs.LabelRemote: id,
-	})
+func (recv *logParsingReceiver) NewSink(clientAddress string, clientNumber base.ClientNumber) base.MessageReceiverSink {
+	slogger := base.NewSinkLogger(recv.logger, clientAddress, clientNumber)
 	inputCounter := base.NewLogInputCounter(recv.metricFactory)
-	return &logParsingReceiverChannel{
+	return &logParsingReceiverSink{
 		logger:        slogger,
 		parser:        recv.createParser(slogger, inputCounter),
-		outputChannel: recv.outputReceiver.NewChannel(id),
+		outputSink:    recv.outputReceiver.NewSink(clientAddress, clientNumber),
 		bufferedLogs:  make([]*base.LogRecord, 0, defs.IntermediateBufferMaxNumLogs),
 		bufferedBytes: 0,
 		now:           time.Now(),
@@ -58,7 +55,7 @@ func (recv *logParsingReceiver) NewChannel(id string) base.StringReceiverChannel
 	}
 }
 
-func (sess *logParsingReceiverChannel) Accept(lines []byte) {
+func (sess *logParsingReceiverSink) Accept(lines []byte) {
 	record := sess.parser.Parse(lines, sess.now)
 	if record == nil {
 		return
@@ -71,24 +68,24 @@ func (sess *logParsingReceiverChannel) Accept(lines []byte) {
 	}
 }
 
-func (sess *logParsingReceiverChannel) Flush() {
+func (sess *logParsingReceiverSink) Flush() {
 	sess.now = time.Now()
 	if len(sess.bufferedLogs) > 0 {
 		sess.sendBuffer()
 	}
-	sess.outputChannel.Tick()
+	sess.outputSink.Tick()
 	sess.inputCounter.UpdateMetrics()
 }
 
-// Close ends this channel
-func (sess *logParsingReceiverChannel) Close() {
+// Close ends this sink
+func (sess *logParsingReceiverSink) Close() {
 	sess.logger.Info("close")
-	sess.outputChannel.Close()
+	sess.outputSink.Close()
 	sess.inputCounter.UpdateMetrics()
 }
 
-func (sess *logParsingReceiverChannel) sendBuffer() {
-	sess.outputChannel.Accept(sess.bufferedLogs)
+func (sess *logParsingReceiverSink) sendBuffer() {
+	sess.outputSink.Accept(sess.bufferedLogs)
 	sess.bufferedLogs = sess.bufferedLogs[:0]
 	sess.bufferedBytes = 0
 }

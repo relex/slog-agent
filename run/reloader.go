@@ -15,9 +15,10 @@ import (
 type Reloader struct {
 	*Loader
 
-	loadingLock sync.Mutex
+	loadingLock *sync.Mutex
 }
 
+// NewReloaderFromConfigFile creates a new Reloader with a new Loader from the given config file
 func NewReloaderFromConfigFile(filepath string, metricPrefix string) (*Reloader, error) {
 	// launch the orchestrator which manages pipelines
 	loader, loaderErr := NewLoaderFromConfigFile(filepath, metricPrefix)
@@ -27,6 +28,8 @@ func NewReloaderFromConfigFile(filepath string, metricPrefix string) (*Reloader,
 
 	return &Reloader{
 		Loader: loader,
+
+		loadingLock: &sync.Mutex{},
 	}, nil
 }
 
