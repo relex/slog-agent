@@ -10,6 +10,7 @@ import (
 	"github.com/relex/gotils/logger"
 	"github.com/relex/slog-agent/base"
 	"github.com/relex/slog-agent/defs"
+	"github.com/relex/slog-agent/output/baseoutput"
 )
 
 // clientWorker is a client of fluentd Forward protocol to forward chunks to upstream
@@ -22,7 +23,7 @@ type clientWorker struct {
 	onChunkLeft  func(chunk base.LogChunk)
 	onFinished   func()
 	stopped      *channels.SignalAwaitable
-	metrics      clientMetrics
+	metrics      baseoutput.ClientMetrics
 }
 
 // NewClientWorker creates ClientWorker
@@ -36,7 +37,7 @@ func NewClientWorker(parentLogger logger.Logger, args base.ChunkConsumerArgs, co
 		onChunkLeft:  args.OnChunkLeftover,
 		onFinished:   args.OnFinished,
 		stopped:      channels.NewSignalAwaitable(),
-		metrics:      newClientMetrics(metricFactory),
+		metrics:      baseoutput.NewClientMetrics(metricFactory),
 	}
 	return client
 }
