@@ -3,6 +3,7 @@ package baseoutput
 import (
 	"time"
 
+	"github.com/relex/gotils/logger"
 	"github.com/relex/slog-agent/base"
 )
 
@@ -14,7 +15,9 @@ type EstablishConnectionFunc func() (ClientConnection, error)
 // It must support full-duplex or desynchronized input and output to allow pipelining, i.e. send next chunk without
 // waiting for the current chunk to finish
 type ClientConnection interface {
-	RemoteAddr() string
+
+	// Logger returns the logger bound to this connection
+	Logger() logger.Logger
 
 	// SendChunk sends out the given chunk to remote
 	SendChunk(chunk base.LogChunk, deadline time.Time) error

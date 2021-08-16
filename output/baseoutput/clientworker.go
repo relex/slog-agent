@@ -8,7 +8,11 @@ import (
 	"github.com/relex/slog-agent/util"
 )
 
-// ClientWorker is a client of fluentd Forward protocol to forward chunks to upstream
+// ClientWorker is a common client implementing ChunkConsumer
+//
+// The caller provides a minimum ClientConnection through EstablishConnectionFunc, while ClientWorker handles
+// logging, metrics, error recovery, reconnecting, periodical ping, and pipeling by handling sending and receiving on
+// their respective goroutines
 type ClientWorker struct {
 	logger       logger.Logger
 	inputChannel <-chan base.LogChunk
@@ -17,7 +21,7 @@ type ClientWorker struct {
 	onChunkLeft  func(chunk base.LogChunk)
 	onFinished   func()
 	stopped      *channels.SignalAwaitable
-	metrics      ClientMetrics
+	metrics      clientMetrics
 	openConn     EstablishConnectionFunc
 }
 
@@ -33,7 +37,7 @@ func NewClientWorker(parentLogger logger.Logger, args base.ChunkConsumerArgs, me
 		onChunkLeft:  args.OnChunkLeftover,
 		onFinished:   args.OnFinished,
 		stopped:      channels.NewSignalAwaitable(),
-		metrics:      NewClientMetrics(metricFactory),
+		metrics:      newClientMetrics(metricFactory),
 		openConn:     openConn,
 	}
 	return client

@@ -5,8 +5,8 @@ import (
 	"github.com/relex/slog-agent/base"
 )
 
-// ClientMetrics defines metrics shared by most of network-based output clients
-type ClientMetrics struct {
+// clientMetrics defines metrics shared by most of network-based output clients
+type clientMetrics struct {
 	queuedChunksLeftover    promexporter.RWGauge // Current numbers of chunks in the current leftovers channel
 	queuedChunksPendingAck  promexporter.RWGauge // Current numbers of chunks waiting for ACK, including read and unread chunks by acknowledger
 	networkErrorsTotal      promexporter.RWCounter
@@ -18,9 +18,9 @@ type ClientMetrics struct {
 	acknowledgedLengthTotal promexporter.RWCounter
 }
 
-func NewClientMetrics(metricFactory *base.MetricFactory) ClientMetrics {
+func newClientMetrics(metricFactory *base.MetricFactory) clientMetrics {
 	queuedChunks := metricFactory.AddOrGetGaugeVec("output_queued_chunks", "Numbers of currently queued chunks", []string{"type"}, nil)
-	return ClientMetrics{
+	return clientMetrics{
 		queuedChunksLeftover:    queuedChunks.WithLabelValues("leftover"),
 		queuedChunksPendingAck:  queuedChunks.WithLabelValues("pendingAck"),
 		networkErrorsTotal:      metricFactory.AddOrGetCounter("output_network_errors_total", "Numbers of network errors", nil, nil),
@@ -33,35 +33,35 @@ func NewClientMetrics(metricFactory *base.MetricFactory) ClientMetrics {
 	}
 }
 
-func (metrics *ClientMetrics) IncrementNetworkErrors() {
+func (metrics *clientMetrics) IncrementNetworkErrors() {
 	metrics.networkErrorsTotal.Inc()
 }
 
-func (metrics *ClientMetrics) IncrementNonNetworkErrors() {
+func (metrics *clientMetrics) IncrementNonNetworkErrors() {
 	metrics.nonNetworkErrorsTotal.Inc()
 }
 
-func (metrics *ClientMetrics) OnForwarding(chunk base.LogChunk) {
+func (metrics *clientMetrics) OnForwarding(chunk base.LogChunk) {
 	metrics.forwardAttemptsTotal.Inc()
 }
 
-func (metrics *ClientMetrics) OnForwarded(chunk base.LogChunk) {
+func (metrics *clientMetrics) OnForwarded(chunk base.LogChunk) {
 	metrics.forwardedCountTotal.Inc()
 	metrics.forwardedLengthTotal.Add(uint64(len(chunk.Data)))
 	metrics.queuedChunksPendingAck.Inc()
 }
 
-func (metrics *ClientMetrics) OnAcknowledged(chunk base.LogChunk) {
+func (metrics *clientMetrics) OnAcknowledged(chunk base.LogChunk) {
 	metrics.acknowledgedCountTotal.Inc()
 	metrics.acknowledgedLengthTotal.Add(uint64(len(chunk.Data)))
 	metrics.queuedChunksPendingAck.Dec()
 }
 
-func (metrics *ClientMetrics) OnLeftoverPopped(chunk base.LogChunk) {
+func (metrics *clientMetrics) OnLeftoverPopped(chunk base.LogChunk) {
 	metrics.queuedChunksLeftover.Dec()
 }
 
-func (metrics *ClientMetrics) OnSessionEnded(previousLeftovers int, unacked int, newLeftovers int) {
+func (metrics *clientMetrics) OnSessionEnded(previousLeftovers int, unacked int, newLeftovers int) {
 	metrics.queuedChunksPendingAck.Sub(int64(unacked))
 	metrics.queuedChunksLeftover.Add(int64(newLeftovers - previousLeftovers))
 }

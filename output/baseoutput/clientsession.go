@@ -18,7 +18,7 @@ type clientSession struct {
 	inputChannel <-chan base.LogChunk
 	inputClosed  channels.Awaitable
 	onChunkAcked func(chunk base.LogChunk)
-	metrics      ClientMetrics
+	metrics      clientMetrics
 	conn         ClientConnection
 	leftovers    chan base.LogChunk        // unprocessed buffers from previous session(s)
 	lastChunk    *base.LogChunk            // last buffer in processing (to be added to leftovers if not completed)
@@ -30,10 +30,7 @@ type clientSession struct {
 func newClientSession(client *ClientWorker, conn ClientConnection, leftovers chan base.LogChunk) *clientSession {
 	// set write buffer to 10MB
 	return &clientSession{
-		logger: client.logger.WithFields(logger.Fields{
-			defs.LabelPart:   "session",
-			defs.LabelClient: conn.RemoteAddr(),
-		}),
+		logger:       conn.Logger().WithField(defs.LabelPart, "session"),
 		inputChannel: client.inputChannel,
 		inputClosed:  client.inputClosed,
 		onChunkAcked: client.onChunkAcked,
