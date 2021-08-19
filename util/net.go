@@ -49,6 +49,15 @@ func IsNetworkClosed(err error) bool {
 	return false
 }
 
+// IsNetworkError checks whether the given error should be considered a network issue,
+// as opposed to e.g. expired certificate or permission denied
+//
+// DO NOT use net.Error directly, as we may need to check for other error types in future
+func IsNetworkError(err error) bool {
+	var netErr net.Error
+	return errors.As(err, &netErr)
+}
+
 // IsNetworkTimeout checks if the given error is network timeout
 func IsNetworkTimeout(err error) bool {
 	var netErr net.Error

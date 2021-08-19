@@ -9,4 +9,5 @@ const (
 	LabelAddress      = "address"
 	LabelClient       = "client"
 	LabelClientNumber = "clientNum"
+	LabelServer       = "server"
 )

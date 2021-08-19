@@ -1,20 +1,15 @@
-package fluentdforward
+package baseoutput
 
 import (
-	"bytes"
 	"fmt"
-	"io"
-	"net"
 	"sort"
 	"sync/atomic"
 	"time"
 
-	"github.com/relex/fluentlib/protocol/forwardprotocol"
 	"github.com/relex/gotils/channels"
 	"github.com/relex/gotils/logger"
 	"github.com/relex/slog-agent/base"
 	"github.com/relex/slog-agent/defs"
-	"github.com/vmihailenco/msgpack/v4"
 )
 
 // clientSession represents a session bound to one forwarding connection
@@ -24,7 +19,7 @@ type clientSession struct {
 	inputClosed  channels.Awaitable
 	onChunkAcked func(chunk base.LogChunk)
 	metrics      clientMetrics
-	conn         net.Conn                  // TLS or TCP connection
+	conn         ClientConnection
 	leftovers    chan base.LogChunk        // unprocessed buffers from previous session(s)
 	lastChunk    *base.LogChunk            // last buffer in processing (to be added to leftovers if not completed)
 	ackerChan    chan base.LogChunk        // channel to pass buffers for acknowledger (wait for ACK and delete), close to end acknowledger
@@ -32,15 +27,10 @@ type clientSession struct {
 	unacked      atomic.Value              // *[]base.LogChunk, un-ACK'ed buffers set when acknowledger quits (to be resent in next session)
 }
 
-var internalPingMessage = buildInternalPingMessage()
-
-func newClientSession(client *clientWorker, conn net.Conn, leftovers chan base.LogChunk) *clientSession {
+func newClientSession(client *ClientWorker, conn ClientConnection, leftovers chan base.LogChunk) *clientSession {
 	// set write buffer to 10MB
 	return &clientSession{
-		logger: client.logger.WithFields(logger.Fields{
-			defs.LabelPart:   "session",
-			defs.LabelClient: conn.RemoteAddr(),
-		}),
+		logger:       conn.Logger().WithField(defs.LabelPart, "session"),
 		inputChannel: client.inputChannel,
 		inputClosed:  client.inputClosed,
 		onChunkAcked: client.onChunkAcked,
@@ -127,14 +117,9 @@ func (session *clientSession) sendChunk(chunk base.LogChunk) (bool, error) {
 	session.metrics.OnForwarding(chunk)
 	session.logger.Debugf("forward chunk %s", chunk.String())
 	timeout := defs.ForwarderBatchSendTimeoutBase + time.Duration(len(chunk.Data)/defs.ForwarderBatchSendMinimumSpeed)*time.Second
-	if err := session.conn.SetWriteDeadline(time.Now().Add(timeout)); err != nil {
-		session.logger.Warnf("failed to set write timeout: %s, %s", chunk.String(), err.Error())
-		session.metrics.IncrementNetworkErrors()
-		return true, err
-	}
-	if err := writeAll(session.conn, chunk.Data); err != nil {
+	if err := session.conn.SendChunk(chunk, time.Now().Add(timeout)); err != nil {
 		session.logger.Warnf("failed to send: %s, %s", chunk.String(), err.Error())
-		session.metrics.IncrementNetworkErrors()
+		session.metrics.OnError(err)
 		return true, err
 	}
 	select {
@@ -156,23 +141,19 @@ func (session *clientSession) sendChunk(chunk base.LogChunk) (bool, error) {
 // sendPing sends a forward message of zero logs and no ID (no ACK) to report status to server
 func (session *clientSession) sendPing() error {
 	session.logger.Debugf("forward ping")
-	if err := session.conn.SetWriteDeadline(time.Now().Add(defs.ForwarderBatchSendTimeoutBase)); err != nil {
-		session.logger.Warnf("failed to set write timeout: %s", err.Error())
-		session.metrics.IncrementNetworkErrors()
-		return err
-	}
-	if err := writeAll(session.conn, internalPingMessage); err != nil {
+	if err := session.conn.SendPing(time.Now().Add(defs.ForwarderBatchSendTimeoutBase)); err != nil {
 		session.logger.Warnf("failed to ping: %s", err.Error())
-		session.metrics.IncrementNetworkErrors()
+		session.metrics.OnError(err)
 		return err
 	}
 	return nil
 }
 
 func (session *clientSession) collectLeftovers() chan base.LogChunk {
-	// gather unhandled previous leftovers
+	// gather previous leftovers
 	close(session.leftovers)
 	fromPrevious := channelToBuffer(session.leftovers)
+
 	// stop acknowledger and gather unread chunks from its input channel
 	session.logger.Info("stopping acknowledger")
 	close(session.ackerChan)
@@ -180,108 +161,90 @@ func (session *clientSession) collectLeftovers() chan base.LogChunk {
 		session.logger.Error("BUG: timeout waiting for acknowledger to stop")
 	}
 	fromAckerChannel := channelToBuffer(session.ackerChan)
-	// gather un-ACK'ed chunks set by runAcknowledger (pendingAckBufMap)
-	var fromAckerUnacked []base.LogChunk
-	if unackedPtr := session.unacked.Load().(*[]base.LogChunk); unackedPtr != nil {
-		fromAckerUnacked = *unackedPtr
+
+	// gather pendings chunks left in runAcknowledger's pendingAckBufMap
+	var fromAckerPending []base.LogChunk
+	if pendingListPtr := session.unacked.Load().(*[]base.LogChunk); pendingListPtr != nil {
+		fromAckerPending = *pendingListPtr
 	} else {
 		session.logger.Error("BUG: failed to get un-ACK'ed chunks from acknowledger")
 	}
+
 	// merge
-	newLeftovers := make([]base.LogChunk, 0, len(fromPrevious)+len(fromAckerChannel)+len(fromAckerUnacked)+1)
+	newLeftovers := make([]base.LogChunk, 0, len(fromPrevious)+len(fromAckerChannel)+len(fromAckerPending)+1)
 	newLeftovers = append(newLeftovers, fromPrevious...)
 	newLeftovers = append(newLeftovers, fromAckerChannel...)
-	newLeftovers = append(newLeftovers, fromAckerUnacked...)
-	// last in sending
+	newLeftovers = append(newLeftovers, fromAckerPending...)
+
+	// add the lastChunk in the middle of processing by clientSession.run
 	inproc := 0
 	if session.lastChunk != nil {
 		newLeftovers = append(newLeftovers, *session.lastChunk)
 		inproc++
 	}
-	session.metrics.OnSessionEnded(len(fromPrevious), len(fromAckerChannel)+len(fromAckerUnacked), len(newLeftovers))
+	session.metrics.OnSessionEnded(len(fromPrevious), len(fromAckerChannel)+len(fromAckerPending), len(newLeftovers))
+
 	// remove duplicates
 	newLeftoversChan := bufferToChannel(newLeftovers)
 	session.logger.Infof("collected leftovers: prev(%d) + chan(%d) + unack(%d) + inproc(%d) = unique(%d)",
-		len(fromPrevious), len(fromAckerChannel), len(fromAckerUnacked), inproc, len(newLeftoversChan))
+		len(fromPrevious), len(fromAckerChannel), len(fromAckerPending), inproc, len(newLeftoversChan))
+
 	return newLeftoversChan
 }
 
 func (session *clientSession) runAcknowledger() {
 	clogger := session.logger.WithField(defs.LabelPart, "session-acker")
-	decoder := msgpack.NewDecoder(session.conn)
-	pendingAckBufMap := make(map[string]base.LogChunk)
+	pendingChunksByID := make(map[string]base.LogChunk)
 	defer func() {
-		values := make([]base.LogChunk, 0, len(pendingAckBufMap))
-		for _, v := range pendingAckBufMap {
+		values := make([]base.LogChunk, 0, len(pendingChunksByID))
+		for _, v := range pendingChunksByID {
 			values = append(values, v)
 		}
 		session.unacked.Store(&values)
 		session.ackerQuit.Signal()
 	}()
 	for {
-		// wait for a buffer for ACK
+		var nextChunk base.LogChunk
+
+		// wait for next sent chunk from clientSession.run
 		{
 			chunk, ok := <-session.ackerChan
 			if !ok {
 				clogger.Infof("stop requested")
 				return
 			}
-			pendingAckBufMap[chunk.ID] = chunk
+			pendingChunksByID[chunk.ID] = chunk
+			nextChunk = chunk
 			clogger.Debugf("received pending chunk %s", chunk.ID)
 		}
-		// wait for ACK
-		ack := forwardprotocol.Ack{}
-		if err := session.conn.SetReadDeadline(time.Now().Add(defs.ForwarderBatchAckTimeout)); err != nil {
-			clogger.Warnf("failed to set read timeout: %s", err.Error())
-			session.metrics.IncrementNetworkErrors()
-			session.conn.Close() // close both directions in case client=>server is still working
-			return
-		}
-		if err := decoder.Decode(&ack); err != nil {
-			clogger.Warnf("failed to read ACK: %s", err.Error())
-			session.metrics.IncrementNetworkErrors()
-			session.conn.Close() // close both directions in case client=>server is still working
-			return
-		}
-		// check the ACK returned from server, not necessarily for the buffer received above
-		if chunk, ok := pendingAckBufMap[ack.Ack]; ok {
-			clogger.Debugf("received ACK %s", ack.Ack)
-			delete(pendingAckBufMap, ack.Ack)
-			session.onChunkAcked(chunk)
-			session.metrics.OnAcknowledged(chunk)
-		} else {
-			clogger.Errorf("received unknown ACK %s", ack.Ack)
-		}
-	}
-}
 
-func buildInternalPingMessage() []byte {
-	var packet bytes.Buffer
-	packet.Grow(100)
-	encoder := msgpack.NewEncoder(&packet)
-	// root array
-	if err := encoder.EncodeArrayLen(3); err != nil {
-		logger.Panic(err)
+		// wait for acknowledgement from upstream
+		ackedChunkID, ackErr := session.conn.ReadChunkAck(time.Now().Add(defs.ForwarderBatchAckTimeout))
+		if ackErr != nil {
+			clogger.Warnf("failed to read ACK: %s", ackErr.Error())
+			session.metrics.OnError(ackErr)
+			session.conn.Close() // close both directions in case client=>server is still working
+			return
+		}
+
+		clogger.Debugf("received ACK to chunk ID=%s", nextChunk.ID)
+
+		// check the ID of the acknowledged chunk, not necessarily the same chunk received from clientSession.run
+		if ackedChunkID != "" {
+			if chunk, exists := pendingChunksByID[ackedChunkID]; exists {
+				nextChunk = chunk
+			} else {
+				clogger.Errorf("received ACK to unknown chunk ID=%s", ackedChunkID)
+				session.metrics.OnError(nil)
+				continue
+			}
+		}
+
+		// clean up
+		delete(pendingChunksByID, nextChunk.ID)
+		session.onChunkAcked(nextChunk)
+		session.metrics.OnAcknowledged(nextChunk)
 	}
-	{
-		// root[0]: tag
-		if err := encoder.EncodeString("internal.ping"); err != nil {
-			logger.Panic(err)
-		}
-		// root[1]: array of log records in batch
-		if err := encoder.EncodeArrayLen(0); err != nil {
-			logger.Panic(err)
-		}
-		// root[2]: options
-		if err := encoder.Encode(forwardprotocol.TransportOption{
-			Size:       0,
-			Chunk:      "",
-			Compressed: "",
-		}); err != nil {
-			logger.Panic(err)
-		}
-	}
-	return packet.Bytes()
 }
 
 func channelToBuffer(bufChan chan base.LogChunk) []base.LogChunk {
@@ -304,17 +267,4 @@ func bufferToChannel(buffers []base.LogChunk) chan base.LogChunk {
 		lastChunkID = b.ID
 	}
 	return channel
-}
-
-func writeAll(conn io.Writer, data []byte) error {
-	for {
-		n, err := conn.Write(data)
-		if err != nil {
-			return err
-		}
-		data = data[n:]
-		if len(data) == 0 {
-			return nil
-		}
-	}
 }
