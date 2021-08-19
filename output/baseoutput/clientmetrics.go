@@ -3,6 +3,7 @@ package baseoutput
 import (
 	"github.com/relex/gotils/promexporter"
 	"github.com/relex/slog-agent/base"
+	"github.com/relex/slog-agent/util"
 )
 
 // clientMetrics defines metrics shared by most of network-based output clients
@@ -33,12 +34,12 @@ func newClientMetrics(metricFactory *base.MetricFactory) clientMetrics {
 	}
 }
 
-func (metrics *clientMetrics) IncrementNetworkErrors() {
-	metrics.networkErrorsTotal.Inc()
-}
-
-func (metrics *clientMetrics) IncrementNonNetworkErrors() {
-	metrics.nonNetworkErrorsTotal.Inc()
+func (metrics *clientMetrics) OnError(err error) {
+	if err != nil && util.IsNetworkError(err) {
+		metrics.networkErrorsTotal.Inc()
+	} else {
+		metrics.nonNetworkErrorsTotal.Inc()
+	}
 }
 
 func (metrics *clientMetrics) OnForwarding(chunk base.LogChunk) {

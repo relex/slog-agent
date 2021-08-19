@@ -5,7 +5,6 @@ import (
 	"github.com/relex/gotils/logger"
 	"github.com/relex/slog-agent/base"
 	"github.com/relex/slog-agent/defs"
-	"github.com/relex/slog-agent/util"
 )
 
 // ClientWorker is a common client implementing ChunkConsumer
@@ -83,11 +82,7 @@ func (client *ClientWorker) runConnection(leftovers chan base.LogChunk) (chan ba
 	conn, err := client.openConn()
 	if err != nil {
 		client.logger.Warnf("failed to open connection: %s", err.Error())
-		if util.IsNetworkError(err) {
-			client.metrics.IncrementNetworkErrors()
-		} else {
-			client.metrics.IncrementNonNetworkErrors()
-		}
+		client.metrics.OnError(err)
 		return leftovers, true
 	}
 

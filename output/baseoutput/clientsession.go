@@ -119,7 +119,7 @@ func (session *clientSession) sendChunk(chunk base.LogChunk) (bool, error) {
 	timeout := defs.ForwarderBatchSendTimeoutBase + time.Duration(len(chunk.Data)/defs.ForwarderBatchSendMinimumSpeed)*time.Second
 	if err := session.conn.SendChunk(chunk, time.Now().Add(timeout)); err != nil {
 		session.logger.Warnf("failed to send: %s, %s", chunk.String(), err.Error())
-		session.metrics.IncrementNetworkErrors()
+		session.metrics.OnError(err)
 		return true, err
 	}
 	select {
@@ -143,16 +143,17 @@ func (session *clientSession) sendPing() error {
 	session.logger.Debugf("forward ping")
 	if err := session.conn.SendPing(time.Now().Add(defs.ForwarderBatchSendTimeoutBase)); err != nil {
 		session.logger.Warnf("failed to ping: %s", err.Error())
-		session.metrics.IncrementNetworkErrors()
+		session.metrics.OnError(err)
 		return err
 	}
 	return nil
 }
 
 func (session *clientSession) collectLeftovers() chan base.LogChunk {
-	// gather unhandled previous leftovers
+	// gather previous leftovers
 	close(session.leftovers)
 	fromPrevious := channelToBuffer(session.leftovers)
+
 	// stop acknowledger and gather unread chunks from its input channel
 	session.logger.Info("stopping acknowledger")
 	close(session.ackerChan)
@@ -160,38 +161,43 @@ func (session *clientSession) collectLeftovers() chan base.LogChunk {
 		session.logger.Error("BUG: timeout waiting for acknowledger to stop")
 	}
 	fromAckerChannel := channelToBuffer(session.ackerChan)
-	// gather un-ACK'ed chunks set by runAcknowledger (pendingAckBufMap)
-	var fromAckerUnacked []base.LogChunk
-	if unackedPtr := session.unacked.Load().(*[]base.LogChunk); unackedPtr != nil {
-		fromAckerUnacked = *unackedPtr
+
+	// gather pendings chunks left in runAcknowledger's pendingAckBufMap
+	var fromAckerPending []base.LogChunk
+	if pendingListPtr := session.unacked.Load().(*[]base.LogChunk); pendingListPtr != nil {
+		fromAckerPending = *pendingListPtr
 	} else {
 		session.logger.Error("BUG: failed to get un-ACK'ed chunks from acknowledger")
 	}
+
 	// merge
-	newLeftovers := make([]base.LogChunk, 0, len(fromPrevious)+len(fromAckerChannel)+len(fromAckerUnacked)+1)
+	newLeftovers := make([]base.LogChunk, 0, len(fromPrevious)+len(fromAckerChannel)+len(fromAckerPending)+1)
 	newLeftovers = append(newLeftovers, fromPrevious...)
 	newLeftovers = append(newLeftovers, fromAckerChannel...)
-	newLeftovers = append(newLeftovers, fromAckerUnacked...)
-	// last in sending
+	newLeftovers = append(newLeftovers, fromAckerPending...)
+
+	// add the lastChunk in the middle of processing by clientSession.run
 	inproc := 0
 	if session.lastChunk != nil {
 		newLeftovers = append(newLeftovers, *session.lastChunk)
 		inproc++
 	}
-	session.metrics.OnSessionEnded(len(fromPrevious), len(fromAckerChannel)+len(fromAckerUnacked), len(newLeftovers))
+	session.metrics.OnSessionEnded(len(fromPrevious), len(fromAckerChannel)+len(fromAckerPending), len(newLeftovers))
+
 	// remove duplicates
 	newLeftoversChan := bufferToChannel(newLeftovers)
 	session.logger.Infof("collected leftovers: prev(%d) + chan(%d) + unack(%d) + inproc(%d) = unique(%d)",
-		len(fromPrevious), len(fromAckerChannel), len(fromAckerUnacked), inproc, len(newLeftoversChan))
+		len(fromPrevious), len(fromAckerChannel), len(fromAckerPending), inproc, len(newLeftoversChan))
+
 	return newLeftoversChan
 }
 
 func (session *clientSession) runAcknowledger() {
 	clogger := session.logger.WithField(defs.LabelPart, "session-acker")
-	pendingAckBufMap := make(map[string]base.LogChunk)
+	pendingChunksByID := make(map[string]base.LogChunk)
 	defer func() {
-		values := make([]base.LogChunk, 0, len(pendingAckBufMap))
-		for _, v := range pendingAckBufMap {
+		values := make([]base.LogChunk, 0, len(pendingChunksByID))
+		for _, v := range pendingChunksByID {
 			values = append(values, v)
 		}
 		session.unacked.Store(&values)
@@ -200,41 +206,42 @@ func (session *clientSession) runAcknowledger() {
 	for {
 		var nextChunk base.LogChunk
 
-		// wait for a buffer for ACK
+		// wait for next sent chunk from clientSession.run
 		{
 			chunk, ok := <-session.ackerChan
 			if !ok {
 				clogger.Infof("stop requested")
 				return
 			}
-			pendingAckBufMap[chunk.ID] = chunk
+			pendingChunksByID[chunk.ID] = chunk
 			nextChunk = chunk
 			clogger.Debugf("received pending chunk %s", chunk.ID)
 		}
 
-		// wait for ACK from upstream
+		// wait for acknowledgement from upstream
 		ackedChunkID, ackErr := session.conn.ReadChunkAck(time.Now().Add(defs.ForwarderBatchAckTimeout))
 		if ackErr != nil {
 			clogger.Warnf("failed to read ACK: %s", ackErr.Error())
-			session.metrics.IncrementNetworkErrors()
+			session.metrics.OnError(ackErr)
 			session.conn.Close() // close both directions in case client=>server is still working
 			return
 		}
 
 		clogger.Debugf("received ACK to chunk ID=%s", nextChunk.ID)
 
-		// check the ACK returned from server, not necessarily for the buffer received above
+		// check the ID of the acknowledged chunk, not necessarily the same chunk received from clientSession.run
 		if ackedChunkID != "" {
-			if chunk, exists := pendingAckBufMap[ackedChunkID]; exists {
+			if chunk, exists := pendingChunksByID[ackedChunkID]; exists {
 				nextChunk = chunk
 			} else {
 				clogger.Errorf("received ACK to unknown chunk ID=%s", ackedChunkID)
+				session.metrics.OnError(nil)
 				continue
 			}
 		}
 
 		// clean up
-		delete(pendingAckBufMap, nextChunk.ID)
+		delete(pendingChunksByID, nextChunk.ID)
 		session.onChunkAcked(nextChunk)
 		session.metrics.OnAcknowledged(nextChunk)
 	}
