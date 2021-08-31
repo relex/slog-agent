@@ -7,6 +7,8 @@ import (
 
 	"github.com/relex/gotils/channels"
 	"github.com/relex/gotils/logger"
+	"github.com/relex/gotils/promexporter/promext"
+	"github.com/relex/gotils/promexporter/promreg"
 	"github.com/relex/slog-agent/base"
 	"github.com/relex/slog-agent/defs"
 	"github.com/relex/slog-agent/input/baseinput"
@@ -38,10 +40,10 @@ extractions:
 
 	stopInput := channels.NewSignalAwaitable()
 	logAggregator, outCh := baseinput.NewLogBufferAggregator(logger.Root())
-	inputMetricFactory := base.NewMetricFactory("test_", nil, nil)
+	mfactory := promreg.NewMetricFactory("test_", nil, nil)
 
 	// create and launch input (the server)
-	input, inputErr := config.NewInput(logger.Root(), allocator, schema, logAggregator, inputMetricFactory, stopInput)
+	input, inputErr := config.NewInput(logger.Root(), allocator, schema, logAggregator, mfactory, stopInput)
 	if !assert.Nil(t, inputErr) {
 		return
 	}
@@ -64,15 +66,14 @@ extractions:
 	stopInput.Signal()
 	assert.True(t, input.Stopped().Wait(defs.TestReadTimeout))
 	assert.Nil(t, conn.Close())
-	if dump, err := inputMetricFactory.DumpMetrics(true); assert.Nil(t, err) {
-		assert.Equal(t, `test_input_dropped_record_bytes_total{protocol="syslog"} 0
+
+	assert.Equal(t, `test_input_dropped_record_bytes_total{protocol="syslog"} 0
 test_input_dropped_records_total{protocol="syslog"} 0
 test_input_labelled_record_bytes_total{label="overflow",protocol="syslog"} 0
 test_input_labelled_records_total{label="overflow",protocol="syslog"} 0
 test_input_passed_record_bytes_total{protocol="syslog"} 71
 test_input_passed_records_total{protocol="syslog"} 1
-`, dump)
-	}
+`, promext.DumpMetrics("", true, false, mfactory))
 }
 
 func readForTest(ch <-chan []*base.LogRecord) []*base.LogRecord {

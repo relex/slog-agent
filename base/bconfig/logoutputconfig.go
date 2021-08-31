@@ -4,6 +4,7 @@ import (
 	"io"
 
 	"github.com/relex/gotils/logger"
+	"github.com/relex/gotils/promexporter/promreg"
 	"github.com/relex/slog-agent/base"
 )
 
@@ -27,7 +28,7 @@ type LogOutputConfig interface {
 
 	NewChunkMaker(parentLogger logger.Logger, tag string) base.LogChunkMaker
 
-	NewForwarder(parentLogger logger.Logger, args base.ChunkConsumerArgs, metricFactory *base.MetricFactory) base.ChunkConsumer
+	NewForwarder(parentLogger logger.Logger, args base.ChunkConsumerArgs, metricCreator promreg.MetricCreator) base.ChunkConsumer
 
 	VerifyConfig(schema base.LogSchema) error
 }

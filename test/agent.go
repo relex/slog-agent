@@ -2,6 +2,7 @@ package test
 
 import (
 	"github.com/relex/gotils/logger"
+	"github.com/relex/gotils/promexporter/promreg"
 	"github.com/relex/slog-agent/base"
 	"github.com/relex/slog-agent/orchestrate/obykeyset"
 	"github.com/relex/slog-agent/orchestrate/osingleton"
@@ -16,21 +17,26 @@ type agent struct {
 	runRecovery    bool
 }
 
+// startAgent starts the integration-testing log agent which is different from production mode in several ways:
+//
+// 1. output chunks may be intercepted before real/network forwarder. If intercepted, the bufferer flushes everything before shutdown instead of saving them for recovery.
+//
+// 2. orchestration keys and tags from config may be overridden
 func startAgent(loader *run.Loader, newChunkSaver base.ChunkConsumerConstructor, keysOverride []string, tagOverride string) *agent {
 	if len(loader.Inputs) != 1 {
 		logger.Warnf("only the first input is used for testing - there are %d", len(loader.Inputs))
 	}
-	switch ocfg := loader.Orchestration.OrchestratorConfig.(type) {
+	switch orcConf := loader.Orchestration.OrchestratorConfig.(type) {
 	case *obykeyset.Config:
 		if keysOverride != nil {
-			newMetricKeys := make([]string, 0, len(ocfg.Keys)+len(loader.MetricKeys))
+			newMetricKeys := make([]string, 0, len(orcConf.Keys)+len(loader.MetricKeys))
 			// move original orchestration Keys to config.MetricKeys
-			for _, ok := range ocfg.Keys {
+			for _, ok := range orcConf.Keys {
 				if util.IndexOfString(keysOverride, ok) == -1 {
 					newMetricKeys = append(newMetricKeys, ok)
 				}
 			}
-			ocfg.Keys = keysOverride
+			orcConf.Keys = keysOverride
 			// remove dup keys from loader.MetricKeys
 			for _, mk := range loader.MetricKeys {
 				if util.IndexOfString(keysOverride, mk) == -1 {
@@ -41,12 +47,14 @@ func startAgent(loader *run.Loader, newChunkSaver base.ChunkConsumerConstructor,
 			loader.PipelineArgs.MetricKeyLocators = loader.PipelineArgs.Schema.MustCreateFieldLocators(newMetricKeys)
 		}
 		if tagOverride != "" {
-			ocfg.TagTemplate = tagOverride
+			orcConf.TagTemplate = tagOverride
 		}
 	case *osingleton.Config:
 		if tagOverride != "" {
-			ocfg.Tag = tagOverride
+			orcConf.Tag = tagOverride
 		}
+	default:
+		logger.Panic("unsupported orchestrator type: ", orcConf)
 	}
 
 	// flush everything at the end if the output is not a real forwarder client
@@ -73,16 +81,8 @@ func (a *agent) Address() string {
 	return a.inputAddresses[0]
 }
 
-func (a *agent) DumpMetrics() string {
-	dump, err := a.loader.MetricFactory.DumpMetrics(false)
-	if err != nil {
-		logger.Panic(err)
-	}
-	return dump
-}
-
-func (a *agent) MetricFactory() *base.MetricFactory {
-	return a.loader.MetricFactory
+func (a *agent) GetMetricQuerier() promreg.MetricQuerier {
+	return a.loader.GetMetricQuerier()
 }
 
 func (a *agent) StopAndWait() {

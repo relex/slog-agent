@@ -17,8 +17,9 @@ type _mutex struct {
 }
 
 // TryLockMutex attempts to lock mutex or fail
+//
+// FIXME: this may be implemented in Go 1.18, see https://github.com/golang/go/issues/45435
 func TryLockMutex(mutex *sync.Mutex) bool {
 	m := (*_mutex)(unsafe.Pointer(mutex))
 	return atomic.CompareAndSwapInt32(&m.state, 0, mutexLocked)
-	// FIXME: cannot call race.Acquire
 }

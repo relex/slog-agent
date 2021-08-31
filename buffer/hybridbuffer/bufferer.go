@@ -5,7 +5,8 @@ import (
 
 	"github.com/relex/gotils/channels"
 	"github.com/relex/gotils/logger"
-	"github.com/relex/gotils/promexporter"
+	"github.com/relex/gotils/promexporter/promext"
+	"github.com/relex/gotils/promexporter/promreg"
 	"github.com/relex/slog-agent/base"
 	"github.com/relex/slog-agent/defs"
 	"github.com/relex/slog-agent/util"
@@ -24,33 +25,33 @@ type bufferer struct {
 }
 
 type bufferMetrics struct {
-	queuedChunksTransient  promexporter.RWGauge
-	queuedChunksPersistent promexporter.RWGauge
+	queuedChunksTransient  promext.RWGauge
+	queuedChunksPersistent promext.RWGauge
 }
 
 // newBufferer creates a HybridBufferer
 // "sendAllAtEnd": sends everything at shutdown and waits for all chunks to be confirmed by ChunkConsumerArgs.OnChunkConsumed
 //                 true for testing only. Same functionality is activated if queue directory cannot be accessed.
 func newBufferer(parentLogger logger.Logger, rootPath string, bufferID string, matchChunkID func(string) bool,
-	parentMetricFactory *base.MetricFactory, storageSpaceLimit int64, sendAllAtEnd bool) base.ChunkBufferer {
+	parentMetricCreator promreg.MetricCreator, storageSpaceLimit int64, sendAllAtEnd bool) base.ChunkBufferer {
 
 	bufLogger := parentLogger.WithField(defs.LabelComponent, "HybridBufferer")
-	metricFactory := makeBufferMetricsFactory(parentMetricFactory)
+	metricCreator := makeBufferMetricCreator(parentMetricCreator)
 	queueDirPath := makeBufferQueueDir(bufLogger, rootPath, bufferID)
 
-	chunkOp := newChunkOperator(bufLogger, queueDirPath, matchChunkID, metricFactory, storageSpaceLimit)
+	chunkOp := newChunkOperator(bufLogger, queueDirPath, matchChunkID, metricCreator, storageSpaceLimit)
 	if chunkOp.HasDir() {
 		bufLogger.Infof("use chunk saving dir: %s", queueDirPath)
 	} else {
 		bufLogger.Error("disable chunk saving due to IO error")
 	}
 
-	chunkMan := newChunkManager(bufLogger, chunkOp, metricFactory, sendAllAtEnd)
+	chunkMan := newChunkManager(bufLogger, chunkOp, metricCreator, sendAllAtEnd)
 
 	inputChannel := make(chan base.LogChunk, defs.BufferMaxNumChunksInQueue)
 	inputClosed := channels.NewSignalAwaitable()
 
-	queuedChunks := metricFactory.AddOrGetGaugeVec("queued_chunks", "Numbers of currently queued chunks", []string{"state"}, nil)
+	queuedChunks := metricCreator.AddOrGetGaugeVec("queued_chunks", "Numbers of currently queued chunks", []string{"state"}, nil)
 	metrics := bufferMetrics{
 		queuedChunksTransient:  queuedChunks.WithLabelValues("transient"),
 		queuedChunksPersistent: queuedChunks.WithLabelValues("persistent"),

@@ -9,6 +9,7 @@ import (
 
 	"github.com/relex/fluentlib/protocol/forwardprotocol"
 	"github.com/relex/gotils/logger"
+	"github.com/relex/gotils/promexporter/promreg"
 	"github.com/relex/slog-agent/base"
 	"github.com/relex/slog-agent/base/bconfig"
 	"github.com/relex/slog-agent/base/bsupport"
@@ -58,8 +59,8 @@ func (cfg *Config) NewChunkMaker(parentLogger logger.Logger, tag string) base.Lo
 }
 
 // NewForwarder creates the forwarding client
-func (cfg *Config) NewForwarder(parentLogger logger.Logger, args base.ChunkConsumerArgs, metricFactory *base.MetricFactory) base.ChunkConsumer {
-	return NewClientWorker(parentLogger, args, cfg.Upstream, metricFactory)
+func (cfg *Config) NewForwarder(parentLogger logger.Logger, args base.ChunkConsumerArgs, metricCreator promreg.MetricCreator) base.ChunkConsumer {
+	return NewClientWorker(parentLogger, args, cfg.Upstream, metricCreator)
 }
 
 // VerifyConfig verifies the configuration

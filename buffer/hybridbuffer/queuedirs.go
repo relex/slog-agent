@@ -7,7 +7,7 @@ import (
 
 	"github.com/pkg/xattr"
 	"github.com/relex/gotils/logger"
-	"github.com/relex/slog-agent/base"
+	"github.com/relex/gotils/promexporter/promreg"
 	"github.com/relex/slog-agent/util"
 	"golang.org/x/sys/unix"
 )
@@ -38,9 +38,9 @@ func makeBufferQueueDir(parentLogger logger.Logger, rootPath string, bufferID st
 }
 
 func listBufferQueueIDs(parentLogger logger.Logger, rootPath string, matchChunkID func(string) bool,
-	parentMetricFactory *base.MetricFactory) []string {
+	parentMetricCreator promreg.MetricCreator) []string {
 
-	metricFactory := makeBufferMetricsFactory(parentMetricFactory)
+	metricCreator := makeBufferMetricCreator(parentMetricCreator)
 
 	parentLogger.Infof("scan root dir: %s", rootPath)
 	rootDir, oerr := os.Open(rootPath)
@@ -87,7 +87,7 @@ func listBufferQueueIDs(parentLogger logger.Logger, rootPath string, matchChunkI
 		id := util.StringFromBytes(idBytes)
 
 		// count chunks in the dir
-		op := newChunkOperator(parentLogger, path, matchChunkID, metricFactory, 0)
+		op := newChunkOperator(parentLogger, path, matchChunkID, metricCreator, 0)
 		if numChunks := op.CountExistingChunks(); numChunks > 0 {
 			validBufferIDList = append(validBufferIDList, id)
 			parentLogger.Infof("add existing buffer name='%s' id='%s' count=%d", name, id, numChunks)

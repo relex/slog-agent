@@ -1,6 +1,9 @@
 package base
 
-import "github.com/relex/gotils/promexporter"
+import (
+	"github.com/relex/gotils/promexporter/promext"
+	"github.com/relex/gotils/promexporter/promreg"
+)
 
 // LogInputCounter tracks metrics for incoming logs
 //
@@ -16,25 +19,25 @@ type LogInputCounter struct {
 
 // valueCounter provides a counter metric
 type valueCounterProvider struct {
-	metric         promexporter.RWCounter // metric for accumulated count of something
-	unwrittenValue uint64                 // accumulated count of something not yet written to Prometheus metrics
+	metric         promext.RWCounter // metric for accumulated count of something
+	unwrittenValue uint64            // accumulated count of something not yet written to Prometheus metrics
 }
 
 // NewLogInputCounter creates a LogInputCounter
-func NewLogInputCounter(factory *MetricFactory) *LogInputCounter {
+func NewLogInputCounter(metricCreator promreg.MetricCreator) *LogInputCounter {
 	return &LogInputCounter{
-		logCustomCounterHost: *newLogCustomCounterHost(factory),
+		logCustomCounterHost: *newLogCustomCounterHost(metricCreator),
 		passedRecordsCountTotal: valueCounterProvider{
-			factory.AddOrGetCounter("passed_records_total", "Numbers of passed log records", nil, nil), 0,
+			metricCreator.AddOrGetCounter("passed_records_total", "Numbers of passed log records", nil, nil), 0,
 		},
 		passedRecordsLengthTotal: valueCounterProvider{
-			factory.AddOrGetCounter("passed_record_bytes_total", "Total length in bytes of passed log records", nil, nil), 0,
+			metricCreator.AddOrGetCounter("passed_record_bytes_total", "Total length in bytes of passed log records", nil, nil), 0,
 		},
 		droppedRecordsCountTotal: valueCounterProvider{
-			factory.AddOrGetCounter("dropped_records_total", "Numbers of dropped log records", nil, nil), 0,
+			metricCreator.AddOrGetCounter("dropped_records_total", "Numbers of dropped log records", nil, nil), 0,
 		},
 		droppedRecordsLengthTotal: valueCounterProvider{
-			factory.AddOrGetCounter("dropped_record_bytes_total", "Total length in bytes of dropped log records", nil, nil), 0,
+			metricCreator.AddOrGetCounter("dropped_record_bytes_total", "Total length in bytes of dropped log records", nil, nil), 0,
 		},
 	}
 }

@@ -1,6 +1,7 @@
 package util
 
 import (
+	"bytes"
 	"fmt"
 	"io"
 	"os"
@@ -21,6 +22,20 @@ func GetYamlLocation(node *yaml.Node) string {
 		title = ""
 	}
 	return fmt.Sprintf("yaml line %d:%d%s", node.Line, node.Column, title)
+}
+
+// MarshalYaml marshals the given source to a YAML string
+func MarshalYaml(source interface{}) (string, error) {
+	writer := &bytes.Buffer{}
+	encoder := yaml.NewEncoder(writer)
+	encoder.SetIndent(2)
+	if err := encoder.Encode(source); err != nil {
+		return "", err
+	}
+	if err := encoder.Close(); err != nil {
+		return "", err
+	}
+	return writer.String(), nil
 }
 
 // NewYamlError creates a new error with location information of YAML node

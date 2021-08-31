@@ -1,38 +1,39 @@
 package baseoutput
 
 import (
-	"github.com/relex/gotils/promexporter"
+	"github.com/relex/gotils/promexporter/promext"
+	"github.com/relex/gotils/promexporter/promreg"
 	"github.com/relex/slog-agent/base"
 	"github.com/relex/slog-agent/util"
 )
 
 // clientMetrics defines metrics shared by most of network-based output clients
 type clientMetrics struct {
-	queuedChunksLeftover    promexporter.RWGauge // Current numbers of chunks in the current leftovers channel
-	queuedChunksPendingAck  promexporter.RWGauge // Current numbers of chunks waiting for ACK, including read and unread chunks by acknowledger
-	networkErrorsTotal      promexporter.RWCounter
-	nonNetworkErrorsTotal   promexporter.RWCounter
-	openedSessionsTotal     promexporter.RWCounter
-	forwardAttemptsTotal    promexporter.RWCounter
-	forwardedCountTotal     promexporter.RWCounter
-	forwardedLengthTotal    promexporter.RWCounter
-	acknowledgedCountTotal  promexporter.RWCounter
-	acknowledgedLengthTotal promexporter.RWCounter
+	queuedChunksLeftover    promext.RWGauge // Current numbers of chunks in the current leftovers channel
+	queuedChunksPendingAck  promext.RWGauge // Current numbers of chunks waiting for ACK, including read and unread chunks by acknowledger
+	networkErrorsTotal      promext.RWCounter
+	nonNetworkErrorsTotal   promext.RWCounter
+	openedSessionsTotal     promext.RWCounter
+	forwardAttemptsTotal    promext.RWCounter
+	forwardedCountTotal     promext.RWCounter
+	forwardedLengthTotal    promext.RWCounter
+	acknowledgedCountTotal  promext.RWCounter
+	acknowledgedLengthTotal promext.RWCounter
 }
 
-func newClientMetrics(metricFactory *base.MetricFactory) clientMetrics {
-	queuedChunks := metricFactory.AddOrGetGaugeVec("output_queued_chunks", "Numbers of currently queued chunks", []string{"type"}, nil)
+func newClientMetrics(metricCreator promreg.MetricCreator) clientMetrics {
+	queuedChunks := metricCreator.AddOrGetGaugeVec("output_queued_chunks", "Numbers of currently queued chunks", []string{"type"}, nil)
 	return clientMetrics{
 		queuedChunksLeftover:    queuedChunks.WithLabelValues("leftover"),
 		queuedChunksPendingAck:  queuedChunks.WithLabelValues("pendingAck"),
-		networkErrorsTotal:      metricFactory.AddOrGetCounter("output_network_errors_total", "Numbers of network errors", nil, nil),
-		nonNetworkErrorsTotal:   metricFactory.AddOrGetCounter("output_nonnetwork_errors_total", "Numbers of non-network errors (auth, unexpected response, etc) from upstream", nil, nil),
-		openedSessionsTotal:     metricFactory.AddOrGetCounter("output_opened_sessions_total", "Numbers of opened sessions", nil, nil),
-		forwardAttemptsTotal:    metricFactory.AddOrGetCounter("output_forward_attempts_total", "Numbers of chunk forwarding attempts", nil, nil),
-		forwardedCountTotal:     metricFactory.AddOrGetCounter("output_forwarded_chunks_total", "Numbers of forwarded chunks", nil, nil),
-		forwardedLengthTotal:    metricFactory.AddOrGetCounter("output_forwarded_chunk_bytes_total", "Total length in bytes of forwarded chunks", nil, nil),
-		acknowledgedCountTotal:  metricFactory.AddOrGetCounter("output_acknowledged_chunks_total", "Numbers of acknowledged chunks", nil, nil),
-		acknowledgedLengthTotal: metricFactory.AddOrGetCounter("output_acknowledged_chunk_bytes_total", "Total length in bytes of acknowledged chunks", nil, nil),
+		networkErrorsTotal:      metricCreator.AddOrGetCounter("output_network_errors_total", "Numbers of network errors", nil, nil),
+		nonNetworkErrorsTotal:   metricCreator.AddOrGetCounter("output_nonnetwork_errors_total", "Numbers of non-network errors (auth, unexpected response, etc) from upstream", nil, nil),
+		openedSessionsTotal:     metricCreator.AddOrGetCounter("output_opened_sessions_total", "Numbers of opened sessions", nil, nil),
+		forwardAttemptsTotal:    metricCreator.AddOrGetCounter("output_forward_attempts_total", "Numbers of chunk forwarding attempts", nil, nil),
+		forwardedCountTotal:     metricCreator.AddOrGetCounter("output_forwarded_chunks_total", "Numbers of forwarded chunks", nil, nil),
+		forwardedLengthTotal:    metricCreator.AddOrGetCounter("output_forwarded_chunk_bytes_total", "Total length in bytes of forwarded chunks", nil, nil),
+		acknowledgedCountTotal:  metricCreator.AddOrGetCounter("output_acknowledged_chunks_total", "Numbers of acknowledged chunks", nil, nil),
+		acknowledgedLengthTotal: metricCreator.AddOrGetCounter("output_acknowledged_chunk_bytes_total", "Total length in bytes of acknowledged chunks", nil, nil),
 	}
 }
 

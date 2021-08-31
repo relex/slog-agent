@@ -17,9 +17,25 @@ func decodeAndDumpRecordsAsJSON(chunk base.LogChunk, separator []byte, indented 
 	if merr := msgpack.NewDecoder(reader).Decode(&message); merr != nil {
 		return base.LogChunkInfo{}, fmt.Errorf("failed to decode chunk: %w", merr)
 	}
+
 	info := base.LogChunkInfo{
 		Tag:        message.Tag,
 		NumRecords: len(message.Entries),
 	}
-	return info, dump.PrintFromMessageToJSON(message, separator, indented, writer)
+
+	for i, log := range message.Entries {
+		if i > 0 {
+			if _, err := writer.Write(separator); err != nil {
+				return info, fmt.Errorf("failed to write separator: %w", err)
+			}
+		}
+		jbin, jerr := dump.FormatEventInJSON(log, message.Tag, indented)
+		if jerr != nil {
+			return info, fmt.Errorf("failed to format log in JSON: %w", jerr)
+		}
+		if _, err := writer.Write(jbin); err != nil {
+			return info, fmt.Errorf("failed to write log: %w", err)
+		}
+	}
+	return info, nil
 }

@@ -20,6 +20,10 @@ type ClientNumber uint
 const MaxClientNumber ClientNumber = 262144
 
 // MultiSinkMessageReceiver receives raw log messages from a multi-source input, e.g. a TCP listener with different incoming connections
+//
+// For an ordinary TCP input, there is a single MultiSinkMessageReceiver, and one MessageReceiverSink for each connection
+//
+// The only production implementation is LogParsingReceiver
 type MultiSinkMessageReceiver interface {
 
 	// NewSink creates a sink to receive raw messages from the input source identified by the given id or client number

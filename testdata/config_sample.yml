@@ -15,6 +15,7 @@ anchors:
 #   - Fields must be declared in schema/fields even if they only exist temporarily during transformations
 #   - A field is empty by default. There is no difference between empty string or null/undefined
 #   - A field of empty value is always skipped from final output
+#   - New fields may be appended for config reload (SIGHUP), but never removed
 #
 # Required fields for syslog input:
 #   - facility: syslog facility name, e.g. local4, kern, ..
@@ -29,8 +30,21 @@ anchors:
 #
 # The reason for declaration is because a log record of fields is internally a Go array/slice
 # If runtime reconfiguration is to be supported in future, it will require new fields to be appended at the end
+#
+# maxFields sets the max count of fields, which may be changed during config reloading but the max must stay constant
 schema:
   fields: [facility, level, time, host, app, pid, source, extradata, log, class, task, vhost, pnum]
+  maxFields: 30
+
+
+########################################################################################################################
+# Reload restrictions on SIGHUP, as opposed to full restart in which the previous config is ignored completely:
+#
+# - No change in inputs including extractions
+# - No change in orchestration type and keys (metric keys may be changed)
+# - The maximum number of allowed fields for reload is defined by schema/maxFields, which cannot be changed itself
+# - Any fields touched by input, extractions or orchestration keys MUST not be moved or renamed.
+# - Any failure would result in an error logged while slog-agent continues to run with previous config
 
 
 ########################################################################################################################

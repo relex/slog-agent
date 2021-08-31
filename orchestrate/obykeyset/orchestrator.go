@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/relex/gotils/logger"
+	"github.com/relex/gotils/promexporter/promreg"
 	"github.com/relex/slog-agent/base"
 	"github.com/relex/slog-agent/defs"
 	"github.com/relex/slog-agent/orchestrate/obase"
@@ -19,7 +20,7 @@ type byKeySetOrchestrator struct {
 	workerMap      *globalPipelineChannelMap // append-only global map of merged keys => worker channel
 	keyLocators    []base.LogFieldLocator
 	tagBuilder     *obase.TagBuilder // builder to construct tag from keys, used when protected by globalPipelineChannelMap's mutex
-	metricFactory  *base.MetricFactory
+	metricCreator  promreg.MetricCreator
 	metricKeyNames []string
 	launchWorkers  base.PipelineWorkersLauncher // start workers for new pipeline (one per key-set), invoked within globalPipelineChannelMap's mutex
 }
@@ -35,7 +36,7 @@ type byKeySetOrchestratorSink struct {
 
 // NewOrchestrator creates an Orchestrator to distribute logs to different pipelines by unique combinations of key labels (key set)
 func NewOrchestrator(parentLogger logger.Logger, schema base.LogSchema, keyFields []string, tagTemplate string,
-	metricFactory *base.MetricFactory, launchWorkers base.PipelineWorkersLauncher, existingPipelineIDs []string) base.Orchestrator {
+	metricCreator promreg.MetricCreator, launchWorkers base.PipelineWorkersLauncher, existingPipelineIDs []string) base.Orchestrator {
 	ologger := parentLogger.WithField(defs.LabelComponent, "ByKeySetOrchestrator")
 	keyLocators, lerr := schema.CreateFieldLocators(keyFields)
 	if lerr != nil {
@@ -54,7 +55,7 @@ func NewOrchestrator(parentLogger logger.Logger, schema base.LogSchema, keyField
 		workerMap:      nil,
 		keyLocators:    keyLocators,
 		tagBuilder:     tagBuilder,
-		metricFactory:  metricFactory,
+		metricCreator:  metricCreator,
 		metricKeyNames: metricKeyNames,
 		launchWorkers:  launchWorkers,
 	}
@@ -64,6 +65,7 @@ func NewOrchestrator(parentLogger logger.Logger, schema base.LogSchema, keyField
 		for _, pipelineID := range existingPipelineIDs {
 			keys := strings.Split(pipelineID, ",")
 			if len(keys) != len(keyFields) {
+				// FIXME: deal with new keys, shorter old keys should be okay
 				ologger.Warnf("ignore malformed existing pipeline ID: %s", pipelineID)
 				continue
 			}
@@ -97,12 +99,12 @@ func (o *byKeySetOrchestrator) newWorker(keys []string, onStopped func()) chan<-
 		defs.LabelName: workerID,
 	})
 	pipelineLogger.Infof("new pipeline tag=%s", tag)
-	pipelineMetricFactory := o.metricFactory.NewSubFactory(
+	pipelineMetricCreator := o.metricCreator.AddOrGetPrefix(
 		"process_",
 		append([]string{"orchestrator"}, o.metricKeyNames...),
 		append([]string{"byKeySet"}, keys...),
 	)
-	o.launchWorkers(pipelineLogger, tag, workerID, inputChannel, pipelineMetricFactory, onStopped)
+	o.launchWorkers(pipelineLogger, tag, workerID, inputChannel, pipelineMetricCreator, onStopped)
 	return inputChannel
 }
 

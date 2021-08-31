@@ -18,10 +18,10 @@ type LogAllocator struct {
 
 // NewLogAllocator creates LogAllocator linked to the given schema
 func NewLogAllocator(schema LogSchema) *LogAllocator {
-	numFields := len(schema.GetFieldNames())
+	maxFields := schema.GetMaxFields()
 	recordPool := &sync.Pool{}
 	recordPool.New = func() interface{} {
-		return newLogRecord(numFields)
+		return newLogRecord(maxFields)
 	}
 	return &LogAllocator{
 		recordPool:   recordPool,
@@ -29,9 +29,9 @@ func NewLogAllocator(schema LogSchema) *LogAllocator {
 	}
 }
 
-func newLogRecord(numFields int) *LogRecord {
+func newLogRecord(maxFields int) *LogRecord {
 	return &LogRecord{
-		Fields:    make(LogFields, numFields),
+		Fields:    make(LogFields, maxFields),
 		RawLength: 0,
 		Timestamp: time.Time{},
 		Unescaped: false,

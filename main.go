@@ -16,7 +16,7 @@ func main() {
 	rand.Seed(time.Now().UnixNano()) // seed rand properly for all rand.* calls
 
 	logger.Infof("version: %s", version)
-	logger.Infof("GOMAXPROCS: %d", runtime.GOMAXPROCS(0)) // FIXME: limit GOMAXPROCS on production until go 1.16: https://github.com/golang/go/issues/28808
+	logger.Infof("GOMAXPROCS: %d", runtime.GOMAXPROCS(0)) // FIXME: limit GOMAXPROCS on production until fixed: https://github.com/golang/go/issues/28808
 
 	registerInfoMetric()
 
@@ -25,7 +25,7 @@ func main() {
 
 func registerInfoMetric() {
 	opts := prometheus.GaugeOpts{}
-	opts.Name = "slog_agent_info"
+	opts.Name = "slogagent_info"
 	opts.Help = "slog-agent application information"
 	gauge := prometheus.NewGaugeVec(opts, []string{"version"})
 	gauge.WithLabelValues(version).Set(1)

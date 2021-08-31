@@ -10,6 +10,7 @@ import (
 
 	"github.com/relex/fluentlib/protocol/forwardprotocol"
 	"github.com/relex/gotils/logger"
+	"github.com/relex/gotils/promexporter/promreg"
 	"github.com/relex/slog-agent/base"
 	"github.com/relex/slog-agent/defs"
 	"github.com/relex/slog-agent/output/baseoutput"
@@ -25,13 +26,13 @@ type forwardConnection struct {
 var internalPingMessage = buildInternalPingMessage()
 
 // NewClientWorker creates ClientWorker
-func NewClientWorker(parentLogger logger.Logger, args base.ChunkConsumerArgs, config UpstreamConfig, metricFactory *base.MetricFactory) base.ChunkConsumer {
+func NewClientWorker(parentLogger logger.Logger, args base.ChunkConsumerArgs, config UpstreamConfig, metricCreator promreg.MetricCreator) base.ChunkConsumer {
 	clientLogger := parentLogger.WithField(defs.LabelComponent, "FluentdForwardClient")
 
 	return baseoutput.NewClientWorker(
 		clientLogger,
 		args,
-		metricFactory,
+		metricCreator,
 		func() (baseoutput.ClientConnection, error) {
 			return openForwardConnection(clientLogger, config)
 		},

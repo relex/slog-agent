@@ -10,10 +10,8 @@
 // reached and logs errors; at shutdown all pending chunks would be held until they're sent or timed out.
 package hybridbuffer
 
-import (
-	"github.com/relex/slog-agent/base"
-)
+import "github.com/relex/gotils/promexporter/promreg"
 
-func makeBufferMetricsFactory(parentMetricFactory *base.MetricFactory) *base.MetricFactory {
-	return parentMetricFactory.NewSubFactory("buffer_", []string{"storage"}, []string{"hybridBuffer"})
+func makeBufferMetricCreator(parentMetricCreator promreg.MetricCreator) promreg.MetricCreator {
+	return parentMetricCreator.AddOrGetPrefix("buffer_", []string{"storage"}, []string{"hybridBuffer"})
 }

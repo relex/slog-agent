@@ -1,8 +1,22 @@
 package util
 
 import (
+	"strings"
 	"unsafe"
 )
+
+// CompareStrings compares the given strings and returns <0 if s1 < s2, >0 if s1 > s2, and zero if equal
+func CompareStrings(s1 []string, s2 []string) int {
+	clen := MinInt(len(s1), len(s2))
+
+	for i := 0; i < clen; i++ {
+		if c := strings.Compare(s1[i], s2[i]); c != 0 {
+			return c
+		}
+	}
+
+	return len(s1) - len(s2)
+}
 
 // ContainsString checks whether target is inside the given list
 func ContainsString(list []string, target string) bool {

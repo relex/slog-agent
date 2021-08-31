@@ -4,66 +4,54 @@ import (
 	"bytes"
 	"fmt"
 	"io/ioutil"
-	"os"
 	"path/filepath"
 	"sync"
 	"testing"
 	"time"
 
 	"github.com/relex/gotils/logger"
+	"github.com/relex/gotils/promexporter/promext"
+	"github.com/relex/gotils/promexporter/promreg"
 	"github.com/relex/slog-agent/base"
 	"github.com/relex/slog-agent/base/bconfig"
 	"github.com/relex/slog-agent/run"
+	"github.com/relex/slog-agent/testdata"
 	"github.com/relex/slog-agent/util"
 	"github.com/stretchr/testify/assert"
 )
 
-const TestOutputGenerationArg = "gen"
-
 func TestDataGeneration(t *testing.T) {
-	if util.IndexOfString(os.Args, TestOutputGenerationArg) == -1 {
+	if !util.IsTestGenerationMode() {
 		return
 	}
 	t.Log("regenerate log outputs...")
-	mfactory := base.NewMetricFactory("testpipeline_", nil, nil)
-	inputFiles, err := filepath.Glob("../testdata/development/*-input.log")
-	if err != nil {
-		logger.Fatal(err)
-	}
-	for _, inPath := range inputFiles {
+	mfactory := promreg.NewMetricFactory("testpipeline_", nil, nil)
+	for _, inPath := range testdata.ListInputFiles(t, "*") {
 		inLines := loadInputRecords(inPath)
-		title := filepath.Base(inPath[:len(inPath)-10])
-		outConfig, process, endProcess := preparePipeline("../testdata/config_sample.yml", title, mfactory)
-		outPath := fmt.Sprintf("../testdata/development/%s-output.json", title)
+		title := testdata.GetInputTitle(t, inPath)
+		outConfig, process, endProcess := preparePipeline(testdata.GetConfigPath(), title, mfactory)
+		outPath := testdata.GetOutputFilename(t, inPath)
 		outWrite, outClose := openLogChunkConsumingFunc(outPath, outConfig)
 		runPipeline(process, endProcess, inLines, 1, outWrite)
 		outClose()
 	}
-	if dump, derr := mfactory.DumpMetrics(false); assert.Nil(t, derr) {
-		assert.Nil(t, ioutil.WriteFile("../testdata/development/all-pipeline.prom", []byte(dump), 0644))
-	}
+
+	assert.Nil(t, ioutil.WriteFile("../testdata/development/all-pipeline.prom", []byte(promext.DumpMetrics("", true, true, mfactory)), 0644))
 }
 
 func TestPipeline(t *testing.T) {
-	if util.IndexOfString(os.Args, TestOutputGenerationArg) != -1 {
+	if util.IsTestGenerationMode() {
 		return
 	}
-	mfactory := base.NewMetricFactory("testpipeline_", nil, nil)
-	inputFiles, err := filepath.Glob("../testdata/development/*-input.log")
-	if err != nil {
-		assert.Nil(t, err)
-	}
-	if len(inputFiles) == 0 {
-		assert.NotZero(t, len(inputFiles))
-	}
-	for _, inPath := range inputFiles {
+	mfactory := promreg.NewMetricFactory("testpipeline_", nil, nil)
+	for _, inPath := range testdata.ListInputFiles(t, "*") {
 		localInPath := inPath
 		title := filepath.Base(inPath[:len(inPath)-10])
 		expectedOutPath := fmt.Sprintf("../testdata/development/%s-output.json", title)
 		t.Run(title, func(tt *testing.T) {
 			expectedOutput, eOutErr := ioutil.ReadFile(expectedOutPath)
 			assert.Nil(t, eOutErr)
-			outConfig, process, endProcess := preparePipeline("../testdata/config_sample.yml", title, mfactory)
+			outConfig, process, endProcess := preparePipeline(testdata.GetConfigPath(), title, mfactory)
 			outWrite, outClose, outGet := openJSONMemWriter(outConfig)
 			runPipeline(process, endProcess, loadInputRecords(localInPath), 1, outWrite)
 			outClose()
@@ -73,19 +61,18 @@ func TestPipeline(t *testing.T) {
 	t.Run("check metrics", func(tt *testing.T) {
 		expectedMetrics, err := ioutil.ReadFile("../testdata/development/all-pipeline.prom")
 		if assert.Nil(tt, err) {
-			if dump, derr := mfactory.DumpMetrics(false); assert.Nil(tt, derr) {
-				assert.Equal(tt, string(expectedMetrics), dump)
-			}
+			assert.Equal(tt, string(expectedMetrics), promext.DumpMetrics("", true, true, mfactory))
 		}
 	})
 }
 
 func TestAgent(t *testing.T) {
-	regenOutput := util.IndexOfString(os.Args, TestOutputGenerationArg) != -1
+	regenOutput := util.IsTestGenerationMode()
 
 	// launch agent
-	loader, loaderErr := run.NewLoaderFromConfigFile("../testdata/config_sample.yml", "testagent_")
-	assert.Nil(t, loaderErr)
+	loader, confErr := run.NewLoaderFromConfigFile(testdata.GetConfigPath(), "testagent_")
+	assert.Nil(t, confErr)
+	loader.ConfigStats.Log(logger.WithField("test", t.Name()))
 
 	outputWritersByTag, newChunkSaver := prepareOutputWriters(t, loader.Output)
 	// Override tag for output splitting and keys (labelsets) for distribution: order of logs would be messed up if keys are different
@@ -130,12 +117,12 @@ func TestAgent(t *testing.T) {
 		t.Run("check metrics", func(tt *testing.T) {
 			expectedMetrics, err := ioutil.ReadFile("../testdata/development/all-agent.prom")
 			if assert.Nil(tt, err) {
-				assert.Equal(tt, string(expectedMetrics), agt.DumpMetrics())
+				assert.Equal(tt, string(expectedMetrics), promext.DumpMetricsFrom("", true, true, agt.GetMetricQuerier()))
 			}
 		})
 	} else {
 		// output JSONs are to be generated from pipeline test, not here
-		assert.Nil(t, ioutil.WriteFile("../testdata/development/all-agent.prom", []byte(agt.DumpMetrics()), 0644))
+		assert.Nil(t, ioutil.WriteFile("../testdata/development/all-agent.prom", []byte(promext.DumpMetricsFrom("", true, true, agt.GetMetricQuerier())), 0644))
 	}
 }
 

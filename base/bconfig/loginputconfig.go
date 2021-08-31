@@ -3,6 +3,7 @@ package bconfig
 import (
 	"github.com/relex/gotils/channels"
 	"github.com/relex/gotils/logger"
+	"github.com/relex/gotils/promexporter/promreg"
 	"github.com/relex/slog-agent/base"
 )
 
@@ -12,7 +13,7 @@ type LogInputConfig interface {
 	GetType() string
 
 	NewInput(parentLogger logger.Logger, allocator *base.LogAllocator, schema base.LogSchema,
-		logBufferReceiver base.MultiSinkBufferReceiver, metricFactory *base.MetricFactory,
+		logBufferReceiver base.MultiSinkBufferReceiver, metricCreator promreg.MetricCreator,
 		stopRequest channels.Awaitable) (base.LogInput, error)
 
 	NewParser(parentLogger logger.Logger, allocator *base.LogAllocator, schema base.LogSchema,

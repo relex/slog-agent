@@ -1,7 +1,8 @@
 package base
 
 import (
-	"github.com/relex/gotils/promexporter"
+	"github.com/relex/gotils/promexporter/promext"
+	"github.com/relex/gotils/promexporter/promreg"
 )
 
 // LogCustomCounterRegistry allows registration of custom record counters by label
@@ -14,24 +15,24 @@ type LogCustomCounterRegistry interface {
 // logCustomCounterHost hosts log counters by custom labels determined at runtime
 // It's used to support for example metrics of different labels added by individual log transforms
 type logCustomCounterHost struct {
-	countMetricVec  *promexporter.RWCounterVec
-	lengthMetricVec *promexporter.RWCounterVec
+	countMetricVec  *promext.RWCounterVec
+	lengthMetricVec *promext.RWCounterVec
 	counterMap      map[string]*logCustomCounter
 }
 
 // logCustomCounter represents a pair of (total log count, total log length) metrics by specific label-set
 type logCustomCounter struct {
-	countMetric     promexporter.RWCounter
-	lengthMetric    promexporter.RWCounter
+	countMetric     promext.RWCounter
+	lengthMetric    promext.RWCounter
 	unwrittenCount  uint64
 	unwrittenLength uint64
 }
 
 // newLogCustomCounterHost creates a logCustomCounterHost bound to a pair of (total log count, total log length) metric vecs
-func newLogCustomCounterHost(factory *MetricFactory) *logCustomCounterHost {
+func newLogCustomCounterHost(metricCreator promreg.MetricCreator) *logCustomCounterHost {
 	return &logCustomCounterHost{
-		countMetricVec:  factory.AddOrGetCounterVec("labelled_records_total", "Numbers of labelled log records", []string{"label"}, nil),
-		lengthMetricVec: factory.AddOrGetCounterVec("labelled_record_bytes_total", "Total length in bytes of labelled log records", []string{"label"}, nil),
+		countMetricVec:  metricCreator.AddOrGetCounterVec("labelled_records_total", "Numbers of labelled log records", []string{"label"}, nil),
+		lengthMetricVec: metricCreator.AddOrGetCounterVec("labelled_record_bytes_total", "Total length in bytes of labelled log records", []string{"label"}, nil),
 		counterMap:      make(map[string]*logCustomCounter, 100),
 	}
 }

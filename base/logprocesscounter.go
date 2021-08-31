@@ -1,7 +1,8 @@
 package base
 
 import (
-	"github.com/relex/gotils/promexporter"
+	"github.com/relex/gotils/promexporter/promext"
+	"github.com/relex/gotils/promexporter/promreg"
 	"github.com/relex/slog-agent/util"
 )
 
@@ -17,7 +18,7 @@ import (
 // LogInputCounter's own custom counter registry is ignored here, as map access per counter update would be very
 // inefficient.
 type LogProcessCounter struct {
-	factory                *MetricFactory
+	factory                promreg.MetricCreator
 	metricKeyExtractor     FieldSetExtractor                     // to extract metric keys from log records
 	metricKeyNames         []string                              // label names of metric keys (ex: key_vhost)
 	customCounterVecMap    map[string]logProcessCustomCounterVec // map of custom label => counter-vector[label], with unfilled metric key labels
@@ -31,8 +32,8 @@ type LogProcessCounter struct {
 
 type logProcessCustomCounterVec struct {
 	index           int
-	countMetricVec  *promexporter.RWCounterVec
-	lengthMetricVec *promexporter.RWCounterVec
+	countMetricVec  *promext.RWCounterVec
+	lengthMetricVec *promext.RWCounterVec
 }
 
 type logInputCounterPair struct {
@@ -41,7 +42,7 @@ type logInputCounterPair struct {
 }
 
 // NewLogProcessCounter creates a LogProcessCounter
-func NewLogProcessCounter(factory *MetricFactory, schema LogSchema, keyLocators []LogFieldLocator) *LogProcessCounter {
+func NewLogProcessCounter(factory promreg.MetricCreator, schema LogSchema, keyLocators []LogFieldLocator) *LogProcessCounter {
 	metricKeyNames := make([]string, len(keyLocators))
 	for i, loc := range keyLocators {
 		metricKeyNames[i] = "key_" + loc.Name(schema)
@@ -116,7 +117,7 @@ func (pcounter *LogProcessCounter) SelectInputCounter(record *LogRecord) *LogInp
 			}
 		}
 		pair = logInputCounterPair{
-			inputCounter:   NewLogInputCounter(pcounter.factory.NewSubFactory("", pcounter.metricKeyNames, permKeys)),
+			inputCounter:   NewLogInputCounter(pcounter.factory.AddOrGetPrefix("", pcounter.metricKeyNames, permKeys)),
 			customCounters: customCounters,
 		}
 		pcounter.inputCounterPairByKeys[permMergedKey] = pair

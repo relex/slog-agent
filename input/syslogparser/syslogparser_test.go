@@ -5,6 +5,8 @@ import (
 	"time"
 
 	"github.com/relex/gotils/logger"
+	"github.com/relex/gotils/promexporter/promext"
+	"github.com/relex/gotils/promexporter/promreg"
 	"github.com/relex/slog-agent/base"
 	"github.com/relex/slog-agent/input/syslogprotocol"
 	"github.com/stretchr/testify/assert"
@@ -15,7 +17,7 @@ func TestSyslogParser(t *testing.T) {
 	allocator := base.NewLogAllocator(schema)
 	const line1 = "<163>1 2019-08-15T15:50:46.866915+03:00 local1 my-app1 123 fn1 - Something"
 	const line2 = "<163>1 2020-09-17T16:51:47.867Z local2 my-app2 456 fn2 - Something else"
-	mfactory := base.NewMetricFactory("syslog_parser_", nil, nil)
+	mfactory := promreg.NewMetricFactory("syslog_parser_", nil, nil)
 	counter := base.NewLogInputCounter(mfactory)
 	parser, err := NewParser(logger.WithField("test", t.Name()), allocator, schema, syslogprotocol.SeverityNames, counter)
 	assert.Nil(t, err)
@@ -41,13 +43,12 @@ func TestSyslogParser(t *testing.T) {
 		}
 	}
 	counter.UpdateMetrics()
-	if dump, err := mfactory.DumpMetrics(true); assert.Nil(t, err) {
-		assert.Equal(t, `syslog_parser_dropped_record_bytes_total 0
+
+	assert.Equal(t, `syslog_parser_dropped_record_bytes_total 0
 syslog_parser_dropped_records_total 0
 syslog_parser_labelled_record_bytes_total{label="overflow"} 0
 syslog_parser_labelled_records_total{label="overflow"} 0
 syslog_parser_passed_record_bytes_total 145
 syslog_parser_passed_records_total 2
-`, dump)
-	}
+`, promext.DumpMetrics("", true, false, mfactory))
 }

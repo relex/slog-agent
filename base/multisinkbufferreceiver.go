@@ -1,6 +1,10 @@
 package base
 
 // MultiSinkBufferReceiver receives buffered logs from a multi-source input, e.g. a TCP with different incoming connections
+//
+// For an ordinary TCP input, there is a single MultiSinkBufferReceiver, and one BufferReceiverSink for each connection
+//
+// The only production implementations are Orchestrator(s)
 type MultiSinkBufferReceiver interface {
 
 	// NewSink creates a sink to receive logs from the input identified by the given id
