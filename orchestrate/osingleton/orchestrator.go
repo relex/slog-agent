@@ -55,7 +55,7 @@ func (oc *singletonOrchestratorChild) Accept(buffer []*base.LogRecord) {
 		// TODO: update metrics
 		break
 	case <-oc.sendTimeout.C:
-		oc.logger.Errorf("BUG: timeout flushing: %d records", len(reusableBuffer))
+		oc.logger.Errorf("BUG: timeout flushing: %d records. stack=%s", len(reusableBuffer), util.Stack())
 		break
 	}
 }

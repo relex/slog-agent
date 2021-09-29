@@ -138,7 +138,7 @@ transformations:
             match:
               source: auth.log
               level: !!str-not fatal
-            label: app-auth                       # label: a metric label value to track dropped logs, e.g.
+            metricLabel: app-auth                 # metricLabel: a metric label value to track dropped logs, e.g.
                                                   #   slogagent_process_labelled_record_bytes_total{key_app="appServ",key_vhost="foo.com",label="app-auth"} 175
 
           - type: switch                          
@@ -159,7 +159,7 @@ transformations:
                 then:
                   - type: redactEmail             # redactEmail: search and redact emails in-place
                     key: log                      # key: field to check and redact
-                    label: redacted               # label: a metric label value to track changed logs (not numbers of emails redacted)
+                    metricLabel: redacted         # metricLabel: a metric label value to track changed logs (not numbers of emails redacted)
 
       - match:
           app: abandoned
@@ -272,3 +272,4 @@ output:
     address: localhost:24224
     tls: true
     secret: guess
+    maxDuration: 30m

@@ -5,6 +5,7 @@ import (
 	"io"
 	"net"
 	"strings"
+	"time"
 
 	"github.com/relex/fluentlib/protocol/forwardprotocol"
 	"github.com/relex/gotils/logger"
@@ -30,9 +31,10 @@ type SerializationConfig struct {
 
 // UpstreamConfig defines the upstream section in config file
 type UpstreamConfig struct {
-	Address string `yaml:"address"`
-	TLS     bool   `yaml:"tls"`
-	Secret  string `yaml:"secret"`
+	Address     string        `yaml:"address"`
+	TLS         bool          `yaml:"tls"`
+	Secret      string        `yaml:"secret"`
+	MaxDuration time.Duration `yaml:"maxDuration"`
 }
 
 // DumpRecordsAsJSON decodes and dumps log records in chunk as JSON format
@@ -95,6 +97,10 @@ func (cfg *Config) VerifyConfig(schema base.LogSchema) error {
 
 	if cfg.Upstream.TLS && len(cfg.Upstream.Secret) == 0 {
 		return fmt.Errorf(".upstream.secret is unspecified when tls=true")
+	}
+
+	if cfg.Upstream.MaxDuration == 0 {
+		return fmt.Errorf(".upstream.maxDuration is unspecified")
 	}
 	return nil
 }

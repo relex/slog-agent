@@ -8,6 +8,7 @@ import (
 	"github.com/relex/gotils/promexporter"
 	"github.com/relex/slog-agent/base"
 	"github.com/relex/slog-agent/defs"
+	"github.com/relex/slog-agent/util"
 )
 
 // bufferer is an intermediate buffer buf which saves log chunks to disk temporarily if needed
@@ -135,7 +136,7 @@ func (buf *bufferer) Destroy() {
 
 	buf.logger.Infof("waiting for feeder: in=%d out=%d", len(buf.inputChannel), buf.feeder.NumOutput())
 	if !buf.feeder.Stopped().Wait(runTimeout) {
-		buf.logger.Errorf("BUG: couldn't stop feeder in time")
+		buf.logger.Errorf("BUG: couldn't stop feeder in time. stack=%s", util.Stack())
 	}
 }
 

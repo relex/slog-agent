@@ -119,11 +119,11 @@ func (op *chunkOperator) LoadChunk(chunkRef *base.LogChunk) bool {
 		return true
 	}
 	if !chunkRef.Saved {
-		op.logger.Errorf("BUG: cannot load unsaved chunk id=%s: %s", chunkRef.ID, util.Stack())
+		op.logger.Errorf("BUG: cannot load unsaved chunk id=%s. stack=%s", chunkRef.ID, util.Stack())
 		return false
 	}
 	if op.maybeDir == nil {
-		op.logger.Errorf("BUG: cannot load chunk id=%s with nil dir: %s", chunkRef.ID, util.Stack())
+		op.logger.Errorf("BUG: cannot load chunk id=%s with nil dir. stack=%s", chunkRef.ID, util.Stack())
 		return false
 	}
 
@@ -143,7 +143,7 @@ func (op *chunkOperator) UnloadChunk(chunkRef *base.LogChunk) bool {
 		return true
 	}
 	if chunkRef.Data == nil {
-		op.logger.Errorf("BUG: cannot unload nil chunk id=%s: %s", chunkRef.ID, util.Stack())
+		op.logger.Errorf("BUG: cannot unload nil chunk id=%s. stack=%s", chunkRef.ID, util.Stack())
 		return false
 	}
 	if op.maybeDir == nil {
@@ -174,11 +174,11 @@ func (op *chunkOperator) RemoveChunk(chunk base.LogChunk) {
 		return
 	}
 	if chunk.Data == nil {
-		op.logger.Errorf("BUG: cannot remove nil chunk id=%s: %s", chunk.ID, util.Stack())
+		op.logger.Errorf("BUG: cannot remove nil chunk id=%s. stack=%s", chunk.ID, util.Stack())
 		return
 	}
 	if op.maybeDir == nil {
-		op.logger.Errorf("BUG: cannot remove chunk id=%s with nil dir: %s", chunk.ID, util.Stack())
+		op.logger.Errorf("BUG: cannot remove chunk id=%s with nil dir. stack=%s", chunk.ID, util.Stack())
 		return
 	}
 
@@ -205,7 +205,7 @@ func (op *chunkOperator) OnChunkRecovered(chunk base.LogChunk) {
 	op.metrics.persistentChunks.Inc() // update before condition check
 
 	if op.maybeDir == nil {
-		op.logger.Errorf("BUG: cannot check size of recovered chunk id=%s with nil dir: %s", chunk.ID, util.Stack())
+		op.logger.Errorf("BUG: cannot check size of recovered chunk id=%s with nil dir. stack=%s", chunk.ID, util.Stack())
 		return
 	}
 

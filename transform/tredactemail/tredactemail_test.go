@@ -17,7 +17,7 @@ func TestRedactEmailTransform(t *testing.T) {
 		assert.Nil(t, util.UnmarshalYamlString(`
 type: redactEmail
 key: log
-label: email
+metricLabel: email
 `, c))
 		tf := c.NewTransform(schema, logger.Root(), bsupport.NewStubLogCustomCounterRegistry())
 		{

@@ -18,7 +18,7 @@ func TestDropTransform(t *testing.T) {
 type: drop
 match:
   name: Foo
-label: test
+metricLabel: test
 `, c))
 		tf := c.NewTransform(schema, logger.Root(), bsupport.NewStubLogCustomCounterRegistry())
 		{

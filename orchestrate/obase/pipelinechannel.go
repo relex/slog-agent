@@ -7,6 +7,7 @@ import (
 	"github.com/relex/slog-agent/base"
 	"github.com/relex/slog-agent/base/bsupport"
 	"github.com/relex/slog-agent/defs"
+	"github.com/relex/slog-agent/util"
 )
 
 // PipelineChannel is an alias to write-only channel of log records
@@ -54,7 +55,7 @@ func (cache *PipelineChannelLocalBuffer) Flush(now time.Time, sendTimeout *time.
 		// TODO: update metrics
 		break
 	case <-sendTimeout.C:
-		logger.Errorf("BUG: timeout flushing: %d records for %s", len(reusableLogBuffer), loggingKey)
+		logger.Errorf("BUG: timeout flushing: %d records for %s. stack=%s", len(reusableLogBuffer), loggingKey, util.Stack())
 		break
 	}
 }
