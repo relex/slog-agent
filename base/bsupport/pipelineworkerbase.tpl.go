@@ -21,22 +21,20 @@ type ChannelInputType generic.Type
 // It contains an input channel, process function for each of input values, and "stop" signals which are triggered when input channel is closed
 // The process function (PipelineProcFunc) is the only thing required from its composite parent
 type PipelineWorkerBaseForBaseName struct {
-	_baseLogger        logger.Logger
-	_baseInput         <-chan ChannelInputType
-	_baseSkipLeftovers bool
-	_baseStopped       *channels.SignalAwaitable
-	_baseOnInput       func(input ChannelInputType, timeout <-chan time.Time)
-	_baseOnTick        func(timeout <-chan time.Time)
-	_baseOnStop        func(timeout <-chan time.Time)
+	_baseLogger  logger.Logger
+	_baseInput   <-chan ChannelInputType
+	_baseStopped *channels.SignalAwaitable
+	_baseOnInput func(input ChannelInputType, timeout <-chan time.Time)
+	_baseOnTick  func(timeout <-chan time.Time)
+	_baseOnStop  func(timeout <-chan time.Time)
 }
 
 // NewPipelineWorkerBaseForBaseName creates a new PipelineWorkerBaseForBaseName
-func NewPipelineWorkerBaseForBaseName(logger logger.Logger, inputChannel <-chan ChannelInputType, skipLeftovers bool) PipelineWorkerBaseForBaseName {
+func NewPipelineWorkerBaseForBaseName(logger logger.Logger, inputChannel <-chan ChannelInputType) PipelineWorkerBaseForBaseName {
 	return PipelineWorkerBaseForBaseName{
-		_baseLogger:        logger,
-		_baseInput:         inputChannel,
-		_baseSkipLeftovers: skipLeftovers,
-		_baseStopped:       channels.NewSignalAwaitable(),
+		_baseLogger:  logger,
+		_baseInput:   inputChannel,
+		_baseStopped: channels.NewSignalAwaitable(),
 	}
 }
 
@@ -72,9 +70,7 @@ func (worker *PipelineWorkerBaseForBaseName) Stopped() channels.Awaitable {
 func (worker *PipelineWorkerBaseForBaseName) _baseRun() {
 	timeoutTimer := time.NewTimer(defs.IntermediateChannelTimeout)
 	worker._baseProcessMain(timeoutTimer)
-	if !worker._baseSkipLeftovers {
-		worker._baseProcessRemaining(timeoutTimer)
-	}
+
 	if worker._baseOnTick != nil {
 		util.ResetTimer(timeoutTimer, defs.IntermediateChannelTimeout)
 		worker._baseOnTick(timeoutTimer.C)
@@ -96,7 +92,7 @@ SELECT_LOOP:
 		select {
 		case value, ok := <-worker._baseInput:
 			if !ok {
-				worker._baseLogger.Infof("end main loop on input channel close, remaining=%d", len(worker._baseInput))
+				worker._baseLogger.Infof("end main loop on input channel close")
 				break SELECT_LOOP
 			}
 			worker._baseOnInput(value, timeoutTimer.C)
@@ -108,14 +104,4 @@ SELECT_LOOP:
 		}
 	}
 	ticker.Stop()
-}
-
-// processRemaining processes everything in input channel until it's empty
-func (worker *PipelineWorkerBaseForBaseName) _baseProcessRemaining(timeoutTimer *time.Timer) {
-	worker._baseLogger.Infof("process remaining inputs len=%d", len(worker._baseInput))
-	util.ResetTimer(timeoutTimer, defs.IntermediateChannelTimeout)
-	for value := range worker._baseInput {
-		worker._baseOnInput(value, timeoutTimer.C)
-	}
-	// onTick should be called afterwards
 }

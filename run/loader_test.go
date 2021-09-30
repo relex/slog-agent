@@ -55,7 +55,7 @@ transformations:
     errorLabel: timeError
   - type: redactEmail
     key: log
-    label: emailFilter
+    metricLabel: emailFilter
 `
 
 const sampleOutputConf = `
@@ -75,6 +75,7 @@ output:
   upstream:
     address: %s
     tls: false
+    maxDuration: 500ms
 `
 
 var sampleConf = assembleConfig(

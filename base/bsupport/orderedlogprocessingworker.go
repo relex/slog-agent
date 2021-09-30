@@ -34,7 +34,6 @@ func NewOrderedLogProcessingWorker(parentLogger logger.Logger,
 		PipelineWorkerBaseForOrderedLogBuffer: NewPipelineWorkerBaseForOrderedLogBuffer(
 			parentLogger.WithField(defs.LabelComponent, "OrderedLogProcessingWorker"),
 			input,
-			false,
 		),
 		deallocator:   deallocator,
 		procCounter:   procCounter,

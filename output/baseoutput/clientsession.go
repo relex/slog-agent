@@ -13,9 +13,6 @@ import (
 	"github.com/relex/slog-agent/util"
 )
 
-// softStopAcknowledgerChunk is a special chunk sent by main session to acknowledger, telling it to end
-var softStopAcknowledgerChunk = base.LogChunk{ID: "<soft-stop>", Data: nil, Saved: false}
-
 // clientSession represents a session bound to one forwarding connection
 type clientSession struct {
 	logger       logger.Logger
@@ -27,6 +24,7 @@ type clientSession struct {
 	leftovers    chan base.LogChunk        // unprocessed chunks from previous session(s)
 	lastChunk    *base.LogChunk            // last chunk in processing (to be added to leftovers if not completed)
 	ackerChan    chan base.LogChunk        // channel to pass chunks for acknowledger (wait for ACK and delete), close to end acknowledger
+	ackerAbort   *channels.SignalAwaitable // signal to abort acknowledger immediately
 	ackerEnded   *channels.SignalAwaitable // signal that acknowledger has ended
 	unacked      atomic.Value              // *[]base.LogChunk, un-ACK'ed chunks set when acknowledger quits (to be resent in next session)
 }
@@ -53,6 +51,7 @@ func newClientSession(client *ClientWorker, conn ClientConnection, leftovers cha
 		leftovers:    leftovers,
 		lastChunk:    nil,
 		ackerChan:    make(chan base.LogChunk, defs.ForwarderMaxPendingChunksForAck),
+		ackerAbort:   channels.NewSignalAwaitable(),
 		ackerEnded:   channels.NewSignalAwaitable(),
 		unacked:      atomic.Value{},
 	}
@@ -186,27 +185,13 @@ func (session *clientSession) collectLeftovers(ending acknowledgerEnding) chan b
 	close(session.leftovers)
 	fromPrevious := collectChunksFromChannel(session.leftovers, session.logger)
 
-	closeAckerChanAfterEnded := false
 	switch ending {
 	case waitPendingChunks:
-		session.logger.Info("pushing soft-stop command to acknowledger")
-		select {
-		case session.ackerChan <- softStopAcknowledgerChunk: // attempt to queue the command (which would be the last)
-			session.logger.Info("pushed soft-stop command to acknowledger")
-			closeAckerChanAfterEnded = true // close after ackerEnded for collection of remaining chunks
-		case <-time.After(defs.ForwarderAckerStopTimeout):
-			session.logger.Error("timeout pushing soft-stop command to acknowledger, abort now")
-			close(session.ackerChan)
-		case <-session.inputClosed.Channel():
-			session.logger.Infof("received stop request while pushing soft-stop command, abort now")
-			close(session.ackerChan)
-		case <-session.ackerEnded.Channel():
-			// acknowledger already terminated due to invalid server response
-			session.logger.Info("acknowledger terminated while pushing soft-stop command, abort now")
-			close(session.ackerChan)
-		}
+		session.logger.Info("stopping acknowledger (soft)")
+		close(session.ackerChan)
 	case endImmediately:
-		session.logger.Info("stopping acknowledger")
+		session.logger.Info("stopping acknowledger (hard)")
+		session.ackerAbort.Signal()
 		close(session.ackerChan)
 	default:
 		session.logger.Panic("invalid ending type: ", ending)
@@ -214,9 +199,6 @@ func (session *clientSession) collectLeftovers(ending acknowledgerEnding) chan b
 
 	if !session.ackerEnded.Wait(defs.ForwarderAckerStopTimeout) {
 		session.logger.Errorf("BUG: timeout waiting for acknowledger to stop. stack=%s", util.Stack())
-	}
-	if closeAckerChanAfterEnded {
-		close(session.ackerChan)
 	}
 	fromAckerChannel := collectChunksFromChannel(session.ackerChan, session.logger)
 
@@ -266,25 +248,23 @@ func (session *clientSession) runAcknowledger() {
 
 		// wait for next sent chunk from clientSession.run
 		{
-			chunk, ok := <-session.ackerChan
-			if !ok {
-				clogger.Infof("stop requested")
-				return
-			}
-			// check for soft-stop command which tells acknowledger to end gracefully
-			// we can safely return here, because unlike the hard channel closing which is immediately in effect,
-			// by the time we get the soft-stop command, all pending chunks have been received and processed already
-			if chunk.ID == softStopAcknowledgerChunk.ID {
-				if len(pendingChunksByID) > 0 {
-					clogger.Errorf("soft-stop requested while there are still pending chunks: %d", len(pendingChunksByID))
-				} else {
-					clogger.Info("soft-stop requested")
+			select {
+			case chunk, ok := <-session.ackerChan:
+				if !ok {
+					if len(pendingChunksByID) > 0 {
+						clogger.Errorf("soft-stop requested while there are still pending chunks: %d", len(pendingChunksByID))
+					} else {
+						clogger.Info("soft-stop requested")
+					}
+					return
 				}
+				pendingChunksByID[chunk.ID] = chunk
+				nextChunk = chunk
+				clogger.Debugf("received pending chunk %s", chunk.ID)
+			case <-session.ackerAbort.Channel():
+				clogger.Info("stop requested, abort acknowledger")
 				return
 			}
-			pendingChunksByID[chunk.ID] = chunk
-			nextChunk = chunk
-			clogger.Debugf("received pending chunk %s", chunk.ID)
 		}
 
 		// wait for next acknowledgement from upstream with timeout,
@@ -319,18 +299,6 @@ func (session *clientSession) runAcknowledger() {
 
 // collectChunksFromChannel collect remaining chunks from a CLOSED channel
 func collectChunksFromChannel(chunkChan chan base.LogChunk, logger logger.Logger) []base.LogChunk {
-	// check if channel is still open. for loop on open channel would hang FOREVER
-	select {
-	case c, ok := <-chunkChan:
-		if ok {
-			logger.Errorf("BUG: collecting from open channel, chunk lost=%s. stack=%s", c, util.Stack())
-			close(chunkChan)
-		}
-	default:
-		logger.Errorf("BUG: collecting from open channel. stack=%s", util.Stack())
-		close(chunkChan)
-	}
-
 	collected := make([]base.LogChunk, 0, len(chunkChan)+20)
 	for c := range chunkChan {
 		collected = append(collected, c)
