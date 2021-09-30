@@ -7,6 +7,7 @@ import (
 	"github.com/relex/gotils/logger"
 	"github.com/relex/slog-agent/base"
 	"github.com/relex/slog-agent/defs"
+	"github.com/relex/slog-agent/util"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -46,7 +47,7 @@ func (worker *testPipelineWorker) onInput(inBuffer []*base.LogRecord, timeout <-
 	case worker.outputChannel <- outBuffer:
 		break
 	case <-timeout:
-		worker.Logger().Errorf("BUG: timeout sending to channel: %d records", len(outBuffer))
+		worker.Logger().Errorf("BUG: timeout sending to channel: %d records. stack=%s", len(outBuffer), util.Stack())
 		break
 	}
 }

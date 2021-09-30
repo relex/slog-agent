@@ -35,6 +35,7 @@ func NewClientWorker(parentLogger logger.Logger, args base.ChunkConsumerArgs, co
 		func() (baseoutput.ClientConnection, error) {
 			return openForwardConnection(clientLogger, config)
 		},
+		config.MaxDuration,
 	)
 }
 

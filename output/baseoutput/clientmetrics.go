@@ -12,6 +12,7 @@ type clientMetrics struct {
 	queuedChunksPendingAck  promexporter.RWGauge // Current numbers of chunks waiting for ACK, including read and unread chunks by acknowledger
 	networkErrorsTotal      promexporter.RWCounter
 	nonNetworkErrorsTotal   promexporter.RWCounter
+	openedSessionsTotal     promexporter.RWCounter
 	forwardAttemptsTotal    promexporter.RWCounter
 	forwardedCountTotal     promexporter.RWCounter
 	forwardedLengthTotal    promexporter.RWCounter
@@ -26,6 +27,7 @@ func newClientMetrics(metricFactory *base.MetricFactory) clientMetrics {
 		queuedChunksPendingAck:  queuedChunks.WithLabelValues("pendingAck"),
 		networkErrorsTotal:      metricFactory.AddOrGetCounter("output_network_errors_total", "Numbers of network errors", nil, nil),
 		nonNetworkErrorsTotal:   metricFactory.AddOrGetCounter("output_nonnetwork_errors_total", "Numbers of non-network errors (auth, unexpected response, etc) from upstream", nil, nil),
+		openedSessionsTotal:     metricFactory.AddOrGetCounter("output_opened_sessions_total", "Numbers of opened sessions", nil, nil),
 		forwardAttemptsTotal:    metricFactory.AddOrGetCounter("output_forward_attempts_total", "Numbers of chunk forwarding attempts", nil, nil),
 		forwardedCountTotal:     metricFactory.AddOrGetCounter("output_forwarded_chunks_total", "Numbers of forwarded chunks", nil, nil),
 		forwardedLengthTotal:    metricFactory.AddOrGetCounter("output_forwarded_chunk_bytes_total", "Total length in bytes of forwarded chunks", nil, nil),
@@ -40,6 +42,10 @@ func (metrics *clientMetrics) OnError(err error) {
 	} else {
 		metrics.nonNetworkErrorsTotal.Inc()
 	}
+}
+
+func (metrics *clientMetrics) OnOpening() {
+	metrics.openedSessionsTotal.Inc()
 }
 
 func (metrics *clientMetrics) OnForwarding(chunk base.LogChunk) {

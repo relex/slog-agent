@@ -14,7 +14,7 @@ import (
 type Config struct {
 	bconfig.Header `yaml:",inline"`
 	Match          bmatch.LogMatcherConfig `yaml:"match"`
-	Label          string                  `yaml:"label"`
+	MetricLabel    string                  `yaml:"metricLabel"`
 }
 
 type dropTransform struct {
@@ -26,7 +26,7 @@ type dropTransform struct {
 func (cfg *Config) NewTransform(schema base.LogSchema, parentLogger logger.Logger, customCounterRegistry base.LogCustomCounterRegistry) base.LogTransform {
 	tf := &dropTransform{
 		matcher: cfg.Match.NewMatcher(schema),
-		counter: customCounterRegistry.RegisterCustomCounter(cfg.Label),
+		counter: customCounterRegistry.RegisterCustomCounter(cfg.MetricLabel),
 	}
 	return tf
 }
@@ -39,8 +39,8 @@ func (cfg *Config) VerifyConfig(schema base.LogSchema) error {
 	if err := cfg.Match.VerifyConfig(schema); err != nil {
 		return fmt.Errorf(".match: %w", err)
 	}
-	if len(cfg.Label) == 0 {
-		return fmt.Errorf(".label is unspecified")
+	if len(cfg.MetricLabel) == 0 {
+		return fmt.Errorf(".metricLabel is unspecified")
 	}
 	return nil
 }

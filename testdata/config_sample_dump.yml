@@ -80,7 +80,7 @@ transformations:
             match:
               level: '!= fatal'
               source: == auth.log
-            label: app-auth
+            metricLabel: app-auth
           - type: switch
             cases:
               - match:
@@ -99,7 +99,7 @@ transformations:
                 then:
                   - type: redactEmail
                     key: log
-                    label: redacted
+                    metricLabel: redacted
       - match:
           app: == abandoned
         then:
@@ -161,3 +161,4 @@ output:
     address: localhost:24224
     tls: true
     secret: guess
+    maxDuration: 30m0s

@@ -46,7 +46,7 @@ var (
 	IntermediateFlushInterval = 1 * time.Second
 
 	// ParallelizationBufferMaxNumLogs defines the numbers of logs to process before switching to next parallel worker
-	// Lower value improves parallelization but reduces the size of output chunk files
+	// Lower value improves parallelization but reduces the size of output chunks
 	// e.g. 25000 logs * 250 bytes avg / 20 compression ratio ~= 200-300KB chunk(s)
 	ParallelizationBufferMaxNumLogs = 25000
 
@@ -73,8 +73,8 @@ var (
 )
 
 var (
-	// ForwarderMaxBuffersForAck is the max number of chunk files waiting in cleanup stage before ACK
-	ForwarderMaxBuffersForAck = 10
+	// ForwarderMaxPendingChunksForAck is the max number of chunks waiting in cleanup stage before ACK
+	ForwarderMaxPendingChunksForAck = 10
 
 	// ForwarderConnectionTimeout is for establishing a TCP connection to upstream
 	ForwarderConnectionTimeout = 60 * time.Second

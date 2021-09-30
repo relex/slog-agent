@@ -13,7 +13,7 @@ import (
 type Config struct {
 	bconfig.Header `yaml:",inline"`
 	Key            string `yaml:"key"`
-	Label          string `yaml:"label"`
+	MetricLabel    string `yaml:"metricLabel"`
 }
 
 type redactEmailTransform struct {
@@ -25,7 +25,7 @@ type redactEmailTransform struct {
 func (cfg *Config) NewTransform(schema base.LogSchema, parentLogger logger.Logger, customCounterRegistry base.LogCustomCounterRegistry) base.LogTransform {
 	tf := &redactEmailTransform{
 		keyLocator: schema.MustCreateFieldLocator(cfg.Key),
-		counter:    customCounterRegistry.RegisterCustomCounter(cfg.Label),
+		counter:    customCounterRegistry.RegisterCustomCounter(cfg.MetricLabel),
 	}
 	return tf
 }
@@ -38,8 +38,8 @@ func (cfg *Config) VerifyConfig(schema base.LogSchema) error {
 	if _, err := schema.CreateFieldLocator(cfg.Key); err != nil {
 		return fmt.Errorf(".key '%s' is invalid: %w", cfg.Key, err)
 	}
-	if len(cfg.Label) == 0 {
-		return fmt.Errorf(".label is unspecified")
+	if len(cfg.MetricLabel) == 0 {
+		return fmt.Errorf(".metricLabel is unspecified")
 	}
 	return nil
 }

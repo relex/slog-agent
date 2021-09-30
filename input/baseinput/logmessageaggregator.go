@@ -48,7 +48,7 @@ func (sess *logMessageAggregatorSink) Accept(value []byte) {
 	case sess.outputChannel <- scopy:
 		return
 	case <-sess.sendTimeout.C:
-		sess.logger.Error("BUG: timeout sending to channel: ", scopy)
+		sess.logger.Errorf("BUG: timeout sending to channel: \"%s\". stack=%s", scopy, util.Stack())
 		break
 	}
 }

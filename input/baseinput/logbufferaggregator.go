@@ -53,7 +53,7 @@ func (sess *logBufferAggregatorSink) Accept(buffer []*base.LogRecord) {
 	case sess.outputChannel <- reusableBuffer:
 		break
 	case <-sess.sendTimeout.C:
-		sess.logger.Errorf("BUG: timeout flushing: %d records", len(reusableBuffer))
+		sess.logger.Errorf("BUG: timeout flushing: %d records. stack=%s", len(reusableBuffer), util.Stack())
 		break
 	}
 }
