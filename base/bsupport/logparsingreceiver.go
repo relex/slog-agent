@@ -4,6 +4,7 @@ import (
 	"time"
 
 	"github.com/relex/gotils/logger"
+	"github.com/relex/gotils/promexporter/promreg"
 	"github.com/relex/slog-agent/base"
 	"github.com/relex/slog-agent/defs"
 )
@@ -15,7 +16,7 @@ type logParsingReceiver struct {
 	logger         logger.Logger
 	createParser   LogParserConstructor
 	outputReceiver base.MultiSinkBufferReceiver
-	metricFactory  *base.MetricFactory
+	metricCreator  promreg.MetricCreator
 }
 
 type logParsingReceiverSink struct {
@@ -32,18 +33,18 @@ type logParsingReceiverSink struct {
 //
 // Actual parsers are created on demand for each of connections
 func NewLogParsingReceiver(parentLogger logger.Logger, createParser LogParserConstructor, nextReceiver base.MultiSinkBufferReceiver,
-	metricFactory *base.MetricFactory) base.MultiSinkMessageReceiver {
+	metricCreator promreg.MetricCreator) base.MultiSinkMessageReceiver {
 	return &logParsingReceiver{
 		logger:         parentLogger.WithField(defs.LabelComponent, "LogParsingReceiver"),
 		createParser:   createParser,
 		outputReceiver: nextReceiver,
-		metricFactory:  metricFactory,
+		metricCreator:  metricCreator,
 	}
 }
 
 func (recv *logParsingReceiver) NewSink(clientAddress string, clientNumber base.ClientNumber) base.MessageReceiverSink {
 	slogger := base.NewSinkLogger(recv.logger, clientAddress, clientNumber)
-	inputCounter := base.NewLogInputCounter(recv.metricFactory)
+	inputCounter := base.NewLogInputCounter(recv.metricCreator)
 	return &logParsingReceiverSink{
 		logger:        slogger,
 		parser:        recv.createParser(slogger, inputCounter),

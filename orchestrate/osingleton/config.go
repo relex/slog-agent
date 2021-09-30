@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"github.com/relex/gotils/logger"
+	"github.com/relex/gotils/promexporter/promreg"
 	"github.com/relex/slog-agent/base"
 	"github.com/relex/slog-agent/base/bconfig"
 	"github.com/relex/slog-agent/base/bsupport"
@@ -17,10 +18,10 @@ type Config struct {
 }
 
 // LaunchOrchestrator constructs and launches a singleton orchestrator and the pipeline
-func (cfg *Config) LaunchOrchestrator(parentLogger logger.Logger, args bconfig.PipelineArgs, metricFactory *base.MetricFactory) base.Orchestrator {
+func (cfg *Config) LaunchOrchestrator(parentLogger logger.Logger, args bconfig.PipelineArgs, metricCreator promreg.MetricCreator) base.Orchestrator {
 	launchPipeline := bsupport.NewSequentialPipelineLauncher(args)
-	pipelineMetricFactory := metricFactory.NewSubFactory("process_", []string{"orchestrator"}, []string{"singleton"})
-	return NewOrchestrator(parentLogger, cfg.Tag, pipelineMetricFactory, launchPipeline)
+	pipelineMetricCreator := metricCreator.AddOrGetPrefix("process_", []string{"orchestrator"}, []string{"singleton"})
+	return NewOrchestrator(parentLogger, cfg.Tag, pipelineMetricCreator, launchPipeline)
 }
 
 // VerifyConfig verifies orchestration config

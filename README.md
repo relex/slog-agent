@@ -59,6 +59,20 @@ make
 make test
 ```
 
+## Configuration Reload and Migration
+
+Currently it is not possible to recover previously queued logs if `orchestration/keys` have been changed
+
+Experimental configuration reloading is supported by starting with `--allow_reload` and sending `SIGHUP`; See
+[testdata/config_sample.yml] for details on which sections may be reconfigured. In general everything after inputs
+are re-configurable. If reconfiguration fails, errors are logged and the agent would continue to run with old
+configuration, without any side-effect.
+
+Note after successful reloading, some of previous logs may be sent to upstream again if they hadn't been acknowledged
+in time.
+
+The metric family `slogagent_reloads_total` counts sucesses and failures of reconfigurations.
+
 ## Development
 
 #### Mark inlinable code

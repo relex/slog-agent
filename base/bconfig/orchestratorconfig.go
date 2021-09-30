@@ -2,6 +2,7 @@ package bconfig
 
 import (
 	"github.com/relex/gotils/logger"
+	"github.com/relex/gotils/promexporter/promreg"
 	"github.com/relex/slog-agent/base"
 )
 
@@ -12,9 +13,9 @@ type OrchestratorConfig interface {
 	GetType() string
 
 	// LaunchOrchestrator creates and launches a new Orchestrator
-	LaunchOrchestrator(parentLogger logger.Logger, args PipelineArgs, metricFactory *base.MetricFactory) base.Orchestrator
+	LaunchOrchestrator(parentLogger logger.Logger, args PipelineArgs, metricCreator promreg.MetricCreator) base.Orchestrator
 
-	// VerifyConfig checks configuration and returns (used metric labels, error)
+	// VerifyConfig checks configuration and returns (key fields, error)
 	VerifyConfig(schema base.LogSchema) ([]string, error)
 }
 

@@ -7,6 +7,8 @@ import (
 	"time"
 
 	"github.com/relex/gotils/logger"
+	"github.com/relex/gotils/promexporter/promext"
+	"github.com/relex/gotils/promexporter/promreg"
 	"github.com/relex/slog-agent/base"
 	"github.com/stretchr/testify/assert"
 )
@@ -16,14 +18,14 @@ func TestByKeySetOrchestrator(t *testing.T) {
 	tlogger := logger.WithField("test", t.Name())
 	schema := base.MustNewLogSchema([]string{"level", "app", "msg"})
 	collectedLogsByTag := make(map[string]*[]*base.LogRecord)
-	launchWorkers := func(parentLogger logger.Logger, tag string, id string, input <-chan []*base.LogRecord, metricFactory *base.MetricFactory, onStopped func()) {
+	launchWorkers := func(parentLogger logger.Logger, tag string, id string, input <-chan []*base.LogRecord, metricCreator promreg.MetricCreator, onStopped func()) {
 		t.Logf("new worker %s: %s", tag, id)
 		_, ok := collectedLogsByTag[tag]
 		assert.False(t, ok, tag)
 		collectedLogs := make([]*base.LogRecord, 0, 100)
 		collectedLogsByTag[tag] = &collectedLogs
 		go func() {
-			counter := metricFactory.AddOrGetCounter("mycounter", "", nil, nil)
+			counter := metricCreator.AddOrGetCounter("mycounter", "", nil, nil)
 			for rec := range input {
 				collectedLogs = append(collectedLogs, rec...)
 				counter.Add(uint64(len(rec)))
@@ -31,7 +33,7 @@ func TestByKeySetOrchestrator(t *testing.T) {
 			onStopped()
 		}()
 	}
-	mfactory := base.NewMetricFactory("testo_", nil, nil)
+	mfactory := promreg.NewMetricFactory("testo_", nil, nil)
 	orchestrator := NewOrchestrator(tlogger, schema, []string{"level", "app"}, "$level-$app", mfactory, launchWorkers, nil)
 	producerWaiter := &sync.WaitGroup{}
 	for i := 0; i < producerCount; i++ {
@@ -87,10 +89,9 @@ func TestByKeySetOrchestrator(t *testing.T) {
 			assert.Contains(t, rec.Fields[2], "print ", i)
 		}
 	}
-	if dump, err := mfactory.DumpMetrics(true); assert.Nil(t, err) {
-		assert.Equal(t, `testo_process_mycounter{key_app="lptd",key_level="info",orchestrator="byKeySet"} 5
+
+	assert.Equal(t, `testo_process_mycounter{key_app="lptd",key_level="info",orchestrator="byKeySet"} 5
 testo_process_mycounter{key_app="sshd",key_level="error",orchestrator="byKeySet"} 5
 testo_process_mycounter{key_app="sshd",key_level="info",orchestrator="byKeySet"} 10
-`, dump)
-	}
+`, promext.DumpMetrics("", true, false, mfactory))
 }

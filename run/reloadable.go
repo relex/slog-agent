@@ -3,10 +3,9 @@ package run
 import (
 	"os"
 	"os/signal"
-	"sync"
-	"sync/atomic"
 	"syscall"
 
+	"github.com/puzpuzpuz/xsync"
 	"github.com/relex/gotils/logger"
 	"github.com/relex/slog-agent/base"
 	"github.com/relex/slog-agent/defs"
@@ -18,29 +17,40 @@ type sinksByClientNumber [base.MaxClientNumber]base.BufferReceiverSink
 // addrsByClientNumber is a fix-sized array to hold client addresses by client number as array index
 type addrsByClientNumber [base.MaxClientNumber]string
 
+// InitiateReloadingFunc initiates the reloading process and returns error if it cannot be continued (e.g. error in
+// new config)
+//
+// No reload would happen and there should be no side effect if the returned CompleteReloadingFunc is not called
+type InitiateReloadingFunc func() (CompleteReloadingFunc, error)
+
+// CompleteReloadingFunc completes the reloading process and launches the new downstream Orchestrator
+//
+// The resulting Orchestrator must be used to replace the existing one after this function is called
+type CompleteReloadingFunc func() base.Orchestrator
+
 // ReloadableOrchestrator supports config reload by re-creating the downstream Orchestrator
 //
 // The type is to be paired with Reloader, which provides the function to reload configuration file and create real Orchestrator(s)
 type ReloadableOrchestrator struct {
-	paused          int32
-	downstream      base.Orchestrator        // the real orchestrator
-	renewDownstream func() base.Orchestrator // function to perform reloading and launch a new downstream orchestrator
+	logger          logger.Logger
+	downstream      base.Orchestrator     // the real orchestrator
+	initiateReload  InitiateReloadingFunc // function to start reloading and launch a new downstream orchestrator
 	downstreamSinks sinksByClientNumber
 	downstreamAddrs addrsByClientNumber
-	reloadLock      *sync.RWMutex
+	downstreamMutex *xsync.RBMutex // read-lock for using/adding downstream sinks, write-lock for renewing the downstream Orchestrator
 }
 
 // NewReloadableOrchestrator creates a reloadable orchestrator wrapping the given downstream orchestrator
-func NewReloadableOrchestrator(downstream base.Orchestrator, renewDownstream func() base.Orchestrator) *ReloadableOrchestrator {
+func NewReloadableOrchestrator(downstream base.Orchestrator, initiateReload InitiateReloadingFunc) *ReloadableOrchestrator {
 	// DO NOT use renewDownstream for initial downstream creation, as config reloading is very different from first-time loading
 
 	rorc := &ReloadableOrchestrator{
-		paused:          0,
+		logger:          logger.WithField(defs.LabelComponent, "ReloadableOrchestrator"),
 		downstream:      downstream,
-		renewDownstream: renewDownstream,
+		initiateReload:  initiateReload,
 		downstreamSinks: sinksByClientNumber{},
 		downstreamAddrs: addrsByClientNumber{},
-		reloadLock:      &sync.RWMutex{},
+		downstreamMutex: &xsync.RBMutex{},
 	}
 
 	// listen to signal: unbuffered since we can ignore new SIGHUPs while reloading
@@ -51,35 +61,34 @@ func NewReloadableOrchestrator(downstream base.Orchestrator, renewDownstream fun
 			// wait for SIGHUP
 			<-c
 			// handle SIGHUP
-			logger.Info("Reloading config...")
 			rorc.reload()
-			logger.Info("Reloaded config")
 		}
 	}()
 
 	return rorc
 }
 
-// NewSink creates a new reloadable sink for an input source
+// NewSink creates a new reloadable sink for an input source (e.g. incoming TCP connection)
 func (orc *ReloadableOrchestrator) NewSink(clientAddress string, clientNumber base.ClientNumber) base.BufferReceiverSink {
-	orc.waitForReload()
 
-	newSink := orc.downstream.NewSink(clientAddress, clientNumber)
+	newDownstream := orc.downstream.NewSink(clientAddress, clientNumber)
+
+	lockT := orc.downstreamMutex.RLock() // only read-lock since we assume clientNumber is unique and nobody else is accessing it
+	defer orc.downstreamMutex.RUnlock(lockT)
 
 	if orc.downstreamSinks[clientNumber] != nil {
-		logger.WithFields(logger.Fields{
-			defs.LabelComponent: "ReloadableOrchestrator",
-			"newClient":         clientAddress,
-			"oldClient":         orc.downstreamAddrs[clientNumber],
-			"clientNumber":      clientNumber,
+		orc.logger.WithFields(logger.Fields{
+			"newClient":    clientAddress,
+			"oldClient":    orc.downstreamAddrs[clientNumber],
+			"clientNumber": clientNumber,
 		}).Error("created new sink while old sink is still in place")
 	}
-	orc.downstreamSinks[clientNumber] = newSink
+	orc.downstreamSinks[clientNumber] = newDownstream
 	orc.downstreamAddrs[clientNumber] = clientAddress
 
 	return &ReloadableSink{
-		parent:        orc,
-		downstreamPtr: &orc.downstreamSinks[clientNumber],
+		downstreamPtr:   &orc.downstreamSinks[clientNumber],
+		downstreamMutex: orc.downstreamMutex,
 	}
 }
 
@@ -89,27 +98,30 @@ func (orc *ReloadableOrchestrator) Shutdown() {
 }
 
 func (orc *ReloadableOrchestrator) reload() {
-	orc.reloadLock.Lock()         // obtain write lock, blocking waitForReload()
-	defer orc.reloadLock.Unlock() // release write lock at the end to wake up all waitForReload() callers
+	orc.logger.Info("reloading config...")
+	completeRenewal, renewalErr := orc.initiateReload()
+	if renewalErr != nil {
+		orc.logger.Error("failed to reload due to: ", renewalErr)
+		reloadFailureCounter.Inc()
+		return
+	}
 
-	atomic.StoreInt32(&orc.paused, 1)
+	// wait and then block all ReloadableSink(s)
+	orc.downstreamMutex.Lock()
+	defer orc.downstreamMutex.Unlock()
 
-	// Close sinks created with old configuration and shut down
-
+	// close sinks created with old configuration and shut down
 	for _, sink := range orc.downstreamSinks {
 		if sink == nil {
 			continue
 		}
 		sink.Close()
-		// Keep closed sinks so we know which ones to re-create below
+		// keep closed sinks in place so we know which ones to re-create below
 	}
-
 	orc.downstream.Shutdown()
 
-	// Recreate downstream Orchestrator and all sinks closed above
-
-	orc.downstream = orc.renewDownstream()
-
+	// recreate downstream Orchestrator and all sinks closed above
+	orc.downstream = completeRenewal()
 	for i, sink := range orc.downstreamSinks {
 		if sink == nil {
 			continue
@@ -118,40 +130,38 @@ func (orc *ReloadableOrchestrator) reload() {
 		clientNumber := base.ClientNumber(i)
 		orc.downstreamSinks[i] = orc.downstream.NewSink(clientAddress, clientNumber)
 	}
-}
-
-func (orc *ReloadableOrchestrator) waitForReload() {
-	if atomic.LoadInt32(&orc.paused) == 0 {
-		return
-	}
-
-	orc.reloadLock.RLock()   // wait for write-lock to be released in reload()
-	orc.reloadLock.RUnlock() // release immediately TODO: use Cond or something proper
+	orc.logger.Info("reloaded config")
+	reloadSuccessCounter.Inc()
 }
 
 // ReloadableSink wraps Orchestrator's BufferReceiverSink to support reloading
+//
+// Like BufferReceiverSink, a ReloadableSink runs in individual input goroutines (e.g. TCP connection handler)
 type ReloadableSink struct {
-	parent        *ReloadableOrchestrator
-	downstreamPtr *base.BufferReceiverSink
+	downstreamPtr   *base.BufferReceiverSink
+	downstreamMutex *xsync.RBMutex
 }
 
-// Accept passes buffered logs to the current downstream sink
+// Accept passes buffered logs to the bound downstream sink
 func (sink *ReloadableSink) Accept(buffer []*base.LogRecord) {
-	sink.parent.waitForReload()
+	lockT := sink.downstreamMutex.RLock()
+	defer sink.downstreamMutex.RUnlock(lockT)
 
 	(*sink.downstreamPtr).Accept(buffer)
 }
 
-// Tick calls Tick on the current downstream sink
+// Tick calls Tick on the bound downstream sink
 func (sink *ReloadableSink) Tick() {
-	sink.parent.waitForReload()
+	lockT := sink.downstreamMutex.RLock()
+	defer sink.downstreamMutex.RUnlock(lockT)
 
 	(*sink.downstreamPtr).Tick()
 }
 
-// Close closes the current downstream sink and the reloadable sink itself
+// Close closes the bound downstream sink and the reloadable sink itself
 func (sink *ReloadableSink) Close() {
-	sink.parent.waitForReload()
+	lockT := sink.downstreamMutex.RLock()
+	defer sink.downstreamMutex.RUnlock(lockT)
 
 	(*sink.downstreamPtr).Close()
 	*sink.downstreamPtr = nil

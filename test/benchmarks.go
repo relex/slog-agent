@@ -7,7 +7,8 @@ import (
 	"time"
 
 	"github.com/relex/gotils/logger"
-	"github.com/relex/slog-agent/base"
+	"github.com/relex/gotils/promexporter/promext"
+	"github.com/relex/gotils/promexporter/promreg"
 	"github.com/relex/slog-agent/run"
 	"github.com/relex/slog-agent/util"
 )
@@ -19,7 +20,7 @@ type benchmarkMetric struct {
 
 // RunBenchmarkPipeline benchmarks a workerless pipeline
 func RunBenchmarkPipeline(inputPath string, outputPath string, repeat int, configFile string) {
-	mfactory := base.NewMetricFactory("benchpipeline_", nil, nil)
+	mfactory := promreg.NewMetricFactory("benchpipeline_", nil, nil)
 	outputConfig, process, endProcess := preparePipeline(configFile, testOutputTag, mfactory)
 	writeChunk, closeOutput := openLogChunkConsumingFunc(outputPath, outputConfig)
 
@@ -34,16 +35,17 @@ func RunBenchmarkPipeline(inputPath string, outputPath string, repeat int, confi
 	closeOutput()
 
 	reportBenchmarkResult("BenchmarkPipeline", totalInputCount, totalInputLength, costTracker.Report(), mfactory)
-	logger.Info(mfactory.DumpMetrics(false))
+	logger.Info(promext.DumpMetrics("", true, false, mfactory))
 }
 
 // RunBenchmarkAgent benchmarks a fully configured agent outputting to file or null
 func RunBenchmarkAgent(inputPath string, outputPath string, repeat int, configFile string) {
 	// launch agent
-	loader, loaderErr := run.NewLoaderFromConfigFile(configFile, "testagent_")
-	if loaderErr != nil {
-		logger.Panic(loaderErr)
+	loader, confErr := run.NewLoaderFromConfigFile(configFile, "testagent_")
+	if confErr != nil {
+		logger.Panic(confErr)
 	}
+	loader.ConfigStats.Log(logger.Root())
 
 	chunkSaver := openLogChunkSaver(outputPath, loader.Output)
 	agt := startAgent(loader, chunkSaver, nil, "")
@@ -57,8 +59,8 @@ func RunBenchmarkAgent(inputPath string, outputPath string, repeat int, configFi
 	logger.Info("stopping...")
 	agt.StopAndWait()
 
-	reportBenchmarkResult("BenchmarkAgent", numRecords*repeat, int64(len(inputData))*int64(repeat), costTracker.Report(), agt.MetricFactory())
-	logger.Info(agt.DumpMetrics())
+	reportBenchmarkResult("BenchmarkAgent", numRecords*repeat, int64(len(inputData))*int64(repeat), costTracker.Report(), agt.GetMetricQuerier())
+	logger.Info(promext.DumpMetricsFrom("", true, true, agt.GetMetricQuerier()))
 }
 
 func runBenchmarkInputSender(agentAddress string, inputData []byte, repeat int) {
@@ -115,7 +117,7 @@ func runBenchmarkInputSender(agentAddress string, inputData []byte, repeat int) 
 	runtime.UnlockOSThread()
 }
 
-func reportBenchmarkResult(title string, numLogs int, sizeOfLogs int64, report CostReport, mfactory *base.MetricFactory) {
+func reportBenchmarkResult(title string, numLogs int, sizeOfLogs int64, report CostReport, mquerier promreg.MetricQuerier) {
 	metrics := []benchmarkMetric{
 		{fmt: "%.0f log/sec", val: float64(numLogs) / report.RealTime.Seconds()},
 		{fmt: "%.0f MB/sec", val: float64(sizeOfLogs) / 1048576 / report.RealTime.Seconds()},
@@ -125,13 +127,13 @@ func reportBenchmarkResult(title string, numLogs int, sizeOfLogs int64, report C
 		{fmt: "%0.2f%% gc", val: 100.0 * report.GCCPUFraction},
 		{fmt: "%.02f sec", val: report.RealTime.Seconds()},
 	}
-	numPass := util.SumMetricValues(mfactory.AddOrGetCounterVec("process_passed_records_total", "", nil, nil))
-	numDrop := util.SumMetricValues(mfactory.AddOrGetCounterVec("process_dropped_records_total", "", nil, nil))
+	numPass := promext.SumMetricValues(mquerier.LookupMetricFamily("process_passed_records_total"))
+	numDrop := promext.SumMetricValues(mquerier.LookupMetricFamily("process_dropped_records_total"))
 	if int(numPass)+int(numDrop) != numLogs {
 		logger.Errorf("numbers of processed records don't match: %d, should be %d", int(numPass)+int(numDrop), numLogs)
 	}
-	numChunks := util.SumMetricValues(mfactory.AddOrGetCounterVec("process_chunks_total", "", nil, nil))
-	numBytes := util.SumMetricValues(mfactory.AddOrGetCounterVec("process_chunk_bytes_total", "", nil, nil))
+	numChunks := promext.SumMetricValues(mquerier.LookupMetricFamily("process_chunks_total"))
+	numBytes := promext.SumMetricValues(mquerier.LookupMetricFamily("process_chunk_bytes_total"))
 	metrics = append(metrics, benchmarkMetric{fmt: "%.0f log/chunk", val: float64(numLogs) / numChunks})
 	metrics = append(metrics, benchmarkMetric{fmt: "%.0f KB/chunk", val: numBytes / 1024.0 / numChunks})
 	metrics = append(metrics, benchmarkMetric{fmt: "%.0f MB in", val: float64(sizeOfLogs) / 1048576})

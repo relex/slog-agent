@@ -1,23 +1,21 @@
 package cmd
 
 import (
-	"context"
-
-	"github.com/relex/gotils/logger"
 	"github.com/relex/slog-agent/defs"
 	"github.com/relex/slog-agent/run"
-	"github.com/relex/slog-agent/util"
 )
 
 type runCommandState struct {
 	Config      string `help:"Configuration file path"`
-	MetricsAddr string `help:"The listener address to expose Prometheus metrics and debug information"`
+	MetricsAddr string `help:"The HTTP listener address to expose Prometheus metrics and debug information. Use :0 for auto assignment."`
+	AllowReload bool   `help:"Allow configuration reloading by SIGHUP"`
 	TestMode    bool   `help:"Use test mode config: fast retry and short timeout"`
 }
 
 var runCmd runCommandState = runCommandState{
 	Config:      "config.yml",
 	MetricsAddr: ":9335",
+	AllowReload: false,
 	TestMode:    false,
 }
 
@@ -26,11 +24,5 @@ func (cmd *runCommandState) run(args []string) {
 		defs.EnableTestMode()
 	}
 
-	msrv := util.LaunchMetricsListener(cmd.MetricsAddr)
-
-	run.Run(cmd.Config)
-
-	if err := msrv.Shutdown(context.Background()); err != nil {
-		logger.Errorf("error shutting down metrics listener: %v", err)
-	}
+	run.Run(cmd.Config, cmd.MetricsAddr, cmd.AllowReload)
 }

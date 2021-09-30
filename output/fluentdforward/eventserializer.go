@@ -96,7 +96,7 @@ func (packer *eventSerializer) SerializeRecord(record *base.LogRecord) base.LogS
 // Check with `disasm` command in go pprof to be sure
 func (packer *eventSerializer) encodeRecord(record *base.LogRecord, buffer []byte) int {
 	// encode log records into chunks of [timestamp, field-map] in msgpack
-	fields := record.Fields
+	fields := record.Fields[0:len(packer.fieldMasks)] // hide unnamed/reserved fields at the end
 	position := 0
 
 	// root-array

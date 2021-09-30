@@ -6,7 +6,8 @@ import (
 	"sort"
 
 	"github.com/relex/gotils/logger"
-	"github.com/relex/gotils/promexporter"
+	"github.com/relex/gotils/promexporter/promext"
+	"github.com/relex/gotils/promexporter/promreg"
 	"github.com/relex/slog-agent/base"
 	"github.com/relex/slog-agent/util"
 )
@@ -20,20 +21,20 @@ type chunkOperator struct {
 }
 
 type chunkOperatorMetrics struct {
-	persistentChunks     promexporter.RWGauge
-	persistentChunkBytes promexporter.RWGauge
-	ioErrorsTotal        promexporter.RWCounter
+	persistentChunks     promext.RWGauge
+	persistentChunkBytes promext.RWGauge
+	ioErrorsTotal        promext.RWCounter
 }
 
-func newChunkOperator(parentLogger logger.Logger, path string, matchID func(string) bool, metricFactory *base.MetricFactory,
+func newChunkOperator(parentLogger logger.Logger, path string, matchID func(string) bool, metricCreator promreg.MetricCreator,
 	spaceLimit int64) chunkOperator {
 
 	ologger := parentLogger
 
 	metrics := chunkOperatorMetrics{
-		persistentChunks:     metricFactory.AddOrGetGauge("persistent_chunks", "Numbers of currently persistent chunks, including chunks being sent but not yet acknowledged.", nil, nil),
-		persistentChunkBytes: metricFactory.AddOrGetGauge("persistent_chunk_bytes", "Bytes of currently persistent chunks, including chunks being sent but not yet acknowledged", nil, nil),
-		ioErrorsTotal:        metricFactory.AddOrGetCounter("io_errors_total", "Numbers of I/O errors for chunk operations", nil, nil),
+		persistentChunks:     metricCreator.AddOrGetGauge("persistent_chunks", "Numbers of currently persistent chunks, including chunks being sent but not yet acknowledged.", nil, nil),
+		persistentChunkBytes: metricCreator.AddOrGetGauge("persistent_chunk_bytes", "Bytes of currently persistent chunks, including chunks being sent but not yet acknowledged", nil, nil),
+		ioErrorsTotal:        metricCreator.AddOrGetCounter("io_errors_total", "Numbers of I/O errors for chunk operations", nil, nil),
 	}
 
 	maybeDir, oerr := os.Open(path)

@@ -2,7 +2,8 @@ package hybridbuffer
 
 import (
 	"github.com/relex/gotils/logger"
-	"github.com/relex/gotils/promexporter"
+	"github.com/relex/gotils/promexporter/promext"
+	"github.com/relex/gotils/promexporter/promreg"
 	"github.com/relex/slog-agent/base"
 	"github.com/relex/slog-agent/defs"
 )
@@ -15,27 +16,27 @@ type chunkManager struct {
 }
 
 type chunkManagerMetrics struct {
-	pendingChunks              promexporter.RWGauge
-	inputChunksTotalTransient  promexporter.RWCounter
-	inputChunksTotalPersistent promexporter.RWCounter
-	consumedChunksTotal        promexporter.RWCounter
-	leftoverChunksTotal        promexporter.RWCounter
-	droppedChunksTotal         promexporter.RWCounter
+	pendingChunks              promext.RWGauge
+	inputChunksTotalTransient  promext.RWCounter
+	inputChunksTotalPersistent promext.RWCounter
+	consumedChunksTotal        promext.RWCounter
+	leftoverChunksTotal        promext.RWCounter
+	droppedChunksTotal         promext.RWCounter
 }
 
-func newChunkManager(parentLogger logger.Logger, operator chunkOperator, metricFactory *base.MetricFactory, sendAllAtEnd bool) chunkManager {
-	inputChunksTotal := metricFactory.AddOrGetCounterVec("input_chunks_total", "Numbers of input chunks", []string{"state"}, nil)
+func newChunkManager(parentLogger logger.Logger, operator chunkOperator, metricCreator promreg.MetricCreator, sendAllAtEnd bool) chunkManager {
+	inputChunksTotal := metricCreator.AddOrGetCounterVec("input_chunks_total", "Numbers of input chunks", []string{"state"}, nil)
 	return chunkManager{
 		logger:       parentLogger.WithField(defs.LabelPart, "ChunkManager"),
 		operator:     operator,
 		sendAllAtEnd: sendAllAtEnd || !operator.HasDir(),
 		metrics: chunkManagerMetrics{
-			pendingChunks:              metricFactory.AddOrGetGauge("pending_chunks", "Numbers of pending chunks in buffer or output phase", nil, nil),
+			pendingChunks:              metricCreator.AddOrGetGauge("pending_chunks", "Numbers of pending chunks in buffer or output phase", nil, nil),
 			inputChunksTotalTransient:  inputChunksTotal.WithLabelValues("transient"),
 			inputChunksTotalPersistent: inputChunksTotal.WithLabelValues("persistent"),
-			consumedChunksTotal:        metricFactory.AddOrGetCounter("consumed_chunks_total", "Numbers of output chunks consumed / forwarded", nil, nil),
-			leftoverChunksTotal:        metricFactory.AddOrGetCounter("leftover_chunks_total", "Numbers of output chunks left for next start", nil, nil),
-			droppedChunksTotal:         metricFactory.AddOrGetCounter("dropped_chunks_total", "Numbers of dropped chunks", nil, nil),
+			consumedChunksTotal:        metricCreator.AddOrGetCounter("consumed_chunks_total", "Numbers of output chunks consumed / forwarded", nil, nil),
+			leftoverChunksTotal:        metricCreator.AddOrGetCounter("leftover_chunks_total", "Numbers of output chunks left for next start", nil, nil),
+			droppedChunksTotal:         metricCreator.AddOrGetCounter("dropped_chunks_total", "Numbers of dropped chunks", nil, nil),
 		},
 	}
 }

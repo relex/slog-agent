@@ -2,6 +2,7 @@ package bsupport
 
 import (
 	"github.com/relex/gotils/logger"
+	"github.com/relex/gotils/promexporter/promreg"
 	"github.com/relex/slog-agent/base"
 	"github.com/relex/slog-agent/base/bconfig"
 )
@@ -10,10 +11,10 @@ import (
 func NewSequentialPipelineLauncher(args bconfig.PipelineArgs) base.PipelineWorkersLauncher {
 
 	return func(parentLogger logger.Logger, tag string, pipelineID string, input <-chan []*base.LogRecord,
-		metricFactory *base.MetricFactory, onStopped func()) {
+		metricCreator promreg.MetricCreator, onStopped func()) {
 
 		outputBufferer := args.BufferConfig.NewBufferer(parentLogger, pipelineID, args.OutputConfig.MatchChunkID,
-			metricFactory, args.SendAllAtEnd)
+			metricCreator, args.SendAllAtEnd)
 		outputBufferer.Launch()
 
 		if args.NewConsumerOverride != nil {
@@ -22,11 +23,11 @@ func NewSequentialPipelineLauncher(args bconfig.PipelineArgs) base.PipelineWorke
 			outputConsumer.Launch()
 		} else {
 			parentLogger.Info("launch consumer")
-			outputConsumer := args.OutputConfig.NewForwarder(parentLogger, outputBufferer.RegisterNewConsumer(), metricFactory)
+			outputConsumer := args.OutputConfig.NewForwarder(parentLogger, outputBufferer.RegisterNewConsumer(), metricCreator)
 			outputConsumer.Launch()
 		}
 
-		procTracker := base.NewLogProcessCounter(metricFactory, args.Schema, args.MetricKeyLocators)
+		procTracker := base.NewLogProcessCounter(metricCreator, args.Schema, args.MetricKeyLocators)
 
 		procWorker := NewLogProcessingWorker(
 			parentLogger,

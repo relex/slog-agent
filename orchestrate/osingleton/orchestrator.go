@@ -5,6 +5,7 @@ import (
 
 	"github.com/relex/gotils/channels"
 	"github.com/relex/gotils/logger"
+	"github.com/relex/gotils/promexporter/promreg"
 	"github.com/relex/slog-agent/base"
 	"github.com/relex/slog-agent/base/bsupport"
 	"github.com/relex/slog-agent/defs"
@@ -24,13 +25,13 @@ type singletonOrchestratorChild struct {
 }
 
 // NewOrchestrator creates a singleton Orchestrator backed by one pipeline to aggregate and process all incoming logs
-func NewOrchestrator(parentLogger logger.Logger, tag string, metricFactory *base.MetricFactory, launchWorkers base.PipelineWorkersLauncher) base.Orchestrator {
+func NewOrchestrator(parentLogger logger.Logger, tag string, metricCreator promreg.MetricCreator, launchWorkers base.PipelineWorkersLauncher) base.Orchestrator {
 	o := &singletonOrchestrator{
 		logger:       parentLogger.WithField(defs.LabelComponent, "SingletonOrchestrator"),
 		inputChannel: make(chan []*base.LogRecord, defs.IntermediateBufferedChannelSize),
 		stopSignal:   channels.NewSignalAwaitable(),
 	}
-	launchWorkers(o.logger, tag, "", o.inputChannel, metricFactory, o.stopSignal.Signal)
+	launchWorkers(o.logger, tag, "", o.inputChannel, metricCreator, o.stopSignal.Signal)
 	return o
 }
 

@@ -5,6 +5,7 @@ import (
 
 	"github.com/relex/gotils/channels"
 	"github.com/relex/gotils/logger"
+	"github.com/relex/gotils/promexporter/promreg"
 	"github.com/relex/slog-agent/base"
 	"github.com/relex/slog-agent/defs"
 )
@@ -28,7 +29,7 @@ type ClientWorker struct {
 }
 
 // NewClientWorker creates ClientWorker
-func NewClientWorker(parentLogger logger.Logger, args base.ChunkConsumerArgs, metricFactory *base.MetricFactory,
+func NewClientWorker(parentLogger logger.Logger, args base.ChunkConsumerArgs, metricCreator promreg.MetricCreator,
 	openConn EstablishConnectionFunc, maxDuration time.Duration) base.ChunkConsumer {
 
 	client := &ClientWorker{
@@ -39,7 +40,7 @@ func NewClientWorker(parentLogger logger.Logger, args base.ChunkConsumerArgs, me
 		onChunkLeft:  args.OnChunkLeftover,
 		onFinished:   args.OnFinished,
 		stopped:      channels.NewSignalAwaitable(),
-		metrics:      newClientMetrics(metricFactory),
+		metrics:      newClientMetrics(metricCreator),
 		openConn:     openConn,
 		maxDuration:  maxDuration,
 	}

@@ -10,6 +10,7 @@ import (
 
 	"github.com/relex/gotils/channels"
 	"github.com/relex/gotils/logger"
+	"github.com/relex/gotils/promexporter/promreg"
 	"github.com/relex/slog-agent/base"
 	"github.com/relex/slog-agent/base/bconfig"
 	"github.com/relex/slog-agent/base/bsupport"
@@ -41,7 +42,7 @@ func init() {
 
 // NewInput creates a SyslogInput and starts the network listener
 func (cfg *Config) NewInput(parentLogger logger.Logger, allocator *base.LogAllocator, schema base.LogSchema,
-	logBufferReceiver base.MultiSinkBufferReceiver, metricFactory *base.MetricFactory,
+	logBufferReceiver base.MultiSinkBufferReceiver, metricCreator promreg.MetricCreator,
 	stopRequest channels.Awaitable) (base.LogInput, error) {
 
 	if len(cfg.LevelMapping) == 0 {
@@ -63,9 +64,9 @@ func (cfg *Config) NewInput(parentLogger logger.Logger, allocator *base.LogAlloc
 		return newCompositeParser(parser, extractionTransforms, allocator)
 	}
 
-	inputMetricFactory := metricFactory.NewSubFactory("input_", []string{"protocol"}, []string{"syslog"})
+	inputMetricCreator := metricCreator.AddOrGetPrefix("input_", []string{"protocol"}, []string{"syslog"})
 
-	rawMessageReceiver := bsupport.NewLogParsingReceiver(inputLogger, createParser, logBufferReceiver, inputMetricFactory)
+	rawMessageReceiver := bsupport.NewLogParsingReceiver(inputLogger, createParser, logBufferReceiver, inputMetricCreator)
 
 	lsnr, addr, err := tcplistener.NewTCPLineListener(inputLogger, cfg.Address, syslogprotocol.TestRecordStart, rawMessageReceiver, stopRequest)
 	if err != nil {
@@ -103,12 +104,30 @@ func (cfg *Config) VerifyConfig(schema base.LogSchema) error {
 	if _, _, err := net.SplitHostPort(cfg.Address); err != nil {
 		return fmt.Errorf(".address has invalid format: %w", err)
 	}
+
+	if len(cfg.LevelMapping) == 0 {
+		return fmt.Errorf(".levelMapping is empty")
+	}
 	if len(cfg.Extractions) == 0 {
 		return fmt.Errorf(".extractions is empty")
 	}
+
+	// try to create a dummy parser and see if there is any error. In real mode, new parser is created per connection.
+	// this would also invoke schema.OnLocated on all fields to be used by real parsers
+	if err := func() error {
+		dummyMetricFactory := promreg.NewMetricFactory("verify_", nil, nil)
+		dummyInputCounter := base.NewLogInputCounter(dummyMetricFactory)
+		dummyLogAllocator := base.NewLogAllocator(schema)
+		_, err := syslogparser.NewParser(logger.Root(), dummyLogAllocator, schema, cfg.LevelMapping, dummyInputCounter)
+		return err
+	}(); err != nil {
+		return fmt.Errorf("incompatible with schema: %w", err)
+	}
+
 	if err := bsupport.VerifyTransformConfigs(cfg.Extractions, schema, ".extractions"); err != nil {
 		return err
 	}
+
 	return nil
 }
 

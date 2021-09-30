@@ -14,6 +14,7 @@ schema:
     - task
     - vhost
     - pnum
+  maxFields: 30
 inputs:
   - type: syslog
     address: localhost:5140

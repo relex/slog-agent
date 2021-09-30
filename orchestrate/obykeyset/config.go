@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"github.com/relex/gotils/logger"
+	"github.com/relex/gotils/promexporter/promreg"
 	"github.com/relex/slog-agent/base"
 	"github.com/relex/slog-agent/base/bconfig"
 	"github.com/relex/slog-agent/base/bsupport"
@@ -19,14 +20,14 @@ type Config struct {
 }
 
 // LaunchOrchestrator constructs and launches a by-keySet orchestrator and pipeline(s)
-func (cfg *Config) LaunchOrchestrator(parentLogger logger.Logger, args bconfig.PipelineArgs, metricFactory *base.MetricFactory) base.Orchestrator {
+func (cfg *Config) LaunchOrchestrator(parentLogger logger.Logger, args bconfig.PipelineArgs, metricCreator promreg.MetricCreator) base.Orchestrator {
 	var launchPipeline base.PipelineWorkersLauncher
 	if cfg.NumChildren == 1 {
 		launchPipeline = bsupport.NewSequentialPipelineLauncher(args)
 	} else {
 		launchDistributor := func(parentLogger logger.Logger, input <-chan []*base.LogRecord, tag string,
-			subMetricFactory *base.MetricFactory, launchChildPipeline base.OrderedPipelineWorkersLauncher, onStopped func()) {
-			distributor := obase.NewDistributor(parentLogger, input, tag, cfg.NumChildren, subMetricFactory, launchChildPipeline)
+			subMetricCreator promreg.MetricCreator, launchChildPipeline base.OrderedPipelineWorkersLauncher, onStopped func()) {
+			distributor := obase.NewDistributor(parentLogger, input, tag, cfg.NumChildren, subMetricCreator, launchChildPipeline)
 			distributor.Launch()
 			distributor.Stopped().Next(onStopped)
 		}
@@ -34,12 +35,12 @@ func (cfg *Config) LaunchOrchestrator(parentLogger logger.Logger, args bconfig.P
 	}
 
 	existingPipelineIDs := args.BufferConfig.ListBufferIDs(parentLogger, args.OutputConfig.MatchChunkID,
-		metricFactory.NewSubFactory("recovery_", nil, nil))
+		metricCreator.AddOrGetPrefix("recovery_", nil, nil))
 
-	return NewOrchestrator(parentLogger, args.Schema, cfg.Keys, cfg.TagTemplate, metricFactory, launchPipeline, existingPipelineIDs)
+	return NewOrchestrator(parentLogger, args.Schema, cfg.Keys, cfg.TagTemplate, metricCreator, launchPipeline, existingPipelineIDs)
 }
 
-// VerifyConfig verifies orchestration config
+// VerifyConfig verifies orchestration config and returns key fields
 func (cfg *Config) VerifyConfig(schema base.LogSchema) ([]string, error) {
 	if len(cfg.Keys) == 0 {
 		return nil, fmt.Errorf(".keys is empty")
@@ -62,9 +63,5 @@ func (cfg *Config) VerifyConfig(schema base.LogSchema) ([]string, error) {
 		return nil, fmt.Errorf(".num must be at least 1: %d", cfg.NumChildren)
 	}
 
-	metricKeyNames := make([]string, len(cfg.Keys))
-	for i, key := range cfg.Keys {
-		metricKeyNames[i] = "key_" + key
-	}
-	return metricKeyNames, nil
+	return cfg.Keys, nil
 }

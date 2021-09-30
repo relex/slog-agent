@@ -18,6 +18,15 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
+func init() {
+	buffer.Register()
+	input.Register()
+	orchestrate.Register()
+	output.Register()
+	rewrite.Register()
+	transform.Register()
+}
+
 // Config defines the root of slog-agent config file
 type Config struct {
 	Anchors         AnchorsConfig                      `yaml:"anchors"`
@@ -32,74 +41,106 @@ type Config struct {
 
 // AnchorsConfig defines the anchors section in config file
 //
-// The section is meant to host user-defined YAML variables for other sections and doesn't need to be unmarshalled itself
+// The section is meant to host user-defined YAML variables for other sections and doesn't need to be processed itself
 type AnchorsConfig struct {
 }
 
-// SchemaConfig defines the schema section in config file
-type SchemaConfig struct {
-	Fields []string `yaml:"fields"`
-}
-
-func init() {
-	buffer.Register()
-	input.Register()
-	orchestrate.Register()
-	output.Register()
-	rewrite.Register()
-	transform.Register()
-}
-
-// ParseConfigFile loads config from the path, creates the schema and verify all configurations
-func ParseConfigFile(filepath string) (Config, base.LogSchema, error) {
-	cfg := Config{}
-	if err := util.UnmarshalYamlFile(filepath, &cfg); err != nil {
-		return cfg, base.LogSchema{}, err
-	}
-	if len(cfg.Schema.Fields) == 0 {
-		return cfg, base.LogSchema{}, fmt.Errorf("schema: no field defined")
-	}
-	logger.Infof("create schema with fields: [%s]", strings.Join(cfg.Schema.Fields, ", "))
-	schema, schemaErr := base.NewLogSchema(cfg.Schema.Fields)
-	if schemaErr != nil {
-		return cfg, schema, fmt.Errorf("schema: %w", schemaErr)
-	}
-	if err := bsupport.VerifyInputConfigs(cfg.Inputs, schema, "inputs"); err != nil {
-		return cfg, schema, err
-	}
-	metricLabelNames, orchErr := cfg.Orchestration.VerifyConfig(schema)
-	if orchErr != nil {
-		return cfg, schema, fmt.Errorf("orchestration: %w", orchErr)
-	}
-	if len(cfg.MetricKeys) == 0 {
-		return cfg, schema, fmt.Errorf("metricKeys is empty")
-	}
-	if _, err := schema.CreateFieldLocators(cfg.MetricKeys); err != nil {
-		return cfg, schema, fmt.Errorf("metricKeys: %w", err)
-	}
-	for i, key := range cfg.MetricKeys {
-		if util.IndexOfString(metricLabelNames, "key_"+key) != -1 {
-			return cfg, schema, fmt.Errorf("metricKeys[%d]: key '%s' cannot exist in both .metricKeys and .orchestration", i, key)
-		}
-	}
-	if err := bsupport.VerifyTransformConfigs(cfg.Transformations, schema, "transforms"); err != nil {
-		return cfg, schema, err
-	}
-	if err := cfg.Buffer.VerifyConfig(); err != nil {
-		return cfg, schema, fmt.Errorf("buffer: %w", err)
-	}
-	if err := cfg.Output.VerifyConfig(schema); err != nil {
-		return cfg, schema, fmt.Errorf("output: %w", err)
-	}
-	return cfg, schema, nil
-}
-
-// MarshalYAML provides custom marshalling to export readable document. The result is not reversible.
+// MarshalYAML does nothing
 func (holder AnchorsConfig) MarshalYAML() (interface{}, error) {
 	return []string(nil), nil
 }
 
-// UnmarshalYAML provides custom unmarshalling for the implementations of Config
+// UnmarshalYAML does nothing
 func (holder *AnchorsConfig) UnmarshalYAML(value *yaml.Node) error {
+	return nil
+}
+
+// SchemaConfig defines the schema section in config file
+type SchemaConfig struct {
+	Fields    []string `yaml:"fields"`
+	MaxFields int      `yaml:"maxFields"`
+}
+
+// ParseConfigFile loads config from the path, creates the schema and verify all configurations
+func ParseConfigFile(filepath string) (Config, base.LogSchema, ConfigStats, error) {
+	var conf Config
+	var stats ConfigStats
+
+	if err := util.UnmarshalYamlFile(filepath, &conf); err != nil {
+		return conf, base.LogSchema{}, stats, err
+	}
+
+	var schema base.LogSchema
+	if s, err := checkAndCreateSchema(conf); err == nil {
+		schema = s
+	} else {
+		return conf, base.LogSchema{}, stats, err
+	}
+
+	statsBuilder := NewConfigStatsBuilder(&schema)
+	statsBuilder.BeginTrackingFixedFields()
+
+	if err := bsupport.VerifyInputConfigs(conf.Inputs, schema, "inputs"); err != nil {
+		return conf, schema, stats, err
+	}
+
+	var orcKeys []string
+	if keys, err := conf.Orchestration.VerifyConfig(schema); err == nil {
+		orcKeys = keys
+		stats.OrchestrationKeys = keys
+	} else {
+		return conf, schema, stats, fmt.Errorf("orchestration: %w", err)
+	}
+
+	statsBuilder.BeginTrackingFields()
+
+	if err := checkMetricKeys(conf, schema, orcKeys); err != nil {
+		return conf, schema, stats, err
+	}
+
+	if err := bsupport.VerifyTransformConfigs(conf.Transformations, schema, "transforms"); err != nil {
+		return conf, schema, stats, err
+	}
+
+	if err := conf.Buffer.VerifyConfig(); err != nil {
+		return conf, schema, stats, fmt.Errorf("buffer: %w", err)
+	}
+
+	if err := conf.Output.VerifyConfig(schema); err != nil {
+		return conf, schema, stats, fmt.Errorf("output: %w", err)
+	}
+
+	statsBuilder.Finish(&stats)
+	return conf, schema, stats, nil
+}
+
+func checkAndCreateSchema(conf Config) (base.LogSchema, error) {
+	if len(conf.Schema.Fields) == 0 {
+		return base.LogSchema{}, fmt.Errorf("schema: no fields defined")
+	}
+	if conf.Schema.MaxFields == 0 {
+		return base.LogSchema{}, fmt.Errorf("schema: no maxFields defined")
+	}
+
+	logger.Infof("create schema with fields: [%s]", strings.Join(conf.Schema.Fields, ", "))
+	schema, schemaErr := base.NewLogSchema(conf.Schema.Fields, conf.Schema.MaxFields)
+	if schemaErr != nil {
+		return base.LogSchema{}, fmt.Errorf("schema: %w", schemaErr)
+	}
+	return schema, nil
+}
+
+func checkMetricKeys(conf Config, schema base.LogSchema, orchestrationKeys []string) error {
+	if len(conf.MetricKeys) == 0 {
+		return fmt.Errorf("metricKeys is empty")
+	}
+	if _, err := schema.CreateFieldLocators(conf.MetricKeys); err != nil {
+		return fmt.Errorf("metricKeys: %w", err)
+	}
+	for i, key := range conf.MetricKeys {
+		if util.IndexOfString(orchestrationKeys, key) != -1 {
+			return fmt.Errorf("metricKeys[%d]: field '%s' cannot be listed in both .metricKeys and .orchestration/keys", i, key)
+		}
+	}
 	return nil
 }

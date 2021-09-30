@@ -7,6 +7,7 @@ import (
 
 	"github.com/c2h5oh/datasize"
 	"github.com/relex/gotils/logger"
+	"github.com/relex/gotils/promexporter/promreg"
 	"github.com/relex/slog-agent/base"
 	"github.com/relex/slog-agent/base/bconfig"
 	"github.com/relex/slog-agent/defs"
@@ -21,25 +22,25 @@ type Config struct {
 
 // ListBufferIDs lists existing buffer IDs
 func (cfg *Config) ListBufferIDs(parentLogger logger.Logger, matchChunkID func(string) bool,
-	metricFactory *base.MetricFactory) []string {
+	metricCreator promreg.MetricCreator) []string {
 
 	clogger := parentLogger.WithField(defs.LabelComponent, "HybridBufferConfig")
 
 	rootPath := os.ExpandEnv(cfg.RootPath)
-	return listBufferQueueIDs(clogger, rootPath, matchChunkID, metricFactory)
+	return listBufferQueueIDs(clogger, rootPath, matchChunkID, metricCreator)
 }
 
 // NewBufferer creates a HybridBufferer
 // If bufferID is empty, the queue dir is the root dir as defined in .path
 func (cfg *Config) NewBufferer(parentLogger logger.Logger, bufferID string, matchChunkID func(string) bool,
-	metricFactory *base.MetricFactory, sendAllAtEnd bool) base.ChunkBufferer {
+	metricCreator promreg.MetricCreator, sendAllAtEnd bool) base.ChunkBufferer {
 
 	rootPath := os.ExpandEnv(cfg.RootPath)
 	if strings.Contains(rootPath, "$") {
 		parentLogger.Warnf("possibly misconfigured .rootPath: '%s'", rootPath)
 	}
 
-	return newBufferer(parentLogger, rootPath, bufferID, matchChunkID, metricFactory, int64(cfg.MaxBufSize.Bytes()), sendAllAtEnd)
+	return newBufferer(parentLogger, rootPath, bufferID, matchChunkID, metricCreator, int64(cfg.MaxBufSize.Bytes()), sendAllAtEnd)
 }
 
 // VerifyConfig checks configuration

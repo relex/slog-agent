@@ -2,13 +2,14 @@ package bsupport
 
 import (
 	"github.com/relex/gotils/logger"
+	"github.com/relex/gotils/promexporter/promreg"
 	"github.com/relex/slog-agent/base"
 	"github.com/relex/slog-agent/base/bconfig"
 )
 
 // ParallelDistributorLauncher defines a function to launch distributor for parallel pipelines
 type ParallelDistributorLauncher func(parentLogger logger.Logger, input <-chan []*base.LogRecord, tag string,
-	metricFactory *base.MetricFactory, launchChildWorkers base.OrderedPipelineWorkersLauncher, onStopped func())
+	metricCreator promreg.MetricCreator, launchChildWorkers base.OrderedPipelineWorkersLauncher, onStopped func())
 
 // NewParallelPipelineLauncher creates a parallel pipeline for processing, buffering and consuming logs
 //
@@ -17,23 +18,23 @@ type ParallelDistributorLauncher func(parentLogger logger.Logger, input <-chan [
 func NewParallelPipelineLauncher(args bconfig.PipelineArgs, launchDistributor ParallelDistributorLauncher) base.PipelineWorkersLauncher {
 
 	return func(parentLogger logger.Logger, tag string, pipelineID string, input <-chan []*base.LogRecord,
-		metricFactory *base.MetricFactory, onStopped func()) {
+		metricCreator promreg.MetricCreator, onStopped func()) {
 
 		outputBufferer := args.BufferConfig.NewBufferer(parentLogger, pipelineID, args.OutputConfig.MatchChunkID,
-			metricFactory, args.SendAllAtEnd)
+			metricCreator, args.SendAllAtEnd)
 		outputBufferer.Launch()
 
 		if args.NewConsumerOverride != nil {
 			outputConsumer := args.NewConsumerOverride(parentLogger, outputBufferer.RegisterNewConsumer())
 			outputConsumer.Launch()
 		} else {
-			outputConsumer := args.OutputConfig.NewForwarder(parentLogger, outputBufferer.RegisterNewConsumer(), metricFactory)
+			outputConsumer := args.OutputConfig.NewForwarder(parentLogger, outputBufferer.RegisterNewConsumer(), metricCreator)
 			outputConsumer.Launch()
 		}
 
 		// all parallel workers within distributor shares same buffer and same consumer
 		launchChildWorkers := newOrderedPipelineLauncher(args, outputBufferer.Accept)
-		launchDistributor(parentLogger, input, tag, metricFactory, launchChildWorkers, func() {
+		launchDistributor(parentLogger, input, tag, metricCreator, launchChildWorkers, func() {
 			outputBufferer.Destroy()
 			onStopped()
 		})
@@ -46,9 +47,9 @@ func NewParallelPipelineLauncher(args bconfig.PipelineArgs, launchDistributor Pa
 func newOrderedPipelineLauncher(args bconfig.PipelineArgs, chunkAccepter base.LogChunkAccepter) base.OrderedPipelineWorkersLauncher {
 
 	return func(parentLogger logger.Logger, tag string, pipelineNum int, input <-chan base.OrderedLogBuffer, // pipelineNum as ID is unused here
-		metricFactory *base.MetricFactory, onStopped func()) {
+		metricCreator promreg.MetricCreator, onStopped func()) {
 
-		procTracker := base.NewLogProcessCounter(metricFactory, args.Schema, args.MetricKeyLocators)
+		procTracker := base.NewLogProcessCounter(metricCreator, args.Schema, args.MetricKeyLocators)
 
 		procWorker := NewOrderedLogProcessingWorker(
 			parentLogger,
