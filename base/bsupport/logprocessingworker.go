@@ -29,7 +29,6 @@ func NewLogProcessingWorker(parentLogger logger.Logger,
 		PipelineWorkerBaseForLogRecords: NewPipelineWorkerBaseForLogRecords(
 			parentLogger.WithField(defs.LabelComponent, "LogProcessingWorker"),
 			input,
-			false,
 		),
 		deallocator:   deallocator,
 		procCounter:   procCounter,

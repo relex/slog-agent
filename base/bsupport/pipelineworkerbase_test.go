@@ -21,7 +21,6 @@ func newTestPipelineWorker(parentLogger logger.Logger, input <-chan []*base.LogR
 		PipelineWorkerBaseForLogRecords: NewPipelineWorkerBaseForLogRecords(
 			parentLogger.WithField(defs.LabelComponent, "TestPipelineWorker"),
 			input,
-			false,
 		),
 		outputChannel: make(chan []*base.LogRecord, defs.IntermediateBufferedChannelSize),
 	}

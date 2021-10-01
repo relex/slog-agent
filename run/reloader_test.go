@@ -55,7 +55,7 @@ func TestReloader(t *testing.T) {
 
 		// schedule reloading after 0.5 second
 		go func() {
-			time.Sleep(500 * time.Millisecond)
+			time.Sleep(1 * time.Second)
 			t.Run("reload errors", func(t *testing.T) {
 				testReloadInvalidConfig(t, orc.(*ReloadableOrchestrator), func(newConf string) error {
 					return ioutil.WriteFile(confFile.Name(), []byte(fmt.Sprintf(newConf, bufDir, srvAddr.String())), 0644)
@@ -71,7 +71,7 @@ func TestReloader(t *testing.T) {
 		start := time.Now()
 		numInput := 0
 		for {
-			if time.Since(start) >= time.Second {
+			if time.Since(start) >= 2*time.Second {
 				break
 			}
 			numInput++

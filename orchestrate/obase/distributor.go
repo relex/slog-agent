@@ -46,7 +46,7 @@ func NewDistributor(parentLogger logger.Logger, input <-chan []*base.LogRecord, 
 	currMutex := &sync.Mutex{}
 	currMutex.Lock()
 	dist := &Distributor{
-		PipelineWorkerBaseForLogRecords: bsupport.NewPipelineWorkerBaseForLogRecords(dlogger, input, false),
+		PipelineWorkerBaseForLogRecords: bsupport.NewPipelineWorkerBaseForLogRecords(dlogger, input),
 		children:                        children,
 		childCounter:                    childCounter,
 		currentBatch: &distributionBatch{

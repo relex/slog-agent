@@ -80,12 +80,12 @@ func (client *ClientWorker) run() {
 				client.logger.Info("reconnect without delay requested for load balancing")
 			}
 
-			client.logger.Infof("retrying connection with leftovers=%d", len(leftovers))
+			client.logger.Infof("retrying connection, leftovers=%d", len(leftovers))
 		}
 	}()
 
 	close(leftovers)
-	client.logger.Infof("process leftovers=%d on shutdown", len(leftovers))
+	client.logger.Infof("save on shutdown, leftovers=%d", len(leftovers))
 	for chunk := range leftovers {
 		client.metrics.OnLeftoverPopped(chunk)
 		client.onChunkLeft(chunk)

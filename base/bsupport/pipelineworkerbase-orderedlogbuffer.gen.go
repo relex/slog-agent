@@ -18,22 +18,20 @@ import (
 // It contains an input channel, process function for each of input values, and "stop" signals which are triggered when input channel is closed
 // The process function (PipelineProcFunc) is the only thing required from its composite parent
 type PipelineWorkerBaseForOrderedLogBuffer struct {
-	_baseLogger        logger.Logger
-	_baseInput         <-chan base.OrderedLogBuffer
-	_baseSkipLeftovers bool
-	_baseStopped       *channels.SignalAwaitable
-	_baseOnInput       func(input base.OrderedLogBuffer, timeout <-chan time.Time)
-	_baseOnTick        func(timeout <-chan time.Time)
-	_baseOnStop        func(timeout <-chan time.Time)
+	_baseLogger  logger.Logger
+	_baseInput   <-chan base.OrderedLogBuffer
+	_baseStopped *channels.SignalAwaitable
+	_baseOnInput func(input base.OrderedLogBuffer, timeout <-chan time.Time)
+	_baseOnTick  func(timeout <-chan time.Time)
+	_baseOnStop  func(timeout <-chan time.Time)
 }
 
 // NewPipelineWorkerBaseForOrderedLogBuffer creates a new PipelineWorkerBaseForOrderedLogBuffer
-func NewPipelineWorkerBaseForOrderedLogBuffer(logger logger.Logger, inputChannel <-chan base.OrderedLogBuffer, skipLeftovers bool) PipelineWorkerBaseForOrderedLogBuffer {
+func NewPipelineWorkerBaseForOrderedLogBuffer(logger logger.Logger, inputChannel <-chan base.OrderedLogBuffer) PipelineWorkerBaseForOrderedLogBuffer {
 	return PipelineWorkerBaseForOrderedLogBuffer{
-		_baseLogger:        logger,
-		_baseInput:         inputChannel,
-		_baseSkipLeftovers: skipLeftovers,
-		_baseStopped:       channels.NewSignalAwaitable(),
+		_baseLogger:  logger,
+		_baseInput:   inputChannel,
+		_baseStopped: channels.NewSignalAwaitable(),
 	}
 }
 
@@ -69,9 +67,7 @@ func (worker *PipelineWorkerBaseForOrderedLogBuffer) Stopped() channels.Awaitabl
 func (worker *PipelineWorkerBaseForOrderedLogBuffer) _baseRun() {
 	timeoutTimer := time.NewTimer(defs.IntermediateChannelTimeout)
 	worker._baseProcessMain(timeoutTimer)
-	if !worker._baseSkipLeftovers {
-		worker._baseProcessRemaining(timeoutTimer)
-	}
+
 	if worker._baseOnTick != nil {
 		util.ResetTimer(timeoutTimer, defs.IntermediateChannelTimeout)
 		worker._baseOnTick(timeoutTimer.C)
@@ -93,7 +89,7 @@ SELECT_LOOP:
 		select {
 		case value, ok := <-worker._baseInput:
 			if !ok {
-				worker._baseLogger.Infof("end main loop on input channel close, remaining=%d", len(worker._baseInput))
+				worker._baseLogger.Infof("end main loop on input channel close")
 				break SELECT_LOOP
 			}
 			worker._baseOnInput(value, timeoutTimer.C)
@@ -105,14 +101,4 @@ SELECT_LOOP:
 		}
 	}
 	ticker.Stop()
-}
-
-// processRemaining processes everything in input channel until it's empty
-func (worker *PipelineWorkerBaseForOrderedLogBuffer) _baseProcessRemaining(timeoutTimer *time.Timer) {
-	worker._baseLogger.Infof("process remaining inputs len=%d", len(worker._baseInput))
-	util.ResetTimer(timeoutTimer, defs.IntermediateChannelTimeout)
-	for value := range worker._baseInput {
-		worker._baseOnInput(value, timeoutTimer.C)
-	}
-	// onTick should be called afterwards
 }
