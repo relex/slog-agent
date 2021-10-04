@@ -17,6 +17,8 @@ import (
 	"github.com/relex/slog-agent/util"
 )
 
+const maxLoggingMessageSize = 200 // 200 bytes should be enough to include all key fields and the start of message
+
 // syslogparser parses RFC 5424 text to log records
 //
 // NOT thread-safe due to caching
@@ -107,20 +109,20 @@ func (parser *syslogParser) Parse(input []byte, timestamp time.Time) *base.LogRe
 
 	fields := record.Fields
 	if len(remaining) < 32 || remaining[0] != '<' {
-		parser.onMalformed(record, fmt.Sprintf("invalid syslog: %s", input)) // FIXME: trim input for logging
+		parser.onMalformed(record, "invalid syslog", input)
 		return nil
 	}
 
 	// parse the pri field, e.g. "<163>"
 	if ok, val, next := nextFieldBySpace(remaining); ok {
 		if val[len(val)-2:] != ">1" {
-			parser.onMalformed(record, fmt.Sprintf("invalid syslog pri '%s': %s", val, input))
+			parser.onMalformed(record, fmt.Sprintf("invalid syslog pri '%s'", val), input)
 			return nil
 		}
 		pri := val[1 : len(val)-2]
 		priVal, err := strconv.Atoi(pri)
 		if err != nil {
-			parser.onMalformed(record, fmt.Sprintf("invalid syslog pri value '%s': %s", pri, input))
+			parser.onMalformed(record, fmt.Sprintf("invalid syslog pri value '%s'", pri), input)
 			return nil
 		}
 
@@ -128,7 +130,7 @@ func (parser *syslogParser) Parse(input []byte, timestamp time.Time) *base.LogRe
 		{
 			facility := priVal >> 3
 			if facility < 0 || facility >= len(syslogprotocol.FacilityNames) {
-				parser.onMalformed(record, fmt.Sprintf("invalid syslog facility %d: %s", facility, input))
+				parser.onMalformed(record, fmt.Sprintf("invalid syslog facility %d", facility), input)
 				return nil
 			}
 			facilityName := syslogprotocol.FacilityNames[facility]
@@ -143,7 +145,7 @@ func (parser *syslogParser) Parse(input []byte, timestamp time.Time) *base.LogRe
 		}
 		remaining = next
 	} else {
-		parser.onMalformed(record, fmt.Sprintf("unfinished syslog: %s", input))
+		parser.onMalformed(record, "unfinished syslog", input)
 		return nil
 	}
 
@@ -151,7 +153,7 @@ func (parser *syslogParser) Parse(input []byte, timestamp time.Time) *base.LogRe
 	for _, locator := range parser.restFieldLocators {
 		ok, val, next := nextFieldBySpace(remaining)
 		if !ok {
-			parser.onMalformed(record, fmt.Sprintf("missing syslog field '%s': %s", locator.Name(parser.schema), input))
+			parser.onMalformed(record, fmt.Sprintf("missing syslog field '%s'", locator.Name(parser.schema)), input)
 			return nil
 		}
 		locator.Set(fields, val)
@@ -172,17 +174,25 @@ func (parser *syslogParser) Parse(input []byte, timestamp time.Time) *base.LogRe
 	return record
 }
 
-func (parser *syslogParser) onMalformed(record *base.LogRecord, warning string) {
+func (parser *syslogParser) onMalformed(record *base.LogRecord, warning string, rawLog []byte) {
 	parser.inputCounter.CountRecordDrop(record)
 	parser.allocator.Release(record)
 	// TODO: omit repeated warnings
-	parser.logger.Warn(warning)
+	if len(rawLog) > maxLoggingMessageSize {
+		parser.logger.Warn(warning, ": ", util.StringFromBytes(rawLog[:maxLoggingMessageSize]), "...")
+	} else {
+		parser.logger.Warn(warning, ": ", util.StringFromBytes(rawLog))
+	}
 }
 
-func (parser *syslogParser) onOverflow(input []byte) {
-	parser.overflowCounter(len(input))
+func (parser *syslogParser) onOverflow(rawLog []byte) {
+	parser.overflowCounter(len(rawLog))
 	// TODO: omit repeated warnings
-	parser.logger.Warn("message overflow: ", util.StringFromBytes(input[:200]), "...") // 200 bytes should include key fields and start of message
+	if len(rawLog) > maxLoggingMessageSize {
+		parser.logger.Warn("message overflow: ", util.StringFromBytes(rawLog[:maxLoggingMessageSize]), "...")
+	} else {
+		parser.logger.Warn("message overflow: ", util.StringFromBytes(rawLog))
+	}
 }
 
 // nextFieldBySpace takes next field value separated by space
