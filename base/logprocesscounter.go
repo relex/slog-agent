@@ -32,8 +32,8 @@ type LogProcessCounter struct {
 
 type logProcessCustomCounterVec struct {
 	index           int
-	countMetricVec  *promext.RWCounterVec
-	lengthMetricVec *promext.RWCounterVec
+	countMetricVec  *promext.LazyRWCounterVec
+	lengthMetricVec *promext.LazyRWCounterVec
 }
 
 type logInputCounterPair struct {
@@ -75,9 +75,9 @@ func (pcounter *LogProcessCounter) RegisterCustomCounter(label string) func(leng
 	if !exists {
 		counterVec = logProcessCustomCounterVec{
 			index: len(pcounter.customCounterVecMap),
-			countMetricVec: pcounter.factory.AddOrGetCounterVec("labelled_records_total", "Numbers of labelled log records",
+			countMetricVec: pcounter.factory.AddOrGetLazyCounterVec("labelled_records_total", "Numbers of labelled log records",
 				append([]string{"label"}, pcounter.metricKeyNames...), []string{label}),
-			lengthMetricVec: pcounter.factory.AddOrGetCounterVec("labelled_record_bytes_total", "Total length in bytes of labelled log records",
+			lengthMetricVec: pcounter.factory.AddOrGetLazyCounterVec("labelled_record_bytes_total", "Total length in bytes of labelled log records",
 				append([]string{"label"}, pcounter.metricKeyNames...), []string{label}),
 		}
 		pcounter.customCounterVecMap[label] = counterVec

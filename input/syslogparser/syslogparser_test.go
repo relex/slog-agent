@@ -46,8 +46,6 @@ func TestSyslogParser(t *testing.T) {
 
 	assert.Equal(t, `syslog_parser_dropped_record_bytes_total 0
 syslog_parser_dropped_records_total 0
-syslog_parser_labelled_record_bytes_total{label="overflow"} 0
-syslog_parser_labelled_records_total{label="overflow"} 0
 syslog_parser_passed_record_bytes_total 145
 syslog_parser_passed_records_total 2
 `, promext.DumpMetrics("", true, false, mfactory))

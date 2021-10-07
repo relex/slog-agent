@@ -15,8 +15,8 @@ type LogCustomCounterRegistry interface {
 // logCustomCounterHost hosts log counters by custom labels determined at runtime
 // It's used to support for example metrics of different labels added by individual log transforms
 type logCustomCounterHost struct {
-	countMetricVec  *promext.RWCounterVec
-	lengthMetricVec *promext.RWCounterVec
+	countMetricVec  *promext.LazyRWCounterVec
+	lengthMetricVec *promext.LazyRWCounterVec
 	counterMap      map[string]*logCustomCounter
 }
 
@@ -31,8 +31,8 @@ type logCustomCounter struct {
 // newLogCustomCounterHost creates a logCustomCounterHost bound to a pair of (total log count, total log length) metric vecs
 func newLogCustomCounterHost(metricCreator promreg.MetricCreator) *logCustomCounterHost {
 	return &logCustomCounterHost{
-		countMetricVec:  metricCreator.AddOrGetCounterVec("labelled_records_total", "Numbers of labelled log records", []string{"label"}, nil),
-		lengthMetricVec: metricCreator.AddOrGetCounterVec("labelled_record_bytes_total", "Total length in bytes of labelled log records", []string{"label"}, nil),
+		countMetricVec:  metricCreator.AddOrGetLazyCounterVec("labelled_records_total", "Numbers of labelled log records", []string{"label"}, nil),
+		lengthMetricVec: metricCreator.AddOrGetLazyCounterVec("labelled_record_bytes_total", "Total length in bytes of labelled log records", []string{"label"}, nil),
 		counterMap:      make(map[string]*logCustomCounter, 100),
 	}
 }

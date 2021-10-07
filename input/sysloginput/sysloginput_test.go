@@ -2,6 +2,7 @@ package sysloginput
 
 import (
 	"net"
+	"strings"
 	"testing"
 	"time"
 
@@ -18,7 +19,9 @@ import (
 )
 
 func TestSyslogTCPInputConfig(t *testing.T) {
-	const testLogLine = "<163>1 2019-08-15T15:50:46.866915+03:00 local my-app 123 fn - Something\n"
+	testMalformedLogLine := "hello world\n"
+	testCorrectLogLine := "<163>1 2019-08-15T15:50:46.866915+03:00 local my-app 123 fn - Something\n"
+	testOversizedLogLine := "<163>1 2019-08-15T15:50:46.866916+03:00 local my-app 456 fn - Something" + strings.Repeat("x", defs.InputLogMaxMessageBytes) + "\n"
 
 	schema := syslogprotocol.RFC5424Schema
 	allocator := base.NewLogAllocator(schema)
@@ -50,14 +53,19 @@ extractions:
 	input.Launch()
 
 	// create client connection to send test logs
-	conn, _ := net.Dial("tcp", input.Address())
-	_, connErr := conn.Write([]byte(testLogLine))
-	assert.Nil(t, connErr)
+	conn, cerr := net.Dial("tcp", input.Address())
+	assert.Nil(t, cerr)
+	_, cerr = conn.Write([]byte(testMalformedLogLine)) // has to be first otherwise it'd be treated as multi-line content
+	assert.Nil(t, cerr)
+	_, cerr = conn.Write([]byte(testCorrectLogLine))
+	assert.Nil(t, cerr)
+	_, cerr = conn.Write([]byte(testOversizedLogLine))
+	assert.Nil(t, cerr)
 
 	// check resulting logs
 	{
 		r := readForTest(outCh)
-		if assert.Equal(t, 1, len(r)) {
+		if assert.Equal(t, 2, len(r)) {
 			assert.Equal(t, "ERROR", selLevel.Get(r[0].Fields))
 			assert.Equal(t, "Something", selLog.Get(r[0].Fields))
 		}
@@ -67,12 +75,12 @@ extractions:
 	assert.True(t, input.Stopped().Wait(defs.TestReadTimeout))
 	assert.Nil(t, conn.Close())
 
-	assert.Equal(t, `test_input_dropped_record_bytes_total{protocol="syslog"} 0
-test_input_dropped_records_total{protocol="syslog"} 0
-test_input_labelled_record_bytes_total{label="overflow",protocol="syslog"} 0
-test_input_labelled_records_total{label="overflow",protocol="syslog"} 0
-test_input_passed_record_bytes_total{protocol="syslog"} 71
-test_input_passed_records_total{protocol="syslog"} 1
+	assert.Equal(t, `test_input_dropped_record_bytes_total{protocol="syslog"} 11
+test_input_dropped_records_total{protocol="syslog"} 1
+test_input_labelled_record_bytes_total{label="overflow",protocol="syslog"} 1.048647e+06
+test_input_labelled_records_total{label="overflow",protocol="syslog"} 1
+test_input_passed_record_bytes_total{protocol="syslog"} 1.048718e+06
+test_input_passed_records_total{protocol="syslog"} 2
 `, promext.DumpMetrics("", true, false, mfactory))
 }
 
