@@ -37,10 +37,13 @@ func (cmap LogMatcherConfig) NewMatcher(schema base.LogSchema) LogMatcher {
 
 // VerifyConfig checks all field names
 func (cmap LogMatcherConfig) VerifyConfig(schema base.LogSchema) error {
-	for key := range cmap {
+	for key, matcher := range cmap {
 		_, err := schema.CreateFieldLocator(key)
 		if err != nil {
 			return fmt.Errorf("invalid match key '%s': %w", key, err)
+		}
+		if matcher.match == nil { // extra check because empty value in map would NOT go through unmarshalling
+			return fmt.Errorf("missing match value for '%s'", key)
 		}
 	}
 	return nil

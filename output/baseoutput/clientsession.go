@@ -183,7 +183,7 @@ func (session *clientSession) sendPing() error {
 func (session *clientSession) collectLeftovers(ending acknowledgerEnding) chan base.LogChunk {
 	// gather previous leftovers
 	close(session.leftovers)
-	fromPrevious := collectChunksFromChannel(session.leftovers, session.logger)
+	fromPrevious := collectChunksFromChannel(session.leftovers)
 
 	switch ending {
 	case waitPendingChunks:
@@ -200,7 +200,7 @@ func (session *clientSession) collectLeftovers(ending acknowledgerEnding) chan b
 	if !session.ackerEnded.Wait(defs.ForwarderAckerStopTimeout) {
 		session.logger.Errorf("BUG: timeout waiting for acknowledger to stop. stack=%s", util.Stack())
 	}
-	fromAckerChannel := collectChunksFromChannel(session.ackerChan, session.logger)
+	fromAckerChannel := collectChunksFromChannel(session.ackerChan)
 
 	// gather pendings chunks left in runAcknowledger's pendingChunksByID
 	var fromAckerPending []base.LogChunk
@@ -298,7 +298,7 @@ func (session *clientSession) runAcknowledger() {
 }
 
 // collectChunksFromChannel collect remaining chunks from a CLOSED channel
-func collectChunksFromChannel(chunkChan chan base.LogChunk, logger logger.Logger) []base.LogChunk {
+func collectChunksFromChannel(chunkChan chan base.LogChunk) []base.LogChunk {
 	collected := make([]base.LogChunk, 0, len(chunkChan)+20)
 	for c := range chunkChan {
 		collected = append(collected, c)
