@@ -82,6 +82,14 @@ transformations:
               level: '!= fatal'
               source: == auth.log
             metricLabel: app-auth
+          - type: exclude
+            match:
+              host: == errors
+              level: == warn
+              source: == main.log
+            percentage: 33
+            exclusionLabel: downsample-drop
+            retentionLabel: downsample-keep
           - type: switch
             cases:
               - match:

@@ -7,6 +7,7 @@ import (
 	"github.com/relex/slog-agent/transform/tblock"
 	"github.com/relex/slog-agent/transform/tdelfields"
 	"github.com/relex/slog-agent/transform/tdrop"
+	"github.com/relex/slog-agent/transform/texclude"
 	"github.com/relex/slog-agent/transform/textract"
 	"github.com/relex/slog-agent/transform/textractspecial"
 	"github.com/relex/slog-agent/transform/tif"
@@ -25,6 +26,7 @@ func init() {
 		"block":       func() bconfig.LogTransformConfig { return &tblock.Config{} },
 		"delFields":   func() bconfig.LogTransformConfig { return &tdelfields.Config{} },
 		"drop":        func() bconfig.LogTransformConfig { return &tdrop.Config{} },
+		"exclude":     func() bconfig.LogTransformConfig { return &texclude.Config{} },
 		"extract":     func() bconfig.LogTransformConfig { return &textract.Config{} },
 		"extractHead": func() bconfig.LogTransformConfig { return &textractspecial.Config{} },
 		"extractTail": func() bconfig.LogTransformConfig { return &textractspecial.Config{} },
