@@ -89,15 +89,11 @@ REPLAY_LEFTOVERS:
 		}
 
 		// forward chunk
-		continueSession, netErr := session.sendChunk(chunk)
-		switch {
-		case netErr != nil:
-			return session.collectLeftovers(endImmediately), reconnectWithDelay
-		case !continueSession:
-			return session.collectLeftovers(endImmediately), noReconnect
-		default:
-			session.lastChunk = nil
+		ok, retry := session.sendChunk(chunk)
+		if !ok {
+			return session.collectLeftovers(endImmediately), retry
 		}
+		session.lastChunk = nil
 	}
 
 	maxSessionDurationSignal := time.After(maxDuration)
@@ -129,27 +125,22 @@ REPLAY_LEFTOVERS:
 		}
 
 		// forward chunk
-		continueSession, netErr := session.sendChunk(chunk)
-		switch {
-		case netErr != nil:
-			return session.collectLeftovers(endImmediately), reconnectWithDelay
-		case !continueSession:
-			return session.collectLeftovers(endImmediately), noReconnect
-
-		default:
-			session.lastChunk = nil
+		ok, retry := session.sendChunk(chunk)
+		if !ok {
+			return session.collectLeftovers(endImmediately), retry
 		}
+		session.lastChunk = nil
 	}
 }
 
-func (session *clientSession) sendChunk(chunk base.LogChunk) (bool, error) {
+func (session *clientSession) sendChunk(chunk base.LogChunk) (bool, reconnectPolicy) {
 	session.metrics.OnForwarding(chunk)
 	session.logger.Debugf("forward chunk %s", chunk.String())
 	timeout := defs.ForwarderBatchSendTimeoutBase + time.Duration(len(chunk.Data)/defs.ForwarderBatchSendMinimumSpeed)*time.Second
 	if err := session.conn.SendChunk(chunk, time.Now().Add(timeout)); err != nil {
 		session.logger.Warnf("failed to send: %s, %s", chunk.String(), err.Error())
 		session.metrics.OnError(err)
-		return true, err
+		return false, reconnectWithDelay
 	}
 
 	// pass forwarded chunk to acknowledger
@@ -158,15 +149,15 @@ func (session *clientSession) sendChunk(chunk base.LogChunk) (bool, error) {
 		break
 	case <-session.inputClosed.Channel():
 		session.logger.Infof("aborted before queueing chunk for ack due to stop request: %s", chunk.String())
-		return false, nil
+		return false, noReconnect
 	case <-session.ackerEnded.Channel():
 		// acknowledger terminated due to invalid server response, return true and error for reconnection
 		err := fmt.Errorf("aborted before queueing chunk for ack due to termination of acknowledger: %s", chunk.String())
 		session.logger.Info(err.Error())
-		return true, err
+		return false, reconnectWithDelay
 	}
 	session.metrics.OnForwarded(chunk)
-	return true, nil
+	return true, ""
 }
 
 // sendPing sends a forward message of zero logs and no ID (no ACK) to report status to server

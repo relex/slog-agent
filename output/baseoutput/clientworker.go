@@ -1,7 +1,9 @@
 package baseoutput
 
 import (
+	"sync/atomic"
 	"time"
+	"unsafe"
 
 	"github.com/relex/gotils/channels"
 	"github.com/relex/gotils/logger"
@@ -25,7 +27,8 @@ type ClientWorker struct {
 	stopped      *channels.SignalAwaitable
 	metrics      clientMetrics
 	openConn     EstablishConnectionFunc
-	maxDuration  time.Duration
+	maxDuration  time.Duration  // max duration of session before reconnection
+	activeConnP  unsafe.Pointer // pointer to the current ClientConnection or nil. Accessed atomically
 }
 
 // NewClientWorker creates ClientWorker
@@ -43,7 +46,27 @@ func NewClientWorker(parentLogger logger.Logger, args base.ChunkConsumerArgs, me
 		metrics:      newClientMetrics(metricCreator),
 		openConn:     openConn,
 		maxDuration:  maxDuration,
+		activeConnP:  unsafe.Pointer(nil),
 	}
+
+	// fast shutdown: force immediate ending of output when inputClosed is signaled
+	// the closing should abort any ongoing network I/O operations
+	//
+	// This is designed for busy clients as they cannot allow logging being paused for extended period of time
+	// (most have no queue and logging is usually a blocking operation), at the cost of resending pending logs which
+	// would cause duplications.
+	//
+	// TODO: make this an option or dependent on keys/tags
+	client.inputClosed.Next(func() {
+		connP := (*ClientConnection)(atomic.LoadPointer(&client.activeConnP))
+		if connP == nil || *connP == nil {
+			return
+		}
+		client.logger.Info("abort ongoing connection due to stop request")
+		(*connP).Close()
+		atomic.StorePointer(&client.activeConnP, nil)
+	})
+
 	return client
 }
 
@@ -66,10 +89,10 @@ func (client *ClientWorker) run() {
 	func() {
 		for {
 			var retry reconnectPolicy
-			leftovers, retry = client.runConnection(leftovers)
+			leftovers, retry = client.runSession(leftovers)
 			switch retry {
 			case noReconnect:
-				client.logger.Infof("stop requested (connection)")
+				client.logger.Infof("stop requested (session)")
 				return
 			case reconnectWithDelay:
 				if client.inputClosed.Wait(defs.ForwarderRetryInterval) { // false if timeout, which is expected
@@ -78,6 +101,8 @@ func (client *ClientWorker) run() {
 				}
 			case reconnect:
 				client.logger.Info("reconnect without delay requested for load balancing")
+			default:
+				client.logger.Panic("BUG: unexpected reconnectPolicy: ", retry)
 			}
 
 			client.logger.Infof("retrying connection, leftovers=%d", len(leftovers))
@@ -93,7 +118,7 @@ func (client *ClientWorker) run() {
 	client.logger.Info("stopped")
 }
 
-func (client *ClientWorker) runConnection(leftovers chan base.LogChunk) (chan base.LogChunk, reconnectPolicy) {
+func (client *ClientWorker) runSession(leftovers chan base.LogChunk) (chan base.LogChunk, reconnectPolicy) {
 
 	// open the connection in the background so we can abort anytime by signal
 	connCh := make(chan ClientConnection)
@@ -115,7 +140,7 @@ func (client *ClientWorker) runConnection(leftovers chan base.LogChunk) (chan ba
 	select {
 	case <-client.inputClosed.Channel():
 		client.logger.Info("stop requested (connection opening stage)")
-		return leftovers, noReconnect // ignore connection opening in background as this is full shutdown
+		return leftovers, noReconnect // ignore the connection being opened in background as this is full shutdown
 	case conn = <-connCh:
 		if conn == nil {
 			// the connection opening failed
@@ -125,24 +150,13 @@ func (client *ClientWorker) runConnection(leftovers chan base.LogChunk) (chan ba
 	}
 
 	client.metrics.OnOpening()
+	atomic.StorePointer(&client.activeConnP, unsafe.Pointer(&conn))
 
 	defer func() {
 		client.logger.Info("close connection")
 		conn.Close() // ignore error because Close may have been called by acknowledger or inputClosed handler below
+		atomic.StorePointer(&client.activeConnP, nil)
 	}()
-
-	// fast shutdown: force immediate ending of output when inputClosed is signaled
-	// the closing should abort any ongoing network I/O operations
-	//
-	// This is designed for busy clients as they cannot allow logging being paused for extended period of time
-	// (most have no queue and logging is usually a blocking operation), at the cost of resending pending logs which
-	// would cause duplications.
-	//
-	// TODO: make this an option or dependent on keys/tags
-	client.inputClosed.Next(func() {
-		client.logger.Info("abort ongoing connection due to stop request")
-		conn.Close()
-	})
 
 	return newClientSession(client, conn, leftovers).run(client.maxDuration)
 }

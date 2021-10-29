@@ -36,6 +36,7 @@ type ClientConnection interface {
 
 	// Close closes the connection
 	//
-	// Close may be called multiple times and it's not considered an error.
+	// Close may be called more than once and/or simultaneously. The implementation must handle such situations
+	// silently and avoid e.g. closing a previously-closed FD, which might have been reused for something else.
 	Close()
 }

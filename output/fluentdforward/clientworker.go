@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"net"
+	"sync/atomic"
 	"time"
 
 	"github.com/relex/fluentlib/protocol/forwardprotocol"
@@ -20,7 +21,8 @@ import (
 type forwardConnection struct {
 	logger  logger.Logger
 	socket  net.Conn
-	decoder msgpack.Decoder
+	decoder msgpack.Decoder // to read msgpack responses from Fluentd
+	end     int32           // 1 = socket closing or closed. Accessed atomically
 }
 
 var internalPingMessage = buildInternalPingMessage()
@@ -131,6 +133,9 @@ func (fconn *forwardConnection) ReadChunkAck(deadline time.Time) (string, error)
 }
 
 func (fconn *forwardConnection) Close() {
+	if !atomic.CompareAndSwapInt32(&fconn.end, 0, 1) {
+		return
+	}
 	fconn.socket.Close()
 }
 
