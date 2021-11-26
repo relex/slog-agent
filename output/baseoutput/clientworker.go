@@ -18,17 +18,17 @@ import (
 // logging, metrics, error recovery, reconnecting, periodical ping, and pipeling by handling sending and receiving on
 // their respective goroutines
 type ClientWorker struct {
-	logger       logger.Logger
-	inputChannel <-chan base.LogChunk
-	inputClosed  channels.Awaitable
-	onChunkAcked func(chunk base.LogChunk)
-	onChunkLeft  func(chunk base.LogChunk)
-	onFinished   func()
-	stopped      *channels.SignalAwaitable
-	metrics      clientMetrics
-	openConn     EstablishConnectionFunc
-	maxDuration  time.Duration  // max duration of session before reconnection
-	activeConnP  unsafe.Pointer // pointer to the current ClientConnection or nil. Accessed atomically
+	logger        logger.Logger
+	inputChannel  <-chan base.LogChunk
+	inputClosed   channels.Awaitable
+	onChunkAcked  func(chunk base.LogChunk)
+	onChunkLeft   func(chunk base.LogChunk)
+	onFinished    func()
+	stopped       *channels.SignalAwaitable
+	metrics       clientMetrics
+	openConn      EstablishConnectionFunc
+	maxDuration   time.Duration  // max duration of session before reconnection
+	activeSession unsafe.Pointer // pointer to the current clientSession
 }
 
 // NewClientWorker creates ClientWorker
@@ -36,17 +36,17 @@ func NewClientWorker(parentLogger logger.Logger, args base.ChunkConsumerArgs, me
 	openConn EstablishConnectionFunc, maxDuration time.Duration) base.ChunkConsumer {
 
 	client := &ClientWorker{
-		logger:       parentLogger,
-		inputChannel: args.InputChannel,
-		inputClosed:  args.InputClosed,
-		onChunkAcked: args.OnChunkConsumed,
-		onChunkLeft:  args.OnChunkLeftover,
-		onFinished:   args.OnFinished,
-		stopped:      channels.NewSignalAwaitable(),
-		metrics:      newClientMetrics(metricCreator),
-		openConn:     openConn,
-		maxDuration:  maxDuration,
-		activeConnP:  unsafe.Pointer(nil),
+		logger:        parentLogger,
+		inputChannel:  args.InputChannel,
+		inputClosed:   args.InputClosed,
+		onChunkAcked:  args.OnChunkConsumed,
+		onChunkLeft:   args.OnChunkLeftover,
+		onFinished:    args.OnFinished,
+		stopped:       channels.NewSignalAwaitable(),
+		metrics:       newClientMetrics(metricCreator),
+		openConn:      openConn,
+		maxDuration:   maxDuration,
+		activeSession: nil,
 	}
 
 	// fast shutdown: force immediate ending of output when inputClosed is signaled
@@ -58,13 +58,12 @@ func NewClientWorker(parentLogger logger.Logger, args base.ChunkConsumerArgs, me
 	//
 	// TODO: make this an option or dependent on keys/tags
 	client.inputClosed.Next(func() {
-		connP := (*ClientConnection)(atomic.LoadPointer(&client.activeConnP))
-		if connP == nil || *connP == nil {
-			return
+		sess := (*clientSession)(atomic.LoadPointer(&client.activeSession))
+		if sess != nil {
+			if sess.Abort() {
+				client.logger.Info("abort ongoing connection due to stop request")
+			}
 		}
-		client.logger.Info("abort ongoing connection due to stop request")
-		(*connP).Close()
-		atomic.StorePointer(&client.activeConnP, nil)
 	})
 
 	return client
@@ -121,7 +120,7 @@ func (client *ClientWorker) run() {
 func (client *ClientWorker) runSession(leftovers chan base.LogChunk) (chan base.LogChunk, reconnectPolicy) {
 
 	// open the connection in the background so we can abort anytime by signal
-	connCh := make(chan ClientConnection)
+	connCh := make(chan ClosableClientConnection)
 	go func() {
 		conn, err := client.openConn()
 		if err != nil {
@@ -135,7 +134,7 @@ func (client *ClientWorker) runSession(leftovers chan base.LogChunk) (chan base.
 		connCh <- conn
 	}()
 
-	var conn ClientConnection
+	var conn ClosableClientConnection
 	// wait for above goroutine to end OR inputClosed signal
 	select {
 	case <-client.inputClosed.Channel():
@@ -150,13 +149,16 @@ func (client *ClientWorker) runSession(leftovers chan base.LogChunk) (chan base.
 	}
 
 	client.metrics.OnOpening()
-	atomic.StorePointer(&client.activeConnP, unsafe.Pointer(&conn))
+
+	sess := newClientSession(client, conn)
+	atomic.StorePointer(&client.activeSession, unsafe.Pointer(sess))
 
 	defer func() {
-		client.logger.Info("close connection")
-		conn.Close() // ignore error because Close may have been called by acknowledger or inputClosed handler below
-		atomic.StorePointer(&client.activeConnP, nil)
+		if sess.Abort() {
+			client.logger.Info("close connection")
+		}
+		atomic.StorePointer(&client.activeSession, nil)
 	}()
 
-	return newClientSession(client, conn, leftovers).run(client.maxDuration)
+	return sess.Run(leftovers, client.maxDuration)
 }
