@@ -60,9 +60,9 @@ func NewClientWorker(parentLogger logger.Logger, args base.ChunkConsumerArgs, me
 	client.inputClosed.Next(func() {
 		sess := (*clientSession)(atomic.LoadPointer(&client.activeSession))
 		if sess != nil {
-			if sess.Abort() {
+			sess.Abort(func() {
 				client.logger.Info("abort ongoing connection due to stop request")
-			}
+			})
 		}
 	})
 
@@ -154,9 +154,9 @@ func (client *ClientWorker) runSession(leftovers chan base.LogChunk) (chan base.
 	atomic.StorePointer(&client.activeSession, unsafe.Pointer(sess))
 
 	defer func() {
-		if sess.Abort() {
-			client.logger.Info("close connection")
-		}
+		sess.Abort(func() {
+			client.logger.Info("close connection at the end of session")
+		})
 		atomic.StorePointer(&client.activeSession, nil)
 	}()
 

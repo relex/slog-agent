@@ -57,18 +57,36 @@ func newClientSession(client *ClientWorker, conn ClosableClientConnection) *clie
 	}
 }
 
+// Run runs a forwarder session on the given connection until maxDuration is reached
+//
+// The connection will NOT be closed unless there is a network error
 func (session *clientSession) Run(leftovers chan base.LogChunk, maxDuration time.Duration) (chan base.LogChunk, reconnectPolicy) {
 	go session.runAcknowledger()
 
-	// send leftovers from previous sessions
+	if newLeftovers, retry := session.resendLeftovers(leftovers); newLeftovers != nil {
+		return newLeftovers, retry
+	}
+
+	return session.processInput(maxDuration)
+}
+
+// Abort interrupts the ongoing session by closing the connection forcefully
+//
+// The Run function should exit after a short delay
+//
+// If the connection is already closed, Abort does nothing and beforeAbort wouldn't be called
+func (session *clientSession) Abort(beforeAbort func()) {
+	session.abortConn(beforeAbort)
+}
+
+func (session *clientSession) resendLeftovers(leftovers chan base.LogChunk) (chan base.LogChunk, reconnectPolicy) {
 	session.logger.Infof("begin recovery stage with leftovers=%d", len(leftovers))
 
-REPLAY_LEFTOVERS:
 	for {
 		var chunk base.LogChunk
 		var ok bool
 
-		// get the next chunk to forward
+		// get the next leftover chunk to forward
 		select {
 		case <-session.inputClosed.Channel():
 			session.logger.Infof("stop requested (recovery stage)")
@@ -84,44 +102,8 @@ REPLAY_LEFTOVERS:
 			session.lastChunk = &chunk
 
 		default:
-			// break as soon as there is no leftover to process
-			break REPLAY_LEFTOVERS
-		}
-
-		// forward chunk
-		ok, retry := session.sendChunk(chunk)
-		if !ok {
-			return session.collectLeftovers(leftovers, endImmediately), retry
-		}
-		session.lastChunk = nil
-	}
-
-	maxSessionDurationSignal := time.After(maxDuration)
-
-	session.logger.Infof("begin normal stage with queued=%d", len(session.inputChannel))
-	for {
-		var chunk base.LogChunk
-		var ok bool
-
-		// get the next chunk to forward
-		select {
-		case chunk, ok = <-session.inputChannel:
-			if !ok {
-				session.logger.Infof("stop requested (normal stage)")
-				return session.collectLeftovers(leftovers, endImmediately), noReconnect
-			}
-			session.logger.Debugf("received new: %v", &chunk)
-			session.lastChunk = &chunk
-
-		case <-maxSessionDurationSignal:
-			session.logger.Info("max session duration reached, stopping to reconnect")
-			return session.collectLeftovers(leftovers, waitPendingChunks), reconnect
-
-		case <-time.After(defs.ForwarderPingInterval): // send ping (keep-alive) if there is no new log
-			if err := session.sendPing(); err != nil {
-				return session.collectLeftovers(leftovers, endImmediately), reconnectWithDelay
-			}
-			continue
+			// break loop as soon as there is no leftover to process
+			return nil, ""
 		}
 
 		// forward chunk
@@ -133,8 +115,42 @@ REPLAY_LEFTOVERS:
 	}
 }
 
-func (session *clientSession) Abort() bool {
-	return session.abortConn()
+func (session *clientSession) processInput(maxDuration time.Duration) (chan base.LogChunk, reconnectPolicy) {
+	maxSessionDurationSignal := time.After(maxDuration)
+
+	session.logger.Infof("begin normal stage with queued=%d", len(session.inputChannel))
+	for {
+		var chunk base.LogChunk
+		var ok bool
+
+		// wait for the next chunk to forward
+		select {
+		case chunk, ok = <-session.inputChannel:
+			if !ok {
+				session.logger.Infof("stop requested (normal stage)")
+				return session.collectLeftovers(nil, endImmediately), noReconnect
+			}
+			session.logger.Debugf("received new: %v", &chunk)
+			session.lastChunk = &chunk
+
+		case <-maxSessionDurationSignal:
+			session.logger.Info("max session duration reached, stopping to reconnect")
+			return session.collectLeftovers(nil, waitPendingChunks), reconnect
+
+		case <-time.After(defs.ForwarderPingInterval): // send ping (keep-alive) if there is no new log
+			if err := session.sendPing(); err != nil {
+				return session.collectLeftovers(nil, endImmediately), reconnectWithDelay
+			}
+			continue
+		}
+
+		// forward chunk
+		ok, retry := session.sendChunk(chunk)
+		if !ok {
+			return session.collectLeftovers(nil, endImmediately), retry
+		}
+		session.lastChunk = nil
+	}
 }
 
 func (session *clientSession) sendChunk(chunk base.LogChunk) (bool, reconnectPolicy) {
@@ -175,10 +191,15 @@ func (session *clientSession) sendPing() error {
 	return nil
 }
 
-func (session *clientSession) collectLeftovers(leftovers chan base.LogChunk, ending acknowledgerEnding) chan base.LogChunk {
-	// gather previous leftovers
-	close(leftovers)
-	fromPrevious := collectChunksFromChannel(leftovers)
+func (session *clientSession) collectLeftovers(maybePreviousLeftovers chan base.LogChunk, ending acknowledgerEnding) chan base.LogChunk {
+	var fromPrevious []base.LogChunk
+	// Gather unsent leftovers from the previous session, if the current recovery stage was interrupted.
+	// Note some of them could have been sent but not yet acknowledged, in which case they'd be collected from the
+	// acknowledger in code below.
+	if maybePreviousLeftovers != nil {
+		close(maybePreviousLeftovers)
+		fromPrevious = collectChunksFromChannel(maybePreviousLeftovers)
+	}
 
 	switch ending {
 	case waitPendingChunks:
@@ -271,9 +292,9 @@ func (session *clientSession) runAcknowledger() {
 
 			// even if a network error has happened when receiving, we still need to call Close here as the sending
 			// side (client=>server) may still be functioning and thus unable to quit by itself
-			if session.abortConn() {
+			session.abortConn(func() {
 				clogger.Info("close connection")
-			}
+			})
 			return
 		}
 
