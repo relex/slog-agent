@@ -20,7 +20,7 @@ import (
 type forwardConnection struct {
 	logger  logger.Logger
 	socket  net.Conn
-	decoder msgpack.Decoder
+	decoder msgpack.Decoder // to read msgpack responses from Fluentd
 }
 
 var internalPingMessage = buildInternalPingMessage()
@@ -33,14 +33,14 @@ func NewClientWorker(parentLogger logger.Logger, args base.ChunkConsumerArgs, co
 		clientLogger,
 		args,
 		metricCreator,
-		func() (baseoutput.ClientConnection, error) {
+		func() (baseoutput.ClosableClientConnection, error) {
 			return openForwardConnection(clientLogger, config)
 		},
 		config.MaxDuration,
 	)
 }
 
-func openForwardConnection(parentLogger logger.Logger, config UpstreamConfig) (baseoutput.ClientConnection, error) {
+func openForwardConnection(parentLogger logger.Logger, config UpstreamConfig) (baseoutput.ClosableClientConnection, error) {
 	connLogger := parentLogger.WithField(defs.LabelServer, config.Address)
 
 	sock, sockErr := connect(connLogger, config.TLS, config.Address)

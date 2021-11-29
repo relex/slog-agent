@@ -1,6 +1,6 @@
 module github.com/relex/slog-agent
 
-go 1.15
+go 1.16
 
 require (
 	github.com/c2h5oh/datasize v0.0.0-20200825124411-48ed595a09d2
