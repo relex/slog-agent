@@ -29,9 +29,10 @@ type ClientConnection interface {
 
 	// ReadChunkAck reads the ID of a previously-sent chunk once it's acknowledged.
 	//
-	// Acknowledgement of chunks by upstream is not required to be in the same order they were sent.
+	// If the order of acknowledgement by upstream is the same as the sending order, the function may return an empty
+	// string to indicate it's the first of previously-unacknowledged chunks.
 	//
-	// If the order is strictly maintained, it may return empty string to indicate the last unacknowledged chunk.
+	// Otherwise, a non-empty ID must be returned to indicate which chunk was acknowledged exactly.
 	ReadChunkAck(deadline time.Time) (string, error)
 }
 
