@@ -12,6 +12,7 @@ import (
 )
 
 // LogRewriterConfigHolder holds an interface to the actual Config
+//
 // The medium is used to support YAML unmarshalling of interfaces
 type LogRewriterConfigHolder struct {
 	Location string `yaml:"-"`
@@ -22,6 +23,7 @@ type LogRewriterConfigHolder struct {
 var LogRewriterConfigConstructors map[string]func() LogRewriterConfig
 
 // RegisterLogRewriterConfigConstructors registers the list of process config structs
+//
 // It can only be called once
 func RegisterLogRewriterConfigConstructors(newMap map[string]func() LogRewriterConfig) {
 	if LogRewriterConfigConstructors != nil {

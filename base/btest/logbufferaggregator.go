@@ -1,4 +1,4 @@
-package baseinput
+package btest
 
 import (
 	"time"
@@ -10,6 +10,7 @@ import (
 	"github.com/relex/slog-agent/util"
 )
 
+// A basic implementation of MultiSinkBufferReceiver for testing purpose
 type logBufferAggregator struct {
 	logger        logger.Logger
 	outputChannel chan<- []*base.LogRecord
@@ -21,7 +22,7 @@ type logBufferAggregatorSink struct {
 	sendTimeout   *time.Timer
 }
 
-// NewLogBufferAggregator creates a MultiSinkBufferReceiver to collect incoming logs to a single channel for test purpose
+// NewLogBufferAggregator creates a basic implementation of MultiSinkBufferReceiver, to collect incoming log batches into a single channel
 func NewLogBufferAggregator(parentLogger logger.Logger) (base.MultiSinkBufferReceiver, <-chan []*base.LogRecord) {
 	ch := make(chan []*base.LogRecord, defs.IntermediateBufferedChannelSize)
 	return &logBufferAggregator{

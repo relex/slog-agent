@@ -12,6 +12,7 @@ import (
 )
 
 // ChunkBufferConfigHolder holds an interface to the actual Config
+//
 // The medium is used to support YAML unmarshalling of interfaces
 type ChunkBufferConfigHolder struct {
 	Location string `yaml:"-"`
@@ -22,6 +23,7 @@ type ChunkBufferConfigHolder struct {
 var ChunkBufferConfigConstructors map[string]func() ChunkBufferConfig
 
 // RegisterChunkBufferConfigConstructors registers the list of process config structs
+//
 // It can only be called once
 func RegisterChunkBufferConfigConstructors(newMap map[string]func() ChunkBufferConfig) {
 	if ChunkBufferConfigConstructors != nil {

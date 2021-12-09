@@ -8,13 +8,13 @@ testpipeline_process_dropped_records_total{key_host="basic-2",key_source="auth.l
 testpipeline_process_dropped_records_total{key_host="errors",key_source="main.log",key_vhost="bar.com"} 1
 testpipeline_process_labelled_record_bytes_total{key_host="basic-2",key_source="auth.log",key_vhost="bar.com",label="app-auth"} 329
 testpipeline_process_labelled_record_bytes_total{key_host="basic-2",key_source="user.log",key_vhost="foo.com",label="redacted"} 324
-testpipeline_process_labelled_record_bytes_total{key_host="errors",key_source="main.log",key_vhost="bar.com",label="downsample-drop"} 17736
-testpipeline_process_labelled_record_bytes_total{key_host="errors",key_source="main.log",key_vhost="bar.com",label="downsample-keep"} 16809
+testpipeline_process_labelled_record_bytes_total{key_host="errors",key_source="main.log",key_vhost="bar.com",label="!downsampled"} 16809
+testpipeline_process_labelled_record_bytes_total{key_host="errors",key_source="main.log",key_vhost="bar.com",label="downsampled"} 17736
 testpipeline_process_labelled_record_bytes_total{key_host="errors",key_source="main.log",key_vhost="bar.com",label="redacted"} 33159
 testpipeline_process_labelled_records_total{key_host="basic-2",key_source="auth.log",key_vhost="bar.com",label="app-auth"} 3
 testpipeline_process_labelled_records_total{key_host="basic-2",key_source="user.log",key_vhost="foo.com",label="redacted"} 1
-testpipeline_process_labelled_records_total{key_host="errors",key_source="main.log",key_vhost="bar.com",label="downsample-drop"} 1
-testpipeline_process_labelled_records_total{key_host="errors",key_source="main.log",key_vhost="bar.com",label="downsample-keep"} 2
+testpipeline_process_labelled_records_total{key_host="errors",key_source="main.log",key_vhost="bar.com",label="!downsampled"} 2
+testpipeline_process_labelled_records_total{key_host="errors",key_source="main.log",key_vhost="bar.com",label="downsampled"} 1
 testpipeline_process_labelled_records_total{key_host="errors",key_source="main.log",key_vhost="bar.com",label="redacted"} 1
 testpipeline_process_passed_record_bytes_total{key_host="basic-1",key_source="access.log",key_vhost="foo.com"} 280
 testpipeline_process_passed_record_bytes_total{key_host="basic-1",key_source="cron.log",key_vhost="foo.com"} 207

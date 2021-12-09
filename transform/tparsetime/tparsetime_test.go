@@ -6,7 +6,7 @@ import (
 
 	"github.com/relex/gotils/logger"
 	"github.com/relex/slog-agent/base"
-	"github.com/relex/slog-agent/base/bsupport"
+	"github.com/relex/slog-agent/base/btest"
 	"github.com/relex/slog-agent/util"
 	"github.com/stretchr/testify/assert"
 )
@@ -14,6 +14,7 @@ import (
 func TestParseTimeTransform(t *testing.T) {
 	schema := base.MustNewLogSchema([]string{"time"})
 	c := &Config{}
+
 	if !assert.Nil(t, util.UnmarshalYamlString(`
 type: parseTime
 key: time
@@ -21,10 +22,13 @@ errorLabel: timeError
 `, c)) {
 		return
 	}
+
 	if !assert.Nil(t, c.VerifyConfig(schema)) {
 		return
 	}
-	tf := c.NewTransform(schema, logger.Root(), bsupport.NewStubLogCustomCounterRegistry())
+
+	reg, _ := btest.NewStubLogCustomCounterRegistry()
+	tf := c.NewTransform(schema, logger.Root(), reg)
 	{
 		record := schema.NewTestRecord2(
 			time.Time{},

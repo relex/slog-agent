@@ -12,6 +12,7 @@ import (
 )
 
 // LogTransformConfigHolder holds an interface to the actual Config
+//
 // The medium is used to support YAML unmarshalling of interfaces
 type LogTransformConfigHolder struct {
 	Location string `yaml:"-"`
@@ -22,6 +23,7 @@ type LogTransformConfigHolder struct {
 var LogTransformConfigConstructors map[string]func() LogTransformConfig
 
 // RegisterLogTransformConfigConstructors registers the list of process config structs
+//
 // It can only be called once
 func RegisterLogTransformConfigConstructors(newMap map[string]func() LogTransformConfig) {
 	if LogTransformConfigConstructors != nil {

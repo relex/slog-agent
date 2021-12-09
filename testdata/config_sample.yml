@@ -152,17 +152,18 @@ transformations:
             match:
               source: auth.log
               level: !!str-not fatal
+            percentage: 100
             metricLabel: app-auth                 # metricLabel: a metric label value to track dropped logs, e.g.
                                                   #   slogagent_process_labelled_record_bytes_total{key_app="appServ",key_vhost="foo.com",label="app-auth"} 175
 
-          - type: exclude                         # exclude: Exclude logs by percentage (AND only)
+          - type: drop                            # drop can also be used with a percentage
             match:
               host: errors
               source: main.log
               level: !!str warn
             percentage: 33                        # percentage: ratio of logs to exclude, 0-100
-            exclusionLabel: downsample-drop       # exclusionLabel: a metric label value to track dropped logs
-            retentionLabel: downsample-keep       # retentionLabel: a metric label value to track matched but retained logs
+            metricLabel: downsampled              # percentage < 100 would create an additional label with "!" in front, e.g.
+                                                  #   label="!downsampled" to count matched but retained logs
 
           - type: switch                          
             cases:                                
