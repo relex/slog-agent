@@ -6,6 +6,7 @@ import (
 )
 
 // LogTransformConfig provides an interface for the configuration of base.LogTransform(s)
+//
 // All the implementations should support YAML unmarshalling
 type LogTransformConfig interface {
 	GetType() string

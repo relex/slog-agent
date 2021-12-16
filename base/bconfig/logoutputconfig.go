@@ -16,6 +16,7 @@ import (
 // A ChunkBufferer is inserted between one or more LogChunkMaker(s) and one ChunkConsumer to support e.g. on-disk buffering
 
 // LogOutputConfig provides an interface for the configuration of LogSerializer, LogChunkMaker and ChunkConsumer
+//
 // All the implementations should support YAML unmarshalling
 type LogOutputConfig interface {
 	GetType() string

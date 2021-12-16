@@ -5,6 +5,7 @@ import (
 )
 
 // LogRewriterConfig provides an interface for the configuration of base.LogRewriter(s)
+//
 // All the implementations should support YAML unmarshalling
 type LogRewriterConfig interface {
 	GetType() string

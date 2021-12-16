@@ -19,6 +19,7 @@ import (
 type ProcessConfig generic.Type
 
 // ProcessConfigHolder holds an interface to the actual Config
+//
 // The medium is used to support YAML unmarshalling of interfaces
 type ProcessConfigHolder struct {
 	Location string `yaml:"-"`
@@ -29,6 +30,7 @@ type ProcessConfigHolder struct {
 var ProcessConfigConstructors map[string]func() ProcessConfig
 
 // RegisterProcessConfigConstructors registers the list of process config structs
+//
 // It can only be called once
 func RegisterProcessConfigConstructors(newMap map[string]func() ProcessConfig) {
 	if ProcessConfigConstructors != nil {

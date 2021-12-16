@@ -12,6 +12,7 @@ import (
 )
 
 // OrchestratorConfigHolder holds an interface to the actual Config
+//
 // The medium is used to support YAML unmarshalling of interfaces
 type OrchestratorConfigHolder struct {
 	Location string `yaml:"-"`
@@ -22,6 +23,7 @@ type OrchestratorConfigHolder struct {
 var OrchestratorConfigConstructors map[string]func() OrchestratorConfig
 
 // RegisterOrchestratorConfigConstructors registers the list of process config structs
+//
 // It can only be called once
 func RegisterOrchestratorConfigConstructors(newMap map[string]func() OrchestratorConfig) {
 	if OrchestratorConfigConstructors != nil {

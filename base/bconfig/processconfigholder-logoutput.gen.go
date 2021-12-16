@@ -12,6 +12,7 @@ import (
 )
 
 // LogOutputConfigHolder holds an interface to the actual Config
+//
 // The medium is used to support YAML unmarshalling of interfaces
 type LogOutputConfigHolder struct {
 	Location string `yaml:"-"`
@@ -22,6 +23,7 @@ type LogOutputConfigHolder struct {
 var LogOutputConfigConstructors map[string]func() LogOutputConfig
 
 // RegisterLogOutputConfigConstructors registers the list of process config structs
+//
 // It can only be called once
 func RegisterLogOutputConfigConstructors(newMap map[string]func() LogOutputConfig) {
 	if LogOutputConfigConstructors != nil {

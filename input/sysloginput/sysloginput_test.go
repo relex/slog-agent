@@ -11,8 +11,8 @@ import (
 	"github.com/relex/gotils/promexporter/promext"
 	"github.com/relex/gotils/promexporter/promreg"
 	"github.com/relex/slog-agent/base"
+	"github.com/relex/slog-agent/base/btest"
 	"github.com/relex/slog-agent/defs"
-	"github.com/relex/slog-agent/input/baseinput"
 	"github.com/relex/slog-agent/input/syslogprotocol"
 	"github.com/relex/slog-agent/util"
 	"github.com/stretchr/testify/assert"
@@ -42,7 +42,7 @@ extractions:
 	}
 
 	stopInput := channels.NewSignalAwaitable()
-	logAggregator, outCh := baseinput.NewLogBufferAggregator(logger.Root())
+	logAggregator, outCh := btest.NewLogBufferAggregator(logger.Root())
 	mfactory := promreg.NewMetricFactory("test_", nil, nil)
 
 	// create and launch input (the server)

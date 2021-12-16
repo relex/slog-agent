@@ -8,6 +8,7 @@ import (
 )
 
 // LogInputConfig provides an interface for the configuration of LogInput(s)
+//
 // All the implementations should support YAML unmarshalling
 type LogInputConfig interface {
 	GetType() string
