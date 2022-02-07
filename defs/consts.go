@@ -5,6 +5,7 @@ const (
 	LabelComponent = "component"
 	LabelName      = "name"
 	LabelPart      = "part"
+	LabelSource    = "source"
 
 	LabelAddress      = "address"
 	LabelClient       = "client"

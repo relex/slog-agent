@@ -3,6 +3,7 @@ package tparsetime
 import (
 	"fmt"
 	"strconv"
+	"strings"
 	"time"
 )
 
@@ -44,7 +45,13 @@ func parseRFC3339Timestamp(timeStr string, timezoneCache map[string]*time.Locati
 		if loc, ok := timezoneCache[tzStr]; ok {
 			location = loc
 		} else {
-			z, err := time.Parse("Z07:00", tzStr)
+			var layout string
+			if strings.Contains(tzStr, ":") {
+				layout = "Z07:00"
+			} else {
+				layout = "Z0700"
+			}
+			z, err := time.Parse(layout, tzStr)
 			if err == nil {
 				tzName, tzOffset := z.Zone()
 				location = time.FixedZone(tzName, tzOffset)
@@ -59,7 +66,7 @@ func parseRFC3339Timestamp(timeStr string, timezoneCache map[string]*time.Locati
 	return time.Date(year, time.Month(month), date, hour, min, sec, int(frac*1000000000.0), location), nil
 }
 
-// splitFractionAndTimezone splits e.g. ".123+07:00" to .123 and +0700
+// splitFractionAndTimezone splits e.g. ".123+07:00" to .123 and +07:00
 func splitFractionAndTimezone(s string) (string, string) {
 	if len(s) > 1 && s[0] == '.' {
 		var i int
