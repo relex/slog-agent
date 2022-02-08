@@ -25,8 +25,8 @@ func NewTransformsFromConfig(transformConfigs []bconfig.LogTransformConfigHolder
 	transforms := make([]base.LogTransformFunc, len(transformConfigs))
 	for i, tc := range transformConfigs {
 		tlogger := parentLogger.WithFields(logger.Fields{
-			defs.LabelPart: tc.LogTransformConfig.GetType(),
-			defs.LabelName: tc.Location,
+			defs.LabelPart:   tc.LogTransformConfig.GetType(),
+			defs.LabelSource: tc.Location,
 		})
 		transforms[i] = tc.NewTransform(schema, tlogger, customCounterHost).Transform
 	}

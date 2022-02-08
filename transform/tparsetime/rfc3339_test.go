@@ -7,22 +7,31 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-const rfc3339MicroTimestampLayout = "2006-01-02T15:04:05.9Z07:00"
+const testLayout = "2006-01-02T15:04:05.9Z07:00" // correct layout as required by RFC5424
+const testLayoutAlt = "2006-01-02T15:04:05.9Z0700"
+
+type testCase struct {
+	timestamp string
+	layout    string
+}
+
+var testCases = []testCase{
+	{"2019-08-15T15:50:46.866-08:00", testLayout},
+	{"2019-08-15T15:50:46.866915+03:00", testLayout},
+	{"2019-08-15T15:50:46.866Z", testLayout},
+	{"2022-02-07T10:30:45.123+0200", testLayoutAlt},
+}
 
 func TestParseRFC3339Timestamp(t *testing.T) {
 	timezoneCache := make(map[string]*time.Location)
-	for _, timeStr := range []string{
-		"2019-08-15T15:50:46.866-08:00",
-		"2019-08-15T15:50:46.866915+03:00",
-		"2019-08-15T15:50:46.866Z",
-	} {
-		ourTime, err := parseRFC3339Timestamp(timeStr, timezoneCache)
-		assert.Nil(t, err, timeStr+" our parsing")
-		theirTime, err := time.Parse(rfc3339MicroTimestampLayout, timeStr)
-		assert.Nil(t, err, timeStr+" go parsing")
-		assert.Equal(t, theirTime.UnixNano(), ourTime.UnixNano(), timeStr+" UNIX nanoseconds")
+	for _, tc := range testCases {
+		ourTime, err := parseRFC3339Timestamp(tc.timestamp, timezoneCache)
+		assert.Nil(t, err, tc.timestamp+" our parsing")
+		theirTime, err := time.Parse(tc.layout, tc.timestamp)
+		assert.Nil(t, err, tc.timestamp+" go parsing")
+		assert.Equal(t, theirTime.UnixNano(), ourTime.UnixNano(), tc.timestamp+" UNIX nanoseconds")
 		_, ourOffset := ourTime.Zone()
 		_, theirOffset := theirTime.Zone()
-		assert.Equal(t, theirOffset, ourOffset, timeStr+" TZ offset")
+		assert.Equal(t, theirOffset, ourOffset, tc.timestamp+" TZ offset")
 	}
 }

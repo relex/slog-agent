@@ -59,7 +59,7 @@ func (tf *parseTimeTransform) Transform(record *base.LogRecord) base.FilterResul
 	if err != nil {
 		tf.errorCounter(record.RawLength)
 		// TODO: omit repeated warnings
-		tf.errorLogger.Warnf("failed to parse timestamp: '%s'", value)
+		tf.errorLogger.Warnf("failed to parse timestamp: '%s': %s", value, err.Error())
 	} else {
 		record.Timestamp = tm
 	}
