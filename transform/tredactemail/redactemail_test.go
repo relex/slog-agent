@@ -26,5 +26,8 @@ func TestRedactEmail(t *testing.T) {
 		assert.Equal(t, "number: hello@123.456", redactEmail("number: hello@123.456"))
 		assert.Equal(t, "in Trx@c78b1de/1593788313696 [OPEN]", redactEmail("in Trx@c78b1de/1593788313696 [OPEN]"))
 		assert.Equal(t, "in Trx@c78b1de./1593788313696 [OPEN]", redactEmail("in Trx@c78b1de./1593788313696 [OPEN]"))
+		assert.Equal(t, "url: ftp://foo:REDACTED", redactEmail("url: ftp://foo:pass@bar.org")) // can't distinguish and password shouldn't show up in logs
+		assert.Equal(t, "url: ftp://foo@bar.org", redactEmail("url: ftp://foo@bar.org"))
+		assert.Equal(t, "/foo@bar.org", redactEmail("/foo@bar.org"))
 	})
 }
