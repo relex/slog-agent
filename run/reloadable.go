@@ -53,8 +53,8 @@ func NewReloadableOrchestrator(downstream base.Orchestrator, initiateReload Init
 		downstreamMutex: &xsync.RBMutex{},
 	}
 
-	// listen to signal: unbuffered since we can ignore new SIGHUPs while reloading
-	c := make(chan os.Signal)
+	// listen to signal: unbuffered since we want to discard any new SIGHUPs while reloading
+	c := make(chan os.Signal, 1) //nolint:govet
 	signal.Notify(c, syscall.SIGHUP)
 	go func() {
 		for {

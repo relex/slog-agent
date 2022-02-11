@@ -6,25 +6,25 @@ import (
 	"github.com/relex/slog-agent/util"
 )
 
-var redactEmailValidAddressChars = make([]bool, 256)
-var redactEmailValidNameChars = make([]bool, 256)
+var validAddressChars = make([]bool, 256)
+var validWordChars = make([]bool, 256)
 
 func init() {
 	for c := byte('A'); c <= byte('Z'); c++ {
-		redactEmailValidAddressChars[c] = true
-		redactEmailValidNameChars[c] = true
+		validAddressChars[c] = true
+		validWordChars[c] = true
 	}
 	for c := byte('a'); c <= byte('z'); c++ {
-		redactEmailValidAddressChars[c] = true
-		redactEmailValidNameChars[c] = true
+		validAddressChars[c] = true
+		validWordChars[c] = true
 	}
 	for c := byte('0'); c <= byte('9'); c++ {
-		redactEmailValidAddressChars[c] = true
-		redactEmailValidNameChars[c] = true
+		validAddressChars[c] = true
+		validWordChars[c] = true
 	}
-	redactEmailValidAddressChars['.'] = true
-	redactEmailValidAddressChars['-'] = true
-	redactEmailValidAddressChars['_'] = true
+	validAddressChars['.'] = true
+	validAddressChars['-'] = true
+	validAddressChars['_'] = true
 }
 
 func redactEmail(src string) string {
@@ -41,7 +41,7 @@ func redactEmailFindFirst(src string) int {
 	sAt := strings.IndexByte(src, '@')
 	// ignore src[0] and src[len-1] because no valid email possible
 	for sAt < sEnd {
-		if sAt > 0 && redactEmailValidNameChars[src[sAt-1]] && redactEmailValidNameChars[src[sAt+1]] {
+		if sAt > 0 && validWordChars[src[sAt-1]] && validWordChars[src[sAt+1]] {
 			return sAt
 		}
 		sAt++
@@ -63,10 +63,9 @@ func redactEmail1(src string, start int) (string, int) {
 	sCopied := 0
 	// ignore src[0] and src[len-1] because no valid email possible
 	for sAt < sEnd {
-		if sAt > 0 && redactEmailValidNameChars[src[sAt-1]] && redactEmailValidNameChars[src[sAt+1]] {
-			emailStart := redactFindEmailStart(src, sAt, sCopied)
-			emailEnd := redactFindEmailEnd(src, sAt)
-			if emailEnd != -1 {
+		if sAt > 0 && validWordChars[src[sAt-1]] && validWordChars[src[sAt+1]] {
+			emailStart, emailEnd := redactFindEmailBoundary(src, sAt, sCopied)
+			if emailStart != -1 && emailEnd != -1 {
 				// copy contents before email and the email
 				dst = append(dst, src[sCopied:emailStart]...)
 				dst = append(dst, "REDACTED"...)
@@ -93,23 +92,37 @@ func redactEmail1(src string, start int) (string, int) {
 	return util.StringFromBytes(dst), numRedacted
 }
 
+func redactFindEmailBoundary(src string, atIndex int, limitStart int) (int, int) {
+	emailStart := redactFindEmailStart(src, atIndex, limitStart)
+	if emailStart == -1 {
+		return -1, -1
+	}
+	return emailStart, redactFindEmailEnd(src, atIndex)
+}
+
+// redactFindEmailStart searches backward to find the beginning of user name before '@'
 func redactFindEmailStart(src string, atIndex int, limitStart int) int {
 	var i int
 	for i = atIndex - 1; i >= limitStart; i-- {
 		c := src[i]
-		if !redactEmailValidAddressChars[c] {
+		if !validAddressChars[c] {
 			break
 		}
 	}
+
+	if i >= 0 && src[i] == '/' {
+		return -1
+	}
+
 	return i + 1
 }
 
+// redactFindEmailEnd searches forward to find the end of email after '@'
 func redactFindEmailEnd(src string, atIndex int) int {
-	var i int
 	dotIndex := -1
-	for i = atIndex + 1; i < len(src); i++ {
+	for i := atIndex + 1; i < len(src); i++ {
 		c := src[i]
-		if !redactEmailValidAddressChars[c] {
+		if !validAddressChars[c] {
 			return -1
 		}
 		if c == '.' {
@@ -117,6 +130,7 @@ func redactFindEmailEnd(src string, atIndex int) int {
 			break
 		}
 	}
+
 	switch {
 	case dotIndex == -1:
 		// truncated domain, e.g.: foo.bar@google
@@ -127,20 +141,22 @@ func redactFindEmailEnd(src string, atIndex int) int {
 	case dotIndex == len(src)-1:
 		// truncated domain, e.g.: foo.bar@google.
 		return len(src)
-	case !redactEmailValidNameChars[src[dotIndex+1]]:
+	case !validWordChars[src[dotIndex+1]]:
 		// not email, e.g.: Trx@123456./
 		return -1
 	}
-	for i = dotIndex + 2; i < len(src); i++ {
-		c := src[i]
-		if !redactEmailValidAddressChars[c] {
+
+	var endIndex int
+	for endIndex = dotIndex + 2; endIndex < len(src); endIndex++ {
+		c := src[endIndex]
+		if !validAddressChars[c] {
 			break
 		}
 	}
-	if redactEmailCheckNumber(src[atIndex+1 : i]) {
+	if redactEmailCheckNumber(src[atIndex+1 : endIndex]) {
 		return -1
 	}
-	return i
+	return endIndex
 }
 
 func redactEmailCheckNumber(s string) bool {
