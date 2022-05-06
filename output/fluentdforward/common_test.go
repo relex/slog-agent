@@ -17,8 +17,8 @@ var testSerializationConfig = SerializationConfig{
 	HiddenFields:      []string{"comp"},
 	RewriteFields: map[string][]bconfig.LogRewriterConfigHolder{
 		"message": {
-			{Location: "", LogRewriterConfig: &testLogRewriter1{}},
-			{Location: "", LogRewriterConfig: &testLogRewriter2{}},
+			{Location: "", Value: &testLogRewriter1{}},
+			{Location: "", Value: &testLogRewriter2{}},
 		},
 	},
 }

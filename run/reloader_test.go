@@ -12,7 +12,7 @@ import (
 
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/relex/fluentlib/protocol/forwardprotocol"
-	"github.com/relex/fluentlib/server"
+	"github.com/relex/fluentlib/server/receivers"
 	"github.com/relex/gotils/logger"
 	"github.com/relex/gotils/promexporter/promext"
 	"github.com/stretchr/testify/assert"
@@ -33,7 +33,7 @@ var sampleYML2 = assembleConfig(
 )
 
 func TestReloader(t *testing.T) {
-	logRecv, outBatchCh := server.NewEventCollector(5 * time.Second)
+	logRecv, outBatchCh := receivers.NewEventCollector(5 * time.Second)
 
 	runTestEnv(t, logRecv, sampleConf, func(bufDir string, confFile *os.File, srvAddr net.Addr) {
 		ld, confErr := NewReloaderFromConfigFile(confFile.Name(), t.Name()+"_")

@@ -7,7 +7,7 @@ import (
 )
 
 func init() {
-	bconfig.RegisterLogInputConfigConstructors(map[string]func() bconfig.LogInputConfig{
+	bconfig.RegisterConfigConstructors(bconfig.LogInputConfigCreatorTable{
 		"syslog": func() bconfig.LogInputConfig { return &sysloginput.Config{} },
 	})
 }

@@ -24,7 +24,7 @@ func preparePipeline(configFile string, tagOverride string, metricCreator promre
 		logger.Fatal("only one input source is supported")
 	}
 
-	inputConfig := conf.Inputs[0].LogInputConfig // we support only one input for testing
+	inputConfig := conf.Inputs[0].Value // we support only one input for testing
 	allocator := base.NewLogAllocator(schema)
 	inputCounter := base.NewLogInputCounter(metricCreator.AddOrGetPrefix("input_", nil, nil))
 
@@ -35,8 +35,8 @@ func preparePipeline(configFile string, tagOverride string, metricCreator promre
 
 	procCounter := base.NewLogProcessCounter(metricCreator.AddOrGetPrefix("process_", nil, nil), schema, schema.MustCreateFieldLocators(conf.MetricKeys))
 	transforms := bsupport.NewTransformsFromConfig(conf.Transformations, schema, logger.Root(), procCounter)
-	serializer := conf.Output.NewSerializer(logger.Root(), schema, allocator)
-	chunkMaker := conf.Output.NewChunkMaker(logger.Root(), tagOverride)
+	serializer := conf.Output.Value.NewSerializer(logger.Root(), schema, allocator)
+	chunkMaker := conf.Output.Value.NewChunkMaker(logger.Root(), tagOverride)
 
 	now := time.Now() // fallback timestamp
 	process := func(s []byte) *base.LogChunk {
@@ -73,7 +73,7 @@ func preparePipeline(configFile string, tagOverride string, metricCreator promre
 		return maybeChunk
 	}
 
-	return conf.Output, process, endProcess
+	return conf.Output.Value, process, endProcess
 }
 
 func runPipeline(process logProcessor, endProcess logProcessCloser, inputLines [][]byte, repeat int, writeChunk func(chunk base.LogChunk)) {

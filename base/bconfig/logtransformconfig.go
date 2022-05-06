@@ -9,7 +9,12 @@ import (
 //
 // All the implementations should support YAML unmarshalling
 type LogTransformConfig interface {
-	GetType() string
+	BaseConfig
+
 	NewTransform(schema base.LogSchema, parentLogger logger.Logger, customCounterRegistry base.LogCustomCounterRegistry) base.LogTransform
+
 	VerifyConfig(schema base.LogSchema) error
 }
+
+type LogTransformConfigHolder = ConfigHolder[LogTransformConfig]
+type LogTransformConfigCreatorTable = ConfigCreatorTable[LogTransformConfig]

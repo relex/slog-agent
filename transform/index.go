@@ -20,7 +20,7 @@ import (
 )
 
 func init() {
-	bconfig.RegisterLogTransformConfigConstructors(map[string]func() bconfig.LogTransformConfig{
+	bconfig.RegisterConfigConstructors(bconfig.LogTransformConfigCreatorTable{
 		"addFields":   func() bconfig.LogTransformConfig { return &taddfields.Config{} },
 		"block":       func() bconfig.LogTransformConfig { return &tblock.Config{} },
 		"delFields":   func() bconfig.LogTransformConfig { return &tdelfields.Config{} },

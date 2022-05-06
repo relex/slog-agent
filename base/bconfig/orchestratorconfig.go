@@ -8,9 +8,7 @@ import (
 
 // OrchestratorConfig configures Orchestrator
 type OrchestratorConfig interface {
-
-	// GetType returns the type name
-	GetType() string
+	BaseConfig
 
 	// LaunchOrchestrator creates and launches a new Orchestrator
 	LaunchOrchestrator(parentLogger logger.Logger, args PipelineArgs, metricCreator promreg.MetricCreator) base.Orchestrator
@@ -18,6 +16,9 @@ type OrchestratorConfig interface {
 	// VerifyConfig checks configuration and returns (key fields, error)
 	VerifyConfig(schema base.LogSchema) ([]string, error)
 }
+
+type OrchestratorConfigHolder = ConfigHolder[OrchestratorConfig]
+type OrchestratorConfigCreatorTable = ConfigCreatorTable[OrchestratorConfig]
 
 // PipelineArgs defines the common arguments to construct pipeline(s)
 type PipelineArgs struct {

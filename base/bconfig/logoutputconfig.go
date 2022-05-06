@@ -19,7 +19,7 @@ import (
 //
 // All the implementations should support YAML unmarshalling
 type LogOutputConfig interface {
-	GetType() string
+	BaseConfig
 
 	DumpRecordsAsJSON(chunk base.LogChunk, separator []byte, indented bool, destination io.Writer) (base.LogChunkInfo, error)
 
@@ -33,3 +33,6 @@ type LogOutputConfig interface {
 
 	VerifyConfig(schema base.LogSchema) error
 }
+
+type LogOutputConfigHolder = ConfigHolder[LogOutputConfig]
+type LogOutputConfigCreatorTable = ConfigCreatorTable[LogOutputConfig]

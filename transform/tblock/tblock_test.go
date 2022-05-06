@@ -13,7 +13,7 @@ import (
 )
 
 func TestBlockTransform(t *testing.T) {
-	bconfig.RegisterLogTransformConfigConstructors(map[string]func() bconfig.LogTransformConfig{
+	bconfig.RegisterConfigConstructors(bconfig.LogTransformConfigCreatorTable{
 		"addFields": func() bconfig.LogTransformConfig { return &taddfields.Config{} },
 		"delFields": func() bconfig.LogTransformConfig { return &tdelfields.Config{} },
 	})

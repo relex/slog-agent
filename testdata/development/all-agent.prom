@@ -8,7 +8,7 @@ testagent_process_buffer_input_chunks_total{key_host="basic-2",orchestrator="byK
 testagent_process_buffer_input_chunks_total{key_host="errors",orchestrator="byKeySet",state="transient",storage="hybridBuffer"} 1
 testagent_process_chunk_bytes_total{key_host="basic-1",orchestrator="byKeySet"} 475
 testagent_process_chunk_bytes_total{key_host="basic-2",orchestrator="byKeySet"} 1660
-testagent_process_chunk_bytes_total{key_host="errors",orchestrator="byKeySet"} 14844
+testagent_process_chunk_bytes_total{key_host="errors",orchestrator="byKeySet"} 14808
 testagent_process_chunks_total{key_host="basic-1",orchestrator="byKeySet"} 1
 testagent_process_chunks_total{key_host="basic-2",orchestrator="byKeySet"} 1
 testagent_process_chunks_total{key_host="errors",orchestrator="byKeySet"} 1

@@ -105,8 +105,8 @@ func checkConfigCompatibility(
 		}
 	}
 	{
-		oldType := oldConf.Orchestration.GetType()
-		newType := newConf.Orchestration.GetType()
+		oldType := oldConf.Orchestration.Value.GetType()
+		newType := newConf.Orchestration.Value.GetType()
 		if oldType != newType {
 			return fmt.Errorf("orchestration/type must not change: old=%s, new=%s", oldType, newType)
 		}

@@ -25,10 +25,10 @@ func NewTransformsFromConfig(transformConfigs []bconfig.LogTransformConfigHolder
 	transforms := make([]base.LogTransformFunc, len(transformConfigs))
 	for i, tc := range transformConfigs {
 		tlogger := parentLogger.WithFields(logger.Fields{
-			defs.LabelPart:   tc.LogTransformConfig.GetType(),
+			defs.LabelPart:   tc.Value.GetType(),
 			defs.LabelSource: tc.Location,
 		})
-		transforms[i] = tc.NewTransform(schema, tlogger, customCounterHost).Transform
+		transforms[i] = tc.Value.NewTransform(schema, tlogger, customCounterHost).Transform
 	}
 	return transforms
 }
@@ -36,7 +36,7 @@ func NewTransformsFromConfig(transformConfigs []bconfig.LogTransformConfigHolder
 // VerifyTransformConfigs verifies a list of transform configurations
 func VerifyTransformConfigs(transformConfigs []bconfig.LogTransformConfigHolder, schema base.LogSchema, header string) error {
 	for i, tfc := range transformConfigs {
-		err := tfc.VerifyConfig(schema)
+		err := tfc.Value.VerifyConfig(schema)
 		if err != nil {
 			return fmt.Errorf("%s[%d] %s: %w", header, i, tfc.Location, err)
 		}

@@ -8,7 +8,12 @@ import (
 //
 // All the implementations should support YAML unmarshalling
 type LogRewriterConfig interface {
-	GetType() string
+	BaseConfig
+
 	NewRewriter(schema base.LogSchema, next base.LogRewriter) base.LogRewriter
+
 	VerifyConfig(schema base.LogSchema, hasNext bool) error
 }
+
+type LogRewriterConfigHolder = ConfigHolder[LogRewriterConfig]
+type LogRewriterConfigCreatorTable = ConfigCreatorTable[LogRewriterConfig]

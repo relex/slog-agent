@@ -7,7 +7,7 @@ import (
 )
 
 func init() {
-	bconfig.RegisterLogOutputConfigConstructors(map[string]func() bconfig.LogOutputConfig{
+	bconfig.RegisterConfigConstructors(bconfig.LogOutputConfigCreatorTable{
 		"fluentdForward": func() bconfig.LogOutputConfig { return &fluentdforward.Config{} },
 	})
 }
