@@ -10,6 +10,7 @@ import (
 	"github.com/relex/slog-agent/defs"
 	"github.com/relex/slog-agent/orchestrate/obase"
 	"github.com/relex/slog-agent/util"
+	"github.com/relex/slog-agent/util/localcachedmap"
 )
 
 // byKeySetOrchestrator is used to ensure fairer sharing of resource among logs of different key sets,
@@ -59,7 +60,8 @@ func NewOrchestrator(parentLogger logger.Logger, schema base.LogSchema, keyField
 		metricKeyNames: metricKeyNames,
 		launchWorkers:  launchWorkers,
 	}
-	o.workerMap = newGlobalPipelineChannelMap(o.newWorker, closePipelineChannel, obase.NewPipelineChannelLocalBuffer)
+	o.workerMap = localcachedmap.NewGlobalMap(o.newWorker, closePipelineChannel, obase.NewPipelineChannelLocalBuffer)
+
 	if len(existingPipelineIDs) > 0 {
 		localMap := o.workerMap.MakeLocalMap()
 		for _, pipelineID := range existingPipelineIDs {
@@ -85,7 +87,7 @@ func (o *byKeySetOrchestrator) NewSink(clientAddress string, clientNumber base.C
 }
 
 func (o *byKeySetOrchestrator) Shutdown() {
-	o.logger.Infof("shutting down pipeline workers count=%d", util.PeekWaitGroup(o.workerMap.objectCounter))
+	o.logger.Infof("shutting down pipeline workers count=%d", o.workerMap.PeekNumObjects())
 	o.workerMap.Destroy()
 	o.logger.Info("shut down all pipeline workers")
 }
