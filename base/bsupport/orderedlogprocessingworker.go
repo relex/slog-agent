@@ -12,7 +12,7 @@ import (
 
 // OrderedLogProcessingWorker is like LogProcessingWorker but keeps buffer processing in order by locks
 type OrderedLogProcessingWorker struct {
-	PipelineWorkerBaseForOrderedLogBuffer
+	PipelineWorkerBase[base.OrderedLogBuffer]
 	deallocator   *base.LogAllocator
 	procCounter   *base.LogProcessCounter
 	transformList []base.LogTransformFunc
@@ -31,7 +31,7 @@ func NewOrderedLogProcessingWorker(parentLogger logger.Logger,
 	transforms []base.LogTransformFunc, serializer base.LogSerializer, chunkMaker base.LogChunkMaker,
 	acceptChunk base.LogChunkAccepter) *OrderedLogProcessingWorker {
 	worker := &OrderedLogProcessingWorker{
-		PipelineWorkerBaseForOrderedLogBuffer: NewPipelineWorkerBaseForOrderedLogBuffer(
+		PipelineWorkerBase: NewPipelineWorkerBase(
 			parentLogger.WithField(defs.LabelComponent, "OrderedLogProcessingWorker"),
 			input,
 		),
