@@ -17,7 +17,10 @@ type OrchestratorConfig interface {
 	VerifyConfig(schema base.LogSchema) ([]string, error)
 }
 
+// OrchestratorConfigHolder holds OrchestratorConfig
 type OrchestratorConfigHolder = ConfigHolder[OrchestratorConfig]
+
+// OrchestratorConfigCreatorTable defines the table of constructors for OrchestratorConfig implementations
 type OrchestratorConfigCreatorTable = ConfigCreatorTable[OrchestratorConfig]
 
 // PipelineArgs defines the common arguments to construct pipeline(s)

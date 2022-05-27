@@ -23,5 +23,8 @@ type LogInputConfig interface {
 	VerifyConfig(schema base.LogSchema) error
 }
 
+// LogInputConfigHolder holds LogInputConfig
 type LogInputConfigHolder = ConfigHolder[LogInputConfig]
+
+// LogInputConfigCreatorTable defines the table of constructors for LogInputConfig implementations
 type LogInputConfigCreatorTable = ConfigCreatorTable[LogInputConfig]

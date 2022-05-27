@@ -7,10 +7,13 @@ import (
 	"github.com/relex/slog-agent/util"
 )
 
+// GlobalObjectConstructor defines a function that creates a new global item in GlobalCachedMap
 type GlobalObjectConstructor[G any] func(keys []string, onStopped func()) G
 
+// GlobalObjectDestructor defines a function that destroys a global item in GlobalCachedMap
 type GlobalObjectDestructor[G any] func(obj G)
 
+// LocalWrapperConstructor defines a function that creates a local wrapper for a global item in GlobalCachedMap
 type LocalWrapperConstructor[G any, L any] func(obj G) L
 
 // GlobalCachedMap keeps a global map of objects that can be looked up in thread-local cache
@@ -25,15 +28,13 @@ type GlobalCachedMap[G any, L any] struct {
 	objectCounter *sync.WaitGroup               // global object counter, for finalization
 }
 
-// LocalCachedMap keeps local cache of global map for fast access, unprotected by mutex
-type LocalCachedMap[G any, L any] struct {
-	localMap  map[string]L           // local cache of map, append only
-	source    *GlobalCachedMap[G, L] // point to the source channelMap
-	keyBuffer []byte                 // preallocated buffer to merge keys
-}
-
 // NewGlobalMap creates a globalMap
-func NewGlobalMap[G any, L any](create GlobalObjectConstructor[G], delete GlobalObjectDestructor[G], wrap LocalWrapperConstructor[G, L]) *GlobalCachedMap[G, L] {
+func NewGlobalMap[G any, L any](
+	create GlobalObjectConstructor[G],
+	delete GlobalObjectDestructor[G],
+	wrap LocalWrapperConstructor[G, L],
+) *GlobalCachedMap[G, L] {
+
 	return &GlobalCachedMap[G, L]{
 		globalMap:     make(map[string]G, 2000),
 		globalMutex:   &sync.Mutex{},
@@ -79,6 +80,13 @@ func (gm *GlobalCachedMap[G, L]) getOrCreate(keys []string, mergedKey string) G 
 	}
 	gm.globalMutex.Unlock()
 	return obj
+}
+
+// LocalCachedMap keeps local cache of global map for fast access, unprotected by mutex
+type LocalCachedMap[G any, L any] struct {
+	localMap  map[string]L           // local cache of map, append only
+	source    *GlobalCachedMap[G, L] // point to the source channelMap
+	keyBuffer []byte                 // preallocated buffer to merge keys
 }
 
 // LocalMap returns the local map. It shouild not be modified.

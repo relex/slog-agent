@@ -16,5 +16,8 @@ type LogTransformConfig interface {
 	VerifyConfig(schema base.LogSchema) error
 }
 
+// LogTransformConfigHolder holds LogTransformConfig
 type LogTransformConfigHolder = ConfigHolder[LogTransformConfig]
+
+// LogTransformConfigCreatorTable defines the table of constructors for LogTransformConfig implementations
 type LogTransformConfigCreatorTable = ConfigCreatorTable[LogTransformConfig]

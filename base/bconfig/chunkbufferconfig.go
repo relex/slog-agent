@@ -30,5 +30,8 @@ type ChunkBufferConfig interface {
 	VerifyConfig() error
 }
 
+// ChunkBufferConfigHolder holds ChunkBufferConfig
 type ChunkBufferConfigHolder = ConfigHolder[ChunkBufferConfig]
+
+// ChunkBufferConfigCreatorTable defines the table of constructors for ChunkBufferConfig implementations
 type ChunkBufferConfigCreatorTable = ConfigCreatorTable[ChunkBufferConfig]

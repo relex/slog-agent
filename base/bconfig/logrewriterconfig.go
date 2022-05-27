@@ -15,5 +15,8 @@ type LogRewriterConfig interface {
 	VerifyConfig(schema base.LogSchema, hasNext bool) error
 }
 
+// LogRewriterConfigHolder holds LogRewriterConfig
 type LogRewriterConfigHolder = ConfigHolder[LogRewriterConfig]
+
+// LogRewriterConfigCreatorTable defines the table of constructors for LogRewriterConfig implementations
 type LogRewriterConfigCreatorTable = ConfigCreatorTable[LogRewriterConfig]

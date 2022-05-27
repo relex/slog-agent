@@ -34,5 +34,8 @@ type LogOutputConfig interface {
 	VerifyConfig(schema base.LogSchema) error
 }
 
+// LogOutputConfigHolder holds LogOutputConfig
 type LogOutputConfigHolder = ConfigHolder[LogOutputConfig]
+
+// LogOutputConfigCreatorTable defines the table of constructors for LogOutputConfig implementations
 type LogOutputConfigCreatorTable = ConfigCreatorTable[LogOutputConfig]

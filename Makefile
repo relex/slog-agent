@@ -1,19 +1,13 @@
 AUTO_BUILD_VERSION ?= dev
 GOPATH := $(shell go env GOPATH)
-SOURCES_NONGEN := $(shell find . -name '*.go' -not -name '*_test.go' -not -name '*.gen.go')
-SOURCES_GEN := $(shell find . -name '*.gen.go')
-SOURCES_TPL := $(shell find . -name '*.tpl.go')
-export LINT_EXHAUSTIVESTRUCT=Y
 
+.PHONY: build
 build: BUILD/slog-agent
 
 include ${GOPATH}/opt/gotils/Common.mk
 
-BUILD/slog-agent: Makefile go.mod $(SOURCES_NONGEN) $(SOURCES_GEN)
-	GO_LDFLAGS="-X main.version=$(AUTO_BUILD_VERSION)" gotils-build.sh -o $@
-
-$(SOURCES_GEN): $(SOURCES_TPL)
-	go generate ./...
+BUILD/slog-agent: Makefile go.mod $(SOURCES_NONTEST)
+	GO_LDFLAGS="-X main.version=$(AUTO_BUILD_VERSION)" ./build.sh -o $@
 
 .PHONY: test-gen
 test-gen: BUILD/slog-agent

@@ -52,6 +52,7 @@ func (holder *ConfigHolder[C]) UnmarshalYAML(value *yaml.Node) error {
 	return nil
 }
 
+// ConfigCreatorTable provides a map of config types to their constructors
 type ConfigCreatorTable[C BaseConfig] map[string]func() C
 
 var typeToConfigCreatorTables = make(map[string]interface{})

@@ -1,4 +1,5 @@
 *.test
+/.vscode
 /BUILD/*
 /testdata/production
 config.yml
