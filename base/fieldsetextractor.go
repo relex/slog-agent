@@ -15,6 +15,7 @@ func NewFieldSetExtractor(locators []LogFieldLocator) *FieldSetExtractor {
 }
 
 // Extract extracts field set from the given log record and returns transient field values
+//
 // Returned slices and values are only usable until next call. They MUST be copied for storing.
 func (ex *FieldSetExtractor) Extract(record *LogRecord) []string {
 	transientFieldSet := ex.fieldSetBuffer

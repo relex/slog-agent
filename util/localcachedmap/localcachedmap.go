@@ -97,7 +97,7 @@ func (lm *LocalCachedMap[G, L]) LocalMap() map[string]L {
 // GetOrCreate gets or creates a global object and returns the local cache of it
 //
 // The given tempKeys is assumed to be transient and will be copied if it needs to be stored in the global map
-func (lm *LocalCachedMap[G, L]) GetOrCreate(tempKeys []string) L {
+func (lm *LocalCachedMap[G, L]) GetOrCreate(tempKeys []string, onCreating func(permKeys []string)) L {
 	tempMergedKey := lm.keyBuffer
 	for _, tkey := range tempKeys {
 		tempMergedKey = append(tempMergedKey, tkey...)
@@ -112,6 +112,7 @@ func (lm *LocalCachedMap[G, L]) GetOrCreate(tempKeys []string) L {
 	// make permanent copy of keys here so that they may be used globally
 	permanentKeys := util.DeepCopyStrings(tempKeys)
 	permanentMergedKey := util.DeepCopyStringFromBytes(tempMergedKey)
+	onCreating(permanentKeys)
 
 	newGlobalObject := lm.source.getOrCreate(permanentKeys, permanentMergedKey)
 	newLocalCache := lm.source.wrapObject(newGlobalObject)

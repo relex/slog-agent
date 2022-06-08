@@ -64,6 +64,7 @@ func NewOrchestrator(parentLogger logger.Logger, schema base.LogSchema, keyField
 
 	if len(existingPipelineIDs) > 0 {
 		localMap := o.workerMap.MakeLocalMap()
+		onCreating := func([]string) {}
 		for _, pipelineID := range existingPipelineIDs {
 			keys := strings.Split(pipelineID, ",")
 			if len(keys) != len(keyFields) {
@@ -71,7 +72,7 @@ func NewOrchestrator(parentLogger logger.Logger, schema base.LogSchema, keyField
 				ologger.Warnf("ignore malformed existing pipeline ID: %s", pipelineID)
 				continue
 			}
-			localMap.GetOrCreate(keys)
+			localMap.GetOrCreate(keys, onCreating)
 		}
 	}
 	return o
@@ -97,9 +98,7 @@ func (o *byKeySetOrchestrator) newWorker(keys []string, onStopped func()) chan<-
 	tag := o.tagBuilder.Build(keys)
 	workerID := strings.Join(keys, ",")
 	inputChannel := make(chan []*base.LogRecord, defs.IntermediateBufferedChannelSize)
-	pipelineLogger := o.logger.WithFields(logger.Fields{
-		defs.LabelName: workerID,
-	})
+	pipelineLogger := o.logger.WithField(defs.LabelName, workerID)
 	pipelineLogger.Infof("new pipeline tag=%s", tag)
 	pipelineMetricCreator := o.metricCreator.AddOrGetPrefix(
 		"process_",
@@ -117,7 +116,7 @@ func (oc *byKeySetOrchestratorSink) Accept(buffer []*base.LogRecord) {
 	workerMap := oc.workerMap
 	for _, record := range buffer {
 		tempKeySet := keySetExtractor.Extract(record)
-		cache := workerMap.GetOrCreate(tempKeySet)
+		cache := workerMap.GetOrCreate(tempKeySet, oc.onNewLinkToPipeline)
 		if cache.Append(record) {
 			cache.Flush(now, oc.sendTimeout, oc.logger, tempKeySet)
 		}
@@ -134,6 +133,11 @@ func (oc *byKeySetOrchestratorSink) Tick() {
 func (oc *byKeySetOrchestratorSink) Close() {
 	oc.logger.Info("close")
 	oc.flushAllLocalBuffers(true)
+}
+
+func (oc *byKeySetOrchestratorSink) onNewLinkToPipeline(permKeys []string) {
+	workerID := strings.Join(permKeys, ",")
+	oc.logger.WithField(defs.LabelName, workerID).Info("creating new link from input to pipeline worker")
 }
 
 func (oc *byKeySetOrchestratorSink) flushAllLocalBuffers(forceAll bool) {
