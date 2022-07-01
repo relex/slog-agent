@@ -11,7 +11,7 @@ import (
 //
 // All the implementations should support YAML unmarshalling
 type LogInputConfig interface {
-	GetType() string
+	BaseConfig
 
 	NewInput(parentLogger logger.Logger, allocator *base.LogAllocator, schema base.LogSchema,
 		logBufferReceiver base.MultiSinkBufferReceiver, metricCreator promreg.MetricCreator,
@@ -22,3 +22,9 @@ type LogInputConfig interface {
 
 	VerifyConfig(schema base.LogSchema) error
 }
+
+// LogInputConfigHolder holds LogInputConfig
+type LogInputConfigHolder = ConfigHolder[LogInputConfig]
+
+// LogInputConfigCreatorTable defines the table of constructors for LogInputConfig implementations
+type LogInputConfigCreatorTable = ConfigCreatorTable[LogInputConfig]

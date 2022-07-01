@@ -26,7 +26,7 @@ func startAgent(loader *run.Loader, newChunkSaver base.ChunkConsumerConstructor,
 	if len(loader.Inputs) != 1 {
 		logger.Warnf("only the first input is used for testing - there are %d", len(loader.Inputs))
 	}
-	switch orcConf := loader.Orchestration.OrchestratorConfig.(type) {
+	switch orcConf := loader.Orchestration.Value.(type) {
 	case *obykeyset.Config:
 		if keysOverride != nil {
 			newMetricKeys := make([]string, 0, len(orcConf.Keys)+len(loader.MetricKeys))

@@ -14,7 +14,7 @@ func NewRewritersFromConfig(rewriterConfigs []bconfig.LogRewriterConfigHolder, s
 	}
 	head := base.LogRewriter(nil)
 	for i := len(rewriterConfigs) - 1; i >= 0; i-- {
-		head = rewriterConfigs[i].NewRewriter(schema, head)
+		head = rewriterConfigs[i].Value.NewRewriter(schema, head)
 	}
 	return head
 }
@@ -23,7 +23,7 @@ func NewRewritersFromConfig(rewriterConfigs []bconfig.LogRewriterConfigHolder, s
 func VerifyRewriterConfigs(rewriterConfigs []bconfig.LogRewriterConfigHolder, schema base.LogSchema, header string) error {
 	lastI := len(rewriterConfigs) - 1
 	for i, rwc := range rewriterConfigs {
-		err := rwc.VerifyConfig(schema, i < lastI)
+		err := rwc.Value.VerifyConfig(schema, i < lastI)
 		if err != nil {
 			return fmt.Errorf("%s[%d] %s: %w", header, i, rwc.Location, err)
 		}

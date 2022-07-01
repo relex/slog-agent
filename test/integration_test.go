@@ -74,7 +74,7 @@ func TestAgent(t *testing.T) {
 	assert.Nil(t, confErr)
 	loader.ConfigStats.Log(logger.WithField("test", t.Name()))
 
-	outputWritersByTag, newChunkSaver := prepareOutputWriters(t, loader.Output)
+	outputWritersByTag, newChunkSaver := prepareOutputWriters(t, loader.Output.Value)
 	// Override tag for output splitting and keys (labelsets) for distribution: order of logs would be messed up if keys are different
 	agt := startAgent(loader, newChunkSaver, []string{"host"}, "$host")
 
@@ -181,17 +181,17 @@ func prepareOutputWriters(t *testing.T, outputConfig bconfig.LogOutputConfig) (m
 		wrt := getOutputWriterByTag(info.Tag)
 		if wrt.Len() == 0 {
 			if _, err := wrt.Write([]byte("[\n")); err != nil {
-				t.Errorf("failed to write separator: %w", err)
+				t.Errorf("failed to write separator: %v", err)
 				return
 			}
 		} else {
 			if _, err := wrt.Write([]byte(",\n")); err != nil {
-				t.Errorf("failed to write separator: %w", err)
+				t.Errorf("failed to write separator: %v", err)
 				return
 			}
 		}
 		if _, werr := wrt.Write(buf.Bytes()); werr != nil {
-			t.Errorf("failed to write JSON: %s: %w", chunk.ID, werr)
+			t.Errorf("failed to write JSON: %s: %v", chunk.ID, werr)
 			return
 		}
 	}

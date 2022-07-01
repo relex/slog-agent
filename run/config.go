@@ -85,7 +85,7 @@ func ParseConfigFile(filepath string) (Config, base.LogSchema, ConfigStats, erro
 	}
 
 	var orcKeys []string
-	if keys, err := conf.Orchestration.VerifyConfig(schema); err == nil {
+	if keys, err := conf.Orchestration.Value.VerifyConfig(schema); err == nil {
 		orcKeys = keys
 		stats.OrchestrationKeys = keys
 	} else {
@@ -102,11 +102,11 @@ func ParseConfigFile(filepath string) (Config, base.LogSchema, ConfigStats, erro
 		return conf, schema, stats, err
 	}
 
-	if err := conf.Buffer.VerifyConfig(); err != nil {
+	if err := conf.Buffer.Value.VerifyConfig(); err != nil {
 		return conf, schema, stats, fmt.Errorf("buffer: %w", err)
 	}
 
-	if err := conf.Output.VerifyConfig(schema); err != nil {
+	if err := conf.Output.Value.VerifyConfig(schema); err != nil {
 		return conf, schema, stats, fmt.Errorf("output: %w", err)
 	}
 

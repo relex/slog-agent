@@ -12,13 +12,13 @@ import (
 )
 
 type testPipelineWorker struct {
-	PipelineWorkerBaseForLogRecords
+	PipelineWorkerBase[[]*base.LogRecord]
 	outputChannel chan []*base.LogRecord
 }
 
 func newTestPipelineWorker(parentLogger logger.Logger, input <-chan []*base.LogRecord) *testPipelineWorker {
 	worker := &testPipelineWorker{
-		PipelineWorkerBaseForLogRecords: NewPipelineWorkerBaseForLogRecords(
+		PipelineWorkerBase: NewPipelineWorkerBase(
 			parentLogger.WithField(defs.LabelComponent, "TestPipelineWorker"),
 			input,
 		),

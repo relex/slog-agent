@@ -10,6 +10,7 @@ import (
 	"github.com/relex/slog-agent/defs"
 	"github.com/relex/slog-agent/orchestrate/obase"
 	"github.com/relex/slog-agent/util"
+	"github.com/relex/slog-agent/util/localcachedmap"
 )
 
 // byKeySetOrchestrator is used to ensure fairer sharing of resource among logs of different key sets,
@@ -59,9 +60,11 @@ func NewOrchestrator(parentLogger logger.Logger, schema base.LogSchema, keyField
 		metricKeyNames: metricKeyNames,
 		launchWorkers:  launchWorkers,
 	}
-	o.workerMap = newGlobalPipelineChannelMap(o.newWorker, closePipelineChannel, obase.NewPipelineChannelLocalBuffer)
+	o.workerMap = localcachedmap.NewGlobalMap(o.newWorker, closePipelineChannel, obase.NewPipelineChannelLocalBuffer)
+
 	if len(existingPipelineIDs) > 0 {
 		localMap := o.workerMap.MakeLocalMap()
+		onCreating := func([]string) {}
 		for _, pipelineID := range existingPipelineIDs {
 			keys := strings.Split(pipelineID, ",")
 			if len(keys) != len(keyFields) {
@@ -69,7 +72,7 @@ func NewOrchestrator(parentLogger logger.Logger, schema base.LogSchema, keyField
 				ologger.Warnf("ignore malformed existing pipeline ID: %s", pipelineID)
 				continue
 			}
-			localMap.GetOrCreate(keys)
+			localMap.GetOrCreate(keys, onCreating)
 		}
 	}
 	return o
@@ -85,7 +88,7 @@ func (o *byKeySetOrchestrator) NewSink(clientAddress string, clientNumber base.C
 }
 
 func (o *byKeySetOrchestrator) Shutdown() {
-	o.logger.Infof("shutting down pipeline workers count=%d", util.PeekWaitGroup(o.workerMap.objectCounter))
+	o.logger.Infof("shutting down pipeline workers count=%d", o.workerMap.PeekNumObjects())
 	o.workerMap.Destroy()
 	o.logger.Info("shut down all pipeline workers")
 }
@@ -95,9 +98,7 @@ func (o *byKeySetOrchestrator) newWorker(keys []string, onStopped func()) chan<-
 	tag := o.tagBuilder.Build(keys)
 	workerID := strings.Join(keys, ",")
 	inputChannel := make(chan []*base.LogRecord, defs.IntermediateBufferedChannelSize)
-	pipelineLogger := o.logger.WithFields(logger.Fields{
-		defs.LabelName: workerID,
-	})
+	pipelineLogger := o.logger.WithField(defs.LabelName, workerID)
 	pipelineLogger.Infof("new pipeline tag=%s", tag)
 	pipelineMetricCreator := o.metricCreator.AddOrGetPrefix(
 		"process_",
@@ -115,7 +116,7 @@ func (oc *byKeySetOrchestratorSink) Accept(buffer []*base.LogRecord) {
 	workerMap := oc.workerMap
 	for _, record := range buffer {
 		tempKeySet := keySetExtractor.Extract(record)
-		cache := workerMap.GetOrCreate(tempKeySet)
+		cache := workerMap.GetOrCreate(tempKeySet, oc.onNewLinkToPipeline)
 		if cache.Append(record) {
 			cache.Flush(now, oc.sendTimeout, oc.logger, tempKeySet)
 		}
@@ -132,6 +133,11 @@ func (oc *byKeySetOrchestratorSink) Tick() {
 func (oc *byKeySetOrchestratorSink) Close() {
 	oc.logger.Info("close")
 	oc.flushAllLocalBuffers(true)
+}
+
+func (oc *byKeySetOrchestratorSink) onNewLinkToPipeline(permKeys []string) {
+	workerID := strings.Join(permKeys, ",")
+	oc.logger.WithField(defs.LabelName, workerID).Info("creating new link from input to pipeline worker")
 }
 
 func (oc *byKeySetOrchestratorSink) flushAllLocalBuffers(forceAll bool) {

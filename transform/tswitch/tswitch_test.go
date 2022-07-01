@@ -12,7 +12,7 @@ import (
 )
 
 func TestSwitchConfig(t *testing.T) {
-	bconfig.RegisterLogTransformConfigConstructors(map[string]func() bconfig.LogTransformConfig{
+	bconfig.RegisterConfigConstructors(bconfig.LogTransformConfigCreatorTable{
 		"addFields": func() bconfig.LogTransformConfig { return &taddfields.Config{} },
 	})
 	schema := base.MustNewLogSchema([]string{"type", "cost"})

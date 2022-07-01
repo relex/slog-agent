@@ -10,6 +10,7 @@ import (
 //
 // All the implementations should support YAML unmarshalling
 type ChunkBufferConfig interface {
+	BaseConfig
 
 	// ListBufferIDs lists existing buffer IDs for orchestrator(s) to re-create their pipelines and start recovery
 	ListBufferIDs(parentLogger logger.Logger, matchChunkID func(string) bool,
@@ -28,3 +29,9 @@ type ChunkBufferConfig interface {
 	// VerifyConfig verifies the configuration
 	VerifyConfig() error
 }
+
+// ChunkBufferConfigHolder holds ChunkBufferConfig
+type ChunkBufferConfigHolder = ConfigHolder[ChunkBufferConfig]
+
+// ChunkBufferConfigCreatorTable defines the table of constructors for ChunkBufferConfig implementations
+type ChunkBufferConfigCreatorTable = ConfigCreatorTable[ChunkBufferConfig]

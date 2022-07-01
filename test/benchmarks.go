@@ -47,7 +47,7 @@ func RunBenchmarkAgent(inputPath string, outputPath string, repeat int, configFi
 	}
 	loader.ConfigStats.Log(logger.Root())
 
-	chunkSaver := openLogChunkSaver(outputPath, loader.Output)
+	chunkSaver := openLogChunkSaver(outputPath, loader.Output.Value)
 	agt := startAgent(loader, chunkSaver, nil, "")
 
 	// feed input

@@ -10,6 +10,7 @@ import (
 
 	dto "github.com/prometheus/client_model/go"
 	"github.com/relex/fluentlib/server"
+	"github.com/relex/fluentlib/server/receivers"
 	"github.com/relex/gotils/logger"
 	"github.com/relex/gotils/promexporter/promext"
 	"github.com/stretchr/testify/assert"
@@ -87,7 +88,7 @@ var sampleConf = assembleConfig(
 )
 
 func TestLoader(t *testing.T) {
-	logRecv, outBatchCh := server.NewMessageCollector(5 * time.Second)
+	logRecv, outBatchCh := receivers.NewMessageCollector(5 * time.Second)
 
 	runTestEnv(t, logRecv, sampleConf, func(bufDir string, confFile *os.File, srvAddr net.Addr) {
 		ld, confErr := NewLoaderFromConfigFile(confFile.Name(), t.Name()+"_")
@@ -137,7 +138,7 @@ anchors: []
 ` + strings.Join(parts, "")
 }
 
-func runTestEnv(t *testing.T, logReceiver server.MessageReceiver, confYML string,
+func runTestEnv(t *testing.T, logReceiver receivers.Receiver, confYML string,
 	do func(bufDir string, confFile *os.File, srvAddr net.Addr)) {
 
 	bufDir, bufDirErr := os.MkdirTemp("", fmt.Sprintf("slog-agent-%s-buf-*", t.Name()))

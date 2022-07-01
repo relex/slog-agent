@@ -7,7 +7,7 @@ import (
 )
 
 func init() {
-	bconfig.RegisterChunkBufferConfigConstructors(map[string]func() bconfig.ChunkBufferConfig{
+	bconfig.RegisterConfigConstructors(bconfig.ChunkBufferConfigCreatorTable{
 		"hybridBuffer": func() bconfig.ChunkBufferConfig { return &hybridbuffer.Config{} },
 	})
 }

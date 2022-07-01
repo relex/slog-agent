@@ -79,8 +79,8 @@ func NewLoaderFromConfigFile(filepath string, metricPrefix string) (*Loader, err
 			Deallocator:         base.NewLogAllocator(schema),
 			MetricKeyLocators:   schema.MustCreateFieldLocators(config.MetricKeys), // should have been verified in config parsing
 			TransformConfigs:    config.Transformations,
-			BufferConfig:        config.Buffer,
-			OutputConfig:        config.Output,
+			BufferConfig:        config.Buffer.Value,
+			OutputConfig:        config.Output.Value,
 			NewConsumerOverride: nil,
 			SendAllAtEnd:        false,
 		},
@@ -97,7 +97,7 @@ func (loader *Loader) LaunchOrchestrator(ologger logger.Logger) base.Orchestrato
 	}
 	loader.pipelineMetricFactory = promreg.NewMetricFactory(loader.metricPrefix, nil, nil)
 
-	return loader.Orchestration.LaunchOrchestrator(ologger, loader.PipelineArgs, loader.pipelineMetricFactory)
+	return loader.Orchestration.Value.LaunchOrchestrator(ologger, loader.PipelineArgs, loader.pipelineMetricFactory)
 }
 
 // LaunchInputs starts all inputs in background and returns (list of addresses, shutdown function)
@@ -116,7 +116,7 @@ func (loader *Loader) LaunchInputs(orchestrator base.Orchestrator) ([]string, fu
 	inputAddresses := make([]string, 0, len(loader.Inputs))
 
 	for index, inputConfig := range loader.Inputs {
-		input, ierr := inputConfig.NewInput(logger.Root(), loader.PipelineArgs.Deallocator, loader.PipelineArgs.Schema,
+		input, ierr := inputConfig.Value.NewInput(logger.Root(), loader.PipelineArgs.Deallocator, loader.PipelineArgs.Schema,
 			orchestrator, loader.inputMetricFactory, stopRequest)
 		if ierr != nil {
 			loader.logger.Fatalf("input[%d]: %s", index, ierr.Error())

@@ -9,7 +9,7 @@ import (
 )
 
 func init() {
-	bconfig.RegisterLogRewriterConfigConstructors(map[string]func() bconfig.LogRewriterConfig{
+	bconfig.RegisterConfigConstructors(bconfig.LogRewriterConfigCreatorTable{
 		"copy":     func() bconfig.LogRewriterConfig { return &rcopy.Config{} },
 		"inline":   func() bconfig.LogRewriterConfig { return &rinline.Config{} },
 		"unescape": func() bconfig.LogRewriterConfig { return &runescape.Config{} },

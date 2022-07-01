@@ -10,7 +10,7 @@ import (
 // VerifyInputConfigs verifies a list of input configurations
 func VerifyInputConfigs(inputConfigs []bconfig.LogInputConfigHolder, schema base.LogSchema, header string) error {
 	for i, sc := range inputConfigs {
-		err := sc.VerifyConfig(schema)
+		err := sc.Value.VerifyConfig(schema)
 		if err != nil {
 			return fmt.Errorf("%s[%d] %s: %w", header, i, sc.Location, err)
 		}

@@ -10,7 +10,7 @@ import (
 
 // LogProcessingWorker is a worker for transformation, serialization and chunk making
 type LogProcessingWorker struct {
-	PipelineWorkerBaseForLogRecords
+	PipelineWorkerBase[[]*base.LogRecord]
 	deallocator   *base.LogAllocator
 	procCounter   *base.LogProcessCounter
 	transformList []base.LogTransformFunc
@@ -26,7 +26,7 @@ func NewLogProcessingWorker(parentLogger logger.Logger,
 	transforms []base.LogTransformFunc, serializer base.LogSerializer, chunkMaker base.LogChunkMaker,
 	acceptChunk base.LogChunkAccepter) *LogProcessingWorker {
 	worker := &LogProcessingWorker{
-		PipelineWorkerBaseForLogRecords: NewPipelineWorkerBaseForLogRecords(
+		PipelineWorkerBase: NewPipelineWorkerBase[[]*base.LogRecord](
 			parentLogger.WithField(defs.LabelComponent, "LogProcessingWorker"),
 			input,
 		),

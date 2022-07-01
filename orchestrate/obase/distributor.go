@@ -16,7 +16,7 @@ import (
 // Distribution is done by ex: first 100 logs to 1st pipeline, next 100 logs to 2nd pipeline, and so on
 // The child workers must be OrderedLogProcessingWorker, which uses locks to keep original order when calling LogChunkAccepter
 type Distributor struct {
-	bsupport.PipelineWorkerBaseForLogRecords
+	bsupport.PipelineWorkerBase[[]*base.LogRecord]
 	children     []chan<- base.OrderedLogBuffer
 	childCounter *sync.WaitGroup
 	currentBatch *distributionBatch
@@ -46,9 +46,9 @@ func NewDistributor(parentLogger logger.Logger, input <-chan []*base.LogRecord, 
 	currMutex := &sync.Mutex{}
 	currMutex.Lock()
 	dist := &Distributor{
-		PipelineWorkerBaseForLogRecords: bsupport.NewPipelineWorkerBaseForLogRecords(dlogger, input),
-		children:                        children,
-		childCounter:                    childCounter,
+		PipelineWorkerBase: bsupport.NewPipelineWorkerBase(dlogger, input),
+		children:           children,
+		childCounter:       childCounter,
 		currentBatch: &distributionBatch{
 			childIndex:    0,
 			previousMutex: prevMutex,

@@ -8,7 +8,7 @@ import (
 )
 
 func init() {
-	bconfig.RegisterOrchestratorConfigConstructors(map[string]func() bconfig.OrchestratorConfig{
+	bconfig.RegisterConfigConstructors(bconfig.OrchestratorConfigCreatorTable{
 		"byKeySet":  func() bconfig.OrchestratorConfig { return &obykeyset.Config{} },
 		"singleton": func() bconfig.OrchestratorConfig { return &osingleton.Config{} },
 	})
