@@ -141,5 +141,5 @@ func EnableTestMode() {
 	ForwarderBatchSendTimeoutBase = 3 * time.Second
 	ForwarderBatchAckTimeout = 3 * time.Second
 	ForwarderRetryInterval = 100 * time.Millisecond
-	ForwarderPingInterval = 100 * time.Millisecond
+	ForwarderPingInterval = 1 * time.Second
 }

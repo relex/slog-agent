@@ -26,7 +26,7 @@ func NewLogProcessingWorker(parentLogger logger.Logger,
 	transforms []base.LogTransformFunc, serializer base.LogSerializer, chunkMaker base.LogChunkMaker,
 	acceptChunk base.LogChunkAccepter) *LogProcessingWorker {
 	worker := &LogProcessingWorker{
-		PipelineWorkerBase: NewPipelineWorkerBase[[]*base.LogRecord](
+		PipelineWorkerBase: NewPipelineWorkerBase(
 			parentLogger.WithField(defs.LabelComponent, "LogProcessingWorker"),
 			input,
 		),

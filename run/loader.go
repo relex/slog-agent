@@ -100,6 +100,15 @@ func (loader *Loader) LaunchOrchestrator(ologger logger.Logger) base.Orchestrato
 	return loader.Orchestration.Value.LaunchOrchestrator(ologger, loader.PipelineArgs, loader.pipelineMetricFactory)
 }
 
+// RelaunchOrchestrator launches the Orchestrator again for recovery in test runs
+func (loader *Loader) RelaunchOrchestrator(ologger logger.Logger) base.Orchestrator {
+	if loader.pipelineMetricFactory == nil {
+		loader.logger.Panic("RelaunchOrchestrator can only be invoked after calling LaunchOrchestrator and shutting it down")
+	}
+
+	return loader.Orchestration.Value.LaunchOrchestrator(ologger, loader.PipelineArgs, loader.pipelineMetricFactory)
+}
+
 // LaunchInputs starts all inputs in background and returns (list of addresses, shutdown function)
 //
 // The returned input addresses are final, e.g. assigned random port if it's 0 in config file

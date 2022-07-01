@@ -26,18 +26,23 @@ type chunkManagerMetrics struct {
 
 func newChunkManager(parentLogger logger.Logger, operator chunkOperator, metricCreator promreg.MetricCreator, sendAllAtEnd bool) chunkManager {
 	inputChunksTotal := metricCreator.AddOrGetCounterVec("input_chunks_total", "Numbers of input chunks", []string{"state"}, nil)
+
+	metrics := chunkManagerMetrics{
+		pendingChunks:              metricCreator.AddOrGetGauge("pending_chunks", "Numbers of pending chunks in buffer or output phase", nil, nil),
+		inputChunksTotalTransient:  inputChunksTotal.WithLabelValues("transient"),
+		inputChunksTotalPersistent: inputChunksTotal.WithLabelValues("persistent"),
+		consumedChunksTotal:        metricCreator.AddOrGetCounter("consumed_chunks_total", "Numbers of output chunks consumed / forwarded", nil, nil),
+		leftoverChunksTotal:        metricCreator.AddOrGetCounter("leftover_chunks_total", "Numbers of output chunks left for next start", nil, nil),
+		droppedChunksTotal:         metricCreator.AddOrGetCounter("dropped_chunks_total", "Numbers of dropped chunks", nil, nil),
+	}
+	// reset gauges in case metricCreator is reused, e.g. 2nd orchestrator for recovery mode
+	metrics.pendingChunks.Set(0)
+
 	return chunkManager{
 		logger:       parentLogger.WithField(defs.LabelPart, "ChunkManager"),
 		operator:     operator,
 		sendAllAtEnd: sendAllAtEnd || !operator.HasDir(),
-		metrics: chunkManagerMetrics{
-			pendingChunks:              metricCreator.AddOrGetGauge("pending_chunks", "Numbers of pending chunks in buffer or output phase", nil, nil),
-			inputChunksTotalTransient:  inputChunksTotal.WithLabelValues("transient"),
-			inputChunksTotalPersistent: inputChunksTotal.WithLabelValues("persistent"),
-			consumedChunksTotal:        metricCreator.AddOrGetCounter("consumed_chunks_total", "Numbers of output chunks consumed / forwarded", nil, nil),
-			leftoverChunksTotal:        metricCreator.AddOrGetCounter("leftover_chunks_total", "Numbers of output chunks left for next start", nil, nil),
-			droppedChunksTotal:         metricCreator.AddOrGetCounter("dropped_chunks_total", "Numbers of dropped chunks", nil, nil),
-		},
+		metrics:      metrics,
 	}
 }
 

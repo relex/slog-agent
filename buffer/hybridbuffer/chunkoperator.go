@@ -36,6 +36,9 @@ func newChunkOperator(parentLogger logger.Logger, path string, matchID func(stri
 		persistentChunkBytes: metricCreator.AddOrGetGauge("persistent_chunk_bytes", "Bytes of currently persistent chunks, including chunks being sent but not yet acknowledged", nil, nil),
 		ioErrorsTotal:        metricCreator.AddOrGetCounter("io_errors_total", "Numbers of I/O errors for chunk operations", nil, nil),
 	}
+	// reset gauges in case metricCreator is reused, e.g. 2nd orchestrator for recovery mode
+	metrics.persistentChunks.Set(0)
+	metrics.persistentChunkBytes.Set(0)
 
 	maybeDir, oerr := os.Open(path)
 	if oerr != nil {
