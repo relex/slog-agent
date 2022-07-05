@@ -23,7 +23,8 @@ type clientMetrics struct {
 
 func newClientMetrics(metricCreator promreg.MetricCreator) clientMetrics {
 	queuedChunks := metricCreator.AddOrGetGaugeVec("output_queued_chunks", "Numbers of currently queued chunks", []string{"type"}, nil)
-	return clientMetrics{
+
+	metrics := clientMetrics{
 		queuedChunksLeftover:    queuedChunks.WithLabelValues("leftover"),
 		queuedChunksPendingAck:  queuedChunks.WithLabelValues("pendingAck"),
 		networkErrorsTotal:      metricCreator.AddOrGetCounter("output_network_errors_total", "Numbers of network errors", nil, nil),
@@ -35,6 +36,11 @@ func newClientMetrics(metricCreator promreg.MetricCreator) clientMetrics {
 		acknowledgedCountTotal:  metricCreator.AddOrGetCounter("output_acknowledged_chunks_total", "Numbers of acknowledged chunks", nil, nil),
 		acknowledgedLengthTotal: metricCreator.AddOrGetCounter("output_acknowledged_chunk_bytes_total", "Total length in bytes of acknowledged chunks", nil, nil),
 	}
+	// reset gauges in case metricCreator is reused, e.g. 2nd orchestrator for recovery mode
+	metrics.queuedChunksLeftover.Set(0)
+	metrics.queuedChunksPendingAck.Set(0)
+
+	return metrics
 }
 
 func (metrics *clientMetrics) OnError(err error) {

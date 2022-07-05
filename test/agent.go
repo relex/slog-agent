@@ -98,7 +98,7 @@ func (a *agent) StopAndWait() {
 	a.loader.PipelineArgs.SendAllAtEnd = true
 
 	// run recovery to send previously unsent chunks
-	orchestrator := a.loader.LaunchOrchestrator(rlogger)
+	orchestrator := a.loader.RelaunchOrchestrator(rlogger)
 	orchestrator.Shutdown()
 	rlogger.Info("recovery orchestrator done")
 }

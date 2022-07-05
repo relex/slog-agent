@@ -56,6 +56,9 @@ func newBufferer(parentLogger logger.Logger, rootPath string, bufferID string, m
 		queuedChunksTransient:  queuedChunks.WithLabelValues("transient"),
 		queuedChunksPersistent: queuedChunks.WithLabelValues("persistent"),
 	}
+	// reset gauges in case parentMetricCreator is reused, e.g. 2nd orchestrator for recovery mode
+	metrics.queuedChunksTransient.Set(0)
+	metrics.queuedChunksPersistent.Set(0)
 
 	return &bufferer{
 		logger:       bufLogger,
