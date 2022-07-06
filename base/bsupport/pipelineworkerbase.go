@@ -46,8 +46,8 @@ func (worker *PipelineWorkerBase[T]) InitInternal(
 	worker._baseOnStop = stopHandler
 }
 
-// Launch starts the main loop of PipelineWorker in background
-func (worker *PipelineWorkerBase[T]) Launch() {
+// Start starts the main loop of PipelineWorker in background
+func (worker *PipelineWorkerBase[T]) Start() {
 	go worker._baseRun()
 }
 

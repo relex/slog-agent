@@ -18,12 +18,14 @@ func TestByKeySetOrchestrator(t *testing.T) {
 	tlogger := logger.WithField("test", t.Name())
 	schema := base.MustNewLogSchema([]string{"level", "app", "msg"})
 	collectedLogsByTag := make(map[string]*[]*base.LogRecord)
-	launchWorkers := func(parentLogger logger.Logger, tag string, id string, input <-chan []*base.LogRecord, metricCreator promreg.MetricCreator, onStopped func()) {
-		t.Logf("new worker %s: %s", tag, id)
-		_, ok := collectedLogsByTag[tag]
-		assert.False(t, ok, tag)
+	startPipeline := func(parentLogger logger.Logger, metricCreator promreg.MetricCreator,
+		input <-chan []*base.LogRecord, bufferID string, outputTag string, onStopped func()) {
+
+		t.Logf("new worker %s: %s", outputTag, bufferID)
+		_, ok := collectedLogsByTag[outputTag]
+		assert.False(t, ok, outputTag)
 		collectedLogs := make([]*base.LogRecord, 0, 100)
-		collectedLogsByTag[tag] = &collectedLogs
+		collectedLogsByTag[outputTag] = &collectedLogs
 		go func() {
 			counter := metricCreator.AddOrGetCounter("mycounter", "", nil, nil)
 			for rec := range input {
@@ -34,7 +36,7 @@ func TestByKeySetOrchestrator(t *testing.T) {
 		}()
 	}
 	mfactory := promreg.NewMetricFactory("testo_", nil, nil)
-	orchestrator := NewOrchestrator(tlogger, schema, []string{"level", "app"}, "$level-$app", mfactory, launchWorkers, nil)
+	orchestrator := NewOrchestrator(tlogger, schema, []string{"level", "app"}, "$level-$app", mfactory, startPipeline, nil)
 	producerWaiter := &sync.WaitGroup{}
 	for i := 0; i < producerCount; i++ {
 		producerWaiter.Add(1)

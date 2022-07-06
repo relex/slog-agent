@@ -7,7 +7,6 @@ import (
 	"github.com/relex/gotils/promexporter/promreg"
 	"github.com/relex/slog-agent/base"
 	"github.com/relex/slog-agent/base/bconfig"
-	"github.com/relex/slog-agent/base/bsupport"
 	"github.com/relex/slog-agent/orchestrate/obase"
 )
 
@@ -17,9 +16,9 @@ type Config struct {
 	Tag            string `yaml:"tag"`
 }
 
-// LaunchOrchestrator constructs and launches a singleton orchestrator and the pipeline
-func (cfg *Config) LaunchOrchestrator(parentLogger logger.Logger, args bconfig.PipelineArgs, metricCreator promreg.MetricCreator) base.Orchestrator {
-	launchPipeline := bsupport.NewSequentialPipelineLauncher(args)
+// StartOrchestrator constructs and launches a singleton orchestrator and the pipeline
+func (cfg *Config) StartOrchestrator(parentLogger logger.Logger, args bconfig.PipelineArgs, metricCreator promreg.MetricCreator) base.Orchestrator {
+	launchPipeline := obase.PrepareSequentialPipeline(args)
 	pipelineMetricCreator := metricCreator.AddOrGetPrefix("process_", []string{"orchestrator"}, []string{"singleton"})
 	return NewOrchestrator(parentLogger, cfg.Tag, pipelineMetricCreator, launchPipeline)
 }

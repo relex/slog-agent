@@ -76,7 +76,7 @@ func (buf *bufferer) QueueDirPath() string {
 	return buf.queueDirPath
 }
 
-func (buf *bufferer) Launch() {
+func (buf *bufferer) Start() {
 	buf.recoverExistingChunks()
 	go buf.feeder.Run()
 }

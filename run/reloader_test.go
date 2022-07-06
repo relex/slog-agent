@@ -40,7 +40,7 @@ func TestReloader(t *testing.T) {
 		assert.Nil(t, confErr)
 		assert.Empty(t, ld.ConfigStats.UnusedFields)
 
-		orc := ld.LaunchOrchestrator(logger.Root())
+		orc := ld.StartOrchestrator(logger.Root())
 
 		inAddrs, shutdownIn := ld.LaunchInputs(orc)
 		assert.Equal(t, 1, len(inAddrs))

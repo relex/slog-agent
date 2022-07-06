@@ -17,8 +17,8 @@ import (
 // TODO: remove interface and call Reloader direcrly after it's proved stable
 type loaderIface interface {
 
-	// LaunchOrchestrator launches an Orchestrator in background and returns it
-	LaunchOrchestrator(ologger logger.Logger) base.Orchestrator
+	// StartOrchestrator launches an Orchestrator in background and returns it
+	StartOrchestrator(ologger logger.Logger) base.Orchestrator
 
 	// LaunchInputs starts all inputs in background and returns (list of addresses, shutdown function)
 	LaunchInputs(orchestrator base.Orchestrator) ([]string, func())
@@ -90,23 +90,23 @@ func NewLoaderFromConfigFile(filepath string, metricPrefix string) (*Loader, err
 	}, nil
 }
 
-// LaunchOrchestrator launches an Orchestrator in background and returns it
-func (loader *Loader) LaunchOrchestrator(ologger logger.Logger) base.Orchestrator {
+// StartOrchestrator launches an Orchestrator in background and returns it
+func (loader *Loader) StartOrchestrator(ologger logger.Logger) base.Orchestrator {
 	if loader.pipelineMetricFactory != nil {
-		loader.logger.Panic("LaunchOrchestrator can only be invoked once per Loader")
+		loader.logger.Panic("StartOrchestrator can only be invoked once per Loader")
 	}
 	loader.pipelineMetricFactory = promreg.NewMetricFactory(loader.metricPrefix, nil, nil)
 
-	return loader.Orchestration.Value.LaunchOrchestrator(ologger, loader.PipelineArgs, loader.pipelineMetricFactory)
+	return loader.Orchestration.Value.StartOrchestrator(ologger, loader.PipelineArgs, loader.pipelineMetricFactory)
 }
 
 // RelaunchOrchestrator launches the Orchestrator again for recovery in test runs
 func (loader *Loader) RelaunchOrchestrator(ologger logger.Logger) base.Orchestrator {
 	if loader.pipelineMetricFactory == nil {
-		loader.logger.Panic("RelaunchOrchestrator can only be invoked after calling LaunchOrchestrator and shutting it down")
+		loader.logger.Panic("RelaunchOrchestrator can only be invoked after calling StartOrchestrator and shutting it down")
 	}
 
-	return loader.Orchestration.Value.LaunchOrchestrator(ologger, loader.PipelineArgs, loader.pipelineMetricFactory)
+	return loader.Orchestration.Value.StartOrchestrator(ologger, loader.PipelineArgs, loader.pipelineMetricFactory)
 }
 
 // LaunchInputs starts all inputs in background and returns (list of addresses, shutdown function)
@@ -130,7 +130,7 @@ func (loader *Loader) LaunchInputs(orchestrator base.Orchestrator) ([]string, fu
 		if ierr != nil {
 			loader.logger.Fatalf("input[%d]: %s", index, ierr.Error())
 		}
-		input.Launch()
+		input.Start()
 
 		inputAddresses = append(inputAddresses, input.Address())
 		inputStoppedSignals = append(inputStoppedSignals, input.Stopped())

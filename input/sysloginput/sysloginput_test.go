@@ -50,7 +50,7 @@ extractions:
 	if !assert.Nil(t, inputErr) {
 		return
 	}
-	input.Launch()
+	input.Start()
 
 	// create client connection to send test logs
 	conn, cerr := net.Dial("tcp", input.Address())

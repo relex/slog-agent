@@ -118,18 +118,10 @@ orchestration:
                                         # Choose keys carefully as idle pipelines and queues are never destroyed without restart
                                         #
                                         # Logs routed to the same pipeline (of the same keyset) are guaranteed to be outputted in the original order
-                                        # and sub-pipelines under "keys" use locks to make sure buffers don't become dis-ordered
                                         #
                                         # The ordering guarantee doesn't mean all logs would be ordered by timestamps - it still depends on the source
 
   tag: development.$app                 # tag: required by Fluentd in upstream. Key fields may be referenced here.
-
-  num: 2                                # num: numbers of parallel sub-pipelines per each set of key-fields. 1 to disable parallel processing.
-                                        #      sub-pipelines are hidden beneath normal pipelines and they have no effect on buffer or queueing for example.
-                                        #
-                                        # For example: keys=[level], num=2 means 2 * {error, warn, info} = 6 pipelines, assuming only 3 log levels are active
-                                        #
-                                        # Keep in mind pipelines don't get destroyed once created.
 
 metricKeys: [host, vhost, source]       # metricKeys define additional fields as metric labels (Prometheus metrics), in addition to key fields above
                                         # They're applied to all processing-level metrics, e.g.

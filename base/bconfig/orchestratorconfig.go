@@ -10,8 +10,8 @@ import (
 type OrchestratorConfig interface {
 	BaseConfig
 
-	// LaunchOrchestrator creates and launches a new Orchestrator
-	LaunchOrchestrator(parentLogger logger.Logger, args PipelineArgs, metricCreator promreg.MetricCreator) base.Orchestrator
+	// StartOrchestrator creates and launches a new Orchestrator
+	StartOrchestrator(parentLogger logger.Logger, args PipelineArgs, metricCreator promreg.MetricCreator) base.Orchestrator
 
 	// VerifyConfig checks configuration and returns (key fields, error)
 	VerifyConfig(schema base.LogSchema) ([]string, error)

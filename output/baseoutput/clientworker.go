@@ -1,22 +1,21 @@
 package baseoutput
 
 import (
-	"sync/atomic"
 	"time"
-	"unsafe"
 
 	"github.com/relex/gotils/channels"
 	"github.com/relex/gotils/logger"
 	"github.com/relex/gotils/promexporter/promreg"
 	"github.com/relex/slog-agent/base"
 	"github.com/relex/slog-agent/defs"
+	"github.com/relex/slog-agent/util"
 )
 
 // ClientWorker is a common client implementing ChunkConsumer
 //
 // The caller provides a minimum ClientConnection through EstablishConnectionFunc, while ClientWorker handles
-// logging, metrics, error recovery, reconnecting, periodical ping, and pipeling by handling sending and receiving on
-// their respective goroutines
+// logging, metrics, error recovery, reconnecting, periodic ping, and pipelining by handling sending and receiving on
+// separate goroutines
 type ClientWorker struct {
 	logger        logger.Logger
 	inputChannel  <-chan base.LogChunk
@@ -27,8 +26,8 @@ type ClientWorker struct {
 	stopped       *channels.SignalAwaitable
 	metrics       clientMetrics
 	openConn      EstablishConnectionFunc
-	maxDuration   time.Duration  // max duration of session before reconnection
-	activeSession unsafe.Pointer // pointer to the current clientSession
+	maxDuration   time.Duration                 // max duration of session before reconnection
+	activeSession util.AtomicRef[clientSession] // holding place of the current clientSession
 }
 
 // NewClientWorker creates ClientWorker
@@ -46,7 +45,7 @@ func NewClientWorker(parentLogger logger.Logger, args base.ChunkConsumerArgs, me
 		metrics:       newClientMetrics(metricCreator),
 		openConn:      openConn,
 		maxDuration:   maxDuration,
-		activeSession: nil,
+		activeSession: util.AtomicRef[clientSession]{},
 	}
 
 	// fast shutdown: force immediate ending of output when inputClosed is signaled
@@ -58,7 +57,7 @@ func NewClientWorker(parentLogger logger.Logger, args base.ChunkConsumerArgs, me
 	//
 	// TODO: make this an option or dependent on keys/tags
 	client.inputClosed.Next(func() {
-		sess := (*clientSession)(atomic.LoadPointer(&client.activeSession))
+		sess := client.activeSession.Get()
 		if sess != nil {
 			sess.Abort(func() {
 				client.logger.Info("abort ongoing connection due to stop request")
@@ -69,8 +68,8 @@ func NewClientWorker(parentLogger logger.Logger, args base.ChunkConsumerArgs, me
 	return client
 }
 
-// Launch starts the ClientWorker
-func (client *ClientWorker) Launch() {
+// Start starts the ClientWorker
+func (client *ClientWorker) Start() {
 	go client.run()
 }
 
@@ -151,13 +150,13 @@ func (client *ClientWorker) runSession(leftovers chan base.LogChunk) (chan base.
 	client.metrics.OnOpening()
 
 	sess := newClientSession(client, conn)
-	atomic.StorePointer(&client.activeSession, unsafe.Pointer(sess))
+	client.activeSession.Set(sess)
 
 	defer func() {
 		sess.Abort(func() {
 			client.logger.Info("close connection at the end of session")
 		})
-		atomic.StorePointer(&client.activeSession, nil)
+		client.activeSession.Set(nil)
 	}()
 
 	return sess.Run(leftovers, client.maxDuration)

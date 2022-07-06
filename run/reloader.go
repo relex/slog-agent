@@ -37,9 +37,9 @@ func NewReloaderFromConfigFile(filepath string, metricPrefix string) (*Reloader,
 	}, nil
 }
 
-// LaunchOrchestrator launches a reloadable Orchestrator
-func (reloader *Reloader) LaunchOrchestrator(ologger logger.Logger) base.Orchestrator {
-	firstDownstreamOrchestrator := reloader.Loader.LaunchOrchestrator(ologger)
+// StartOrchestrator launches a reloadable Orchestrator
+func (reloader *Reloader) StartOrchestrator(ologger logger.Logger) base.Orchestrator {
+	firstDownstreamOrchestrator := reloader.Loader.StartOrchestrator(ologger)
 
 	return NewReloadableOrchestrator(firstDownstreamOrchestrator, reloader.initiateDownstreamReload)
 }
@@ -66,7 +66,7 @@ func (reloader *Reloader) initiateDownstreamReload() (CompleteReloadingFunc, err
 
 		reloader.Loader = newLoader
 		reloader.numReload++
-		return reloader.Loader.LaunchOrchestrator(reloader.logger.WithField("numReload", reloader.numReload))
+		return reloader.Loader.StartOrchestrator(reloader.logger.WithField("numReload", reloader.numReload))
 	}, nil
 
 }

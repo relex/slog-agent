@@ -63,7 +63,7 @@ func startAgent(loader *run.Loader, newChunkSaver base.ChunkConsumerConstructor,
 		loader.PipelineArgs.SendAllAtEnd = true
 	}
 
-	orchestrator := loader.LaunchOrchestrator(logger.Root())
+	orchestrator := loader.StartOrchestrator(logger.Root())
 	inputAddresses, shutdownInputFn := loader.LaunchInputs(orchestrator)
 
 	return &agent{

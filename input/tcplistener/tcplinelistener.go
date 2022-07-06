@@ -60,7 +60,7 @@ func NewTCPLineListener(parentLogger logger.Logger, address string, testRecord f
 	})
 	logger.Info("start listening")
 
-	// init taskCounter with 1 for the listener; Can't wait for Launch() because WaitGroupAwaitable below would quit immediately if it's zero.
+	// init taskCounter with 1 for the listener; Can't wait for Start() because WaitGroupAwaitable below would quit immediately if it's zero.
 	taskCounter := &sync.WaitGroup{}
 	taskCounter.Add(1)
 
@@ -76,7 +76,7 @@ func NewTCPLineListener(parentLogger logger.Logger, address string, testRecord f
 	}, boundAddr, nil
 }
 
-func (lsnr *tcpLineListener) Launch() {
+func (lsnr *tcpLineListener) Start() {
 	go lsnr.run()
 }
 

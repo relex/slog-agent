@@ -41,7 +41,6 @@ writing new code.
 - Buffering: hybrid disk+memory buffering - compressed and only persisted when necessary
 - Output: Fluentd Forward protocol, both compressed and uncompressed. Single output only.
 - Metrics: Prometheus metrics to count logs and log size by key fields (e.g. vhost + log level + filename)
-- Parallelization: by key fields and by fixed pipeline numbers (WIP). Log order is preserved.
 
 Dynamic fields are not supported - All fields must be known in configuration because they're packed in arrays that can
 be accessed without hashmap lookup.

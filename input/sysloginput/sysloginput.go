@@ -139,6 +139,6 @@ func (in *input) Stopped() channels.Awaitable {
 	return in.listener.Stopped()
 }
 
-func (in *input) Launch() {
-	in.listener.Launch()
+func (in *input) Start() {
+	in.listener.Start()
 }

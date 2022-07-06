@@ -31,7 +31,7 @@ func newChunkSaver(args base.ChunkConsumerArgs, write func(chunk base.LogChunk),
 	}
 }
 
-func (saver *chunkSaver) Launch() {
+func (saver *chunkSaver) Start() {
 	go saver.run()
 }
 
