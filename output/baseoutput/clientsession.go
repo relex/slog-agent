@@ -206,6 +206,9 @@ func (session *clientSession) collectLeftovers(maybePreviousLeftovers chan base.
 		session.logger.Info("stopping acknowledger (soft)")
 		close(session.ackerChan)
 	case endImmediately:
+		// we shouldn't end acknowledger gracefully during shutdown/restart because at this stage inputs are already
+		// closed and all client applications are effectively paused by the inability to log anything. The shutdown has
+		// to be done as quickly as possible even at the cost of duplicated logs in next start.
 		session.logger.Info("stopping acknowledger (hard)")
 		session.ackerAbort.Signal()
 		close(session.ackerChan)

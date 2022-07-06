@@ -48,19 +48,19 @@ func RunBenchmarkAgent(inputPath string, outputPath string, repeat int, configFi
 	loader.ConfigStats.Log(logger.Root())
 
 	chunkSaver := openLogChunkSaver(outputPath, loader.Output.Value)
-	agt := startAgent(loader, chunkSaver, nil, "")
+	agentInstance := startAgent(loader, chunkSaver, nil, "")
 
 	// feed input
 	inputData, numRecords := loadInput(inputPath)
 	costTracker := StartCostTracking()
-	runBenchmarkInputSender(agt.Address(), inputData, repeat)
+	runBenchmarkInputSender(agentInstance.Address(), inputData, repeat)
 	time.Sleep(1 * time.Second)
 
 	logger.Info("stopping...")
-	agt.StopAndWait()
+	agentInstance.StopAndWait()
 
-	reportBenchmarkResult("BenchmarkAgent", numRecords*repeat, int64(len(inputData))*int64(repeat), costTracker.Report(), agt.GetMetricQuerier())
-	logger.Info(promext.DumpMetricsFrom("", true, true, agt.GetMetricQuerier()))
+	reportBenchmarkResult("BenchmarkAgent", numRecords*repeat, int64(len(inputData))*int64(repeat), costTracker.Report(), agentInstance.GetMetricQuerier())
+	logger.Info(promext.DumpMetricsFrom("", true, true, agentInstance.GetMetricQuerier()))
 }
 
 func runBenchmarkInputSender(agentAddress string, inputData []byte, repeat int) {

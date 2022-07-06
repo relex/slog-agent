@@ -126,7 +126,8 @@ func (buf *bufferer) Accept(chunk base.LogChunk, timeout <-chan time.Time) {
 
 // Destroy closes everything and saves all pending chunks
 func (buf *bufferer) Destroy() {
-	buf.logger.Infof("destroying: in=%d out=%d", len(buf.inputChannel), buf.feeder.NumOutput())
+	buf.logger.Infof("destroying: in=%d out=%d wait=%t", len(buf.inputChannel), buf.feeder.NumOutput(),
+		buf.chunkMan.ShouldWaitPendingChunks())
 
 	var runTimeout time.Duration
 	if buf.chunkMan.WaitPendingChunks() {

@@ -1,6 +1,8 @@
 package test
 
 import (
+	"time"
+
 	"github.com/relex/gotils/logger"
 	"github.com/relex/gotils/promexporter/promreg"
 	"github.com/relex/slog-agent/base"
@@ -71,6 +73,7 @@ func startAgent(loader *run.Loader, newChunkSaver base.ChunkConsumerConstructor,
 		inputAddresses: inputAddresses,
 		shutdownFn: func() {
 			shutdownInputFn()
+			time.Sleep(1 * time.Second) // give orchestrator time to process flushed logs at the end of tcp listener
 			orchestrator.Shutdown()
 		},
 		runRecovery: newChunkSaver == nil,
