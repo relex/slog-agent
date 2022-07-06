@@ -56,7 +56,8 @@ func PrepareSequentialPipeline(args bconfig.PipelineArgs) PipelineStarter {
 			onStopped()
 		})
 
-		// only start the processing worker after all the rest have been started
+		// only start the processing worker to handle incoming logs after all the rest have finished initialization
+		// and their workers being started in background
 		procWorker.Start()
 	}
 }
