@@ -56,6 +56,7 @@ func (gm *GlobalCachedMap[G, L]) MakeLocalMap() *LocalCachedMap[G, L] {
 	}
 }
 
+// PeekNumObjects returns the size of the map
 func (gm *GlobalCachedMap[G, L]) PeekNumObjects() int {
 	return util.PeekWaitGroup(gm.objectCounter)
 }
@@ -89,11 +90,6 @@ type LocalCachedMap[G any, L any] struct {
 	keyBuffer []byte                 // preallocated buffer to merge keys
 }
 
-// LocalMap returns the local map. It shouild not be modified.
-func (lm *LocalCachedMap[G, L]) LocalMap() map[string]L {
-	return lm.localMap
-}
-
 // GetOrCreate gets or creates a global object and returns the local cache of it
 //
 // The given tempKeys is assumed to be transient and will be copied if it needs to be stored in the global map
@@ -118,4 +114,11 @@ func (lm *LocalCachedMap[G, L]) GetOrCreate(tempKeys []string, onCreating func(p
 	newLocalCache := lm.source.wrapObject(newGlobalObject)
 	lm.localMap[permanentMergedKey] = newLocalCache
 	return newLocalCache
+}
+
+// Walk iterates through each of (key, value) pair
+func (lm *LocalCachedMap[G, L]) Walk(action func(key string, localCache L)) {
+	for key, localCache := range lm.localMap {
+		action(key, localCache)
+	}
 }

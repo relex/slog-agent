@@ -13,12 +13,14 @@ import (
 	"github.com/relex/slog-agent/util/localcachedmap"
 )
 
-// byKeySetOrchestrator is used to ensure fairer sharing of resource among logs of different key sets,
+// byKeySetOrchestrator is used to ensure fair sharing of CPU resource among logs of different key sets,
+//
 // e.g. using "level" as key field allows priority processing of error logs when there are massive amounts of debug logs before them
+//
 // A per-connection version has been tried and abandoned because a client may create a new connection after the old one dies, and both need to share info here
 type byKeySetOrchestrator struct {
 	logger         logger.Logger
-	workerMap      *globalPipelineChannelMap // append-only global map of merged keys => worker channel
+	workerMap      *localcachedmap.GlobalCachedMap[chan<- []*base.LogRecord, *channelInputBuffer] // append-only global map of merged keys => worker channel
 	keyLocators    []base.LogFieldLocator
 	tagBuilder     *obase.TagBuilder // builder to construct tag from keys, used when protected by globalPipelineChannelMap's mutex
 	metricCreator  promreg.MetricCreator
@@ -26,12 +28,13 @@ type byKeySetOrchestrator struct {
 	startPipeline  obase.PipelineStarter // start workers for new pipeline (one per key-set), invoked within globalPipelineChannelMap's mutex
 }
 
-// byKeySetOrchestratorSink is created for each of input sessions or connections
-// It holds local cache of pending logs to a set of real (global) workers used by this channel and flushes on demand
+// byKeySetOrchestratorSink is created for each of input sessions or incoming connections
+//
+// It holds local buffer of pending logs to a set of global channels to backend workers, used by this input sink and flushes on demand
 type byKeySetOrchestratorSink struct {
 	logger          logger.Logger
-	workerMap       *localPipelineChannelMap // append-only locac cache of byKeySetOrchestrator.workerMap
-	keySetExtractor base.FieldSetExtractor   // extractor to fetch keys from LogRecord(s)
+	workerMap       *localcachedmap.LocalCachedMap[chan<- []*base.LogRecord, *channelInputBuffer] // append-only locac cache of byKeySetOrchestrator.workerMap
+	keySetExtractor base.FieldSetExtractor                                                        // extractor to fetch keys from LogRecord(s)
 	sendTimeout     *time.Timer
 }
 
@@ -65,7 +68,11 @@ func NewOrchestrator(parentLogger logger.Logger, schema base.LogSchema, keyField
 		metricKeyNames: metricKeyNames,
 		startPipeline:  startPipeline,
 	}
-	o.workerMap = localcachedmap.NewGlobalMap(o.newPipeline, closePipelineChannel, wrapPipelineChannelInLocalBuffer)
+	o.workerMap = localcachedmap.NewGlobalMap(
+		o.newPipeline,
+		func(ch chan<- []*base.LogRecord) { close(ch) },
+		newInputBufferForChannel,
+	)
 
 	if len(initialPipelineIDs) > 0 {
 		localMap := o.workerMap.MakeLocalMap()
@@ -147,13 +154,14 @@ func (oc *byKeySetOrchestratorSink) onNewLinkToPipeline(permKeys []string) {
 
 func (oc *byKeySetOrchestratorSink) flushAllLocalBuffers(forceAll bool) {
 	now := time.Now()
-	for mergedKey, cache := range oc.workerMap.LocalMap() {
+
+	oc.workerMap.Walk(func(mergedKey string, cache *channelInputBuffer) {
 		if len(cache.PendingLogs) == 0 {
-			continue
+			return
 		}
 		if !forceAll && now.Sub(cache.LastFlushTime) < defs.IntermediateFlushInterval {
-			continue
+			return
 		}
 		cache.Flush(now, oc.sendTimeout, oc.logger, mergedKey)
-	}
+	})
 }

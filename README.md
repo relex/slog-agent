@@ -159,7 +159,6 @@ See [DESIGN](DESIGN.md)
 
 Some of code is based on the internal behaviors of go runtime and marked as `GO_INTERNAL` in comments:
 
-- util/syncmutex.go `TryLockMutex()`: attempt to lock a `sync.Mutex` without waiting
 - util/syncwaitgroup.go `PeekWaitGroup()`: peek the count number from `sync.WaitGroup`
 - util/strings.go `StringFromBytes()`: make string from mutable bytes without copying, like `strings.Builder` but
   accepts mutable arrays (*dangerous*)
