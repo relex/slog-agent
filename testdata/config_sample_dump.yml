@@ -66,7 +66,6 @@ orchestration:
     - level
     - pnum
   tag: development.$app
-  num: 2
 metricKeys:
   - host
   - vhost

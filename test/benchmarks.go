@@ -25,8 +25,7 @@ func RunBenchmarkPipeline(inputPath string, outputPath string, repeat int, confi
 	writeChunk, closeOutput := openLogChunkConsumingFunc(outputPath, outputConfig)
 
 	inputRecords := loadInputRecords(inputPath)
-	inputLength := 0
-	util.Each(len(inputRecords), func(i int) { inputLength += len(inputRecords[i]) + 1 })
+	inputLength := util.SumSlice(inputRecords, func(record []byte) int { return len(record) + 1 /* +1 for newline char */ })
 
 	totalInputCount := len(inputRecords) * repeat
 	totalInputLength := int64(inputLength) * int64(repeat)
@@ -48,19 +47,19 @@ func RunBenchmarkAgent(inputPath string, outputPath string, repeat int, configFi
 	loader.ConfigStats.Log(logger.Root())
 
 	chunkSaver := openLogChunkSaver(outputPath, loader.Output.Value)
-	agt := startAgent(loader, chunkSaver, nil, "")
+	agentInstance := startAgent(loader, chunkSaver, nil, "")
 
 	// feed input
 	inputData, numRecords := loadInput(inputPath)
 	costTracker := StartCostTracking()
-	runBenchmarkInputSender(agt.Address(), inputData, repeat)
+	runBenchmarkInputSender(agentInstance.Address(), inputData, repeat)
 	time.Sleep(1 * time.Second)
 
 	logger.Info("stopping...")
-	agt.StopAndWait()
+	agentInstance.StopAndWait()
 
-	reportBenchmarkResult("BenchmarkAgent", numRecords*repeat, int64(len(inputData))*int64(repeat), costTracker.Report(), agt.GetMetricQuerier())
-	logger.Info(promext.DumpMetricsFrom("", true, true, agt.GetMetricQuerier()))
+	reportBenchmarkResult("BenchmarkAgent", numRecords*repeat, int64(len(inputData))*int64(repeat), costTracker.Report(), agentInstance.GetMetricQuerier())
+	logger.Info(promext.DumpMetricsFrom("", true, true, agentInstance.GetMetricQuerier()))
 }
 
 func runBenchmarkInputSender(agentAddress string, inputData []byte, repeat int) {

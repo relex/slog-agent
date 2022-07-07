@@ -3,8 +3,8 @@ package obase
 import (
 	"fmt"
 
-	"github.com/relex/slog-agent/util"
 	"github.com/relex/slog-agent/util/stringtemplate"
+	"golang.org/x/exp/slices"
 )
 
 // TagBuilder builds tags from key set fields
@@ -18,7 +18,7 @@ type tagKeyFieldIndex int
 // NewTagBuilder creates a TagBuilder
 func NewTagBuilder(tagTemplate string, keyNames []string) (*TagBuilder, error) {
 	tagExpander, eerr := stringtemplate.NewExpander(tagTemplate, func(name string) (stringtemplate.PartProvider, error) {
-		index := util.IndexOfString(keyNames, name)
+		index := slices.Index(keyNames, name)
 		if index == -1 {
 			return nil, fmt.Errorf("variable '%s' is not one of label fields", name)
 		}

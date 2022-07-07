@@ -111,7 +111,7 @@ func (packer *messagePacker) FlushBuffer() *base.LogChunk {
 	} else {
 		maybeChunk = &base.LogChunk{
 			ID:    openChunk.id,
-			Data:  util.CopyByteSlice(packer.reusedMessageBuffer.Bytes()),
+			Data:  util.CopySlice(packer.reusedMessageBuffer.Bytes()),
 			Saved: false,
 		}
 	}

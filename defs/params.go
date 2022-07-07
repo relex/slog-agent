@@ -45,35 +45,23 @@ var (
 	//
 	// 0 = unbuffered channels
 	//
-	// Higher value improves parallelization when ByKeySetParallelOrchestrator is used
+	// The value has visible performance impact as of Go 1.18; size=10 would cause performance loss by over 20%
 	IntermediateBufferedChannelSize = 1
 
 	// IntermediateChannelTimeout defines the timeout of intermediate channel reads and writes.
 	//
 	// There is no recovery without data loss and it should be treated as a bug if such timeout happens at runtime
-	IntermediateChannelTimeout = 20 * time.Second
+	IntermediateChannelTimeout = 60 * time.Second
 
 	// IntermediateFlushInterval defines how often for intermediate workers to flush their own states
 	//
 	// For example, to flush buffer streams into output chunks, or to update internal timer
 	IntermediateFlushInterval = 1 * time.Second
 
-	// ParallelizationBufferMaxNumLogs defines the numbers of logs to process before switching to next parallel worker
-	//
-	// Lower value improves parallelization but reduces the size of output chunks
-	//
-	// e.g. 25000 logs * 250 bytes avg / 20 compression ratio ~= 200-300KB chunk(s)
-	ParallelizationBufferMaxNumLogs = 25000
-
-	// ParallelizationBufferMaxTotalBytes defines the numbers of raw input bytes to process before switching to next parallel worker
-	//
-	// The value can be slightly higher than OutputChunkMaxDataBytes
-	ParallelizationBufferMaxTotalBytes = OutputChunkMaxDataBytes + OutputChunkMaxDataBytes/4
-
 	// OutputChunkMaxDataBytes defines the max uncompressed data size of a LogChunk, not including necessary headers
 	//
 	// The value must be lower than the maximum buffer length acceptable by upstream
-	OutputChunkMaxDataBytes = 8 * 1024 * 1024
+	OutputChunkMaxDataBytes = 7 * 1024 * 1024
 
 	// BufferMaxNumChunksInQueue is the max numbers of of loaded and unloaded chunks to be held in a queue,
 	// equal to the max numbers of queued files on disk, because at least all the filepaths need to be held in channel

@@ -8,7 +8,7 @@ import (
 	"github.com/relex/slog-agent/base/bsupport"
 	"github.com/relex/slog-agent/defs"
 	"github.com/relex/slog-agent/output/fastmsgpack"
-	"github.com/relex/slog-agent/util"
+	"golang.org/x/exp/slices"
 )
 
 type eventSerializer struct {
@@ -64,9 +64,9 @@ func NewEventSerializer(parentLogger logger.Logger, schema base.LogSchema, confi
 
 	fieldMasks := make([]bool, len(fieldNames))
 	for i, name := range fieldNames {
-		if util.IndexOfString(config.EnvironmentFields, name) != -1 {
+		if slices.Index(config.EnvironmentFields, name) != -1 {
 			fieldMasks[i] = true
-		} else if util.IndexOfString(config.HiddenFields, name) != -1 {
+		} else if slices.Index(config.HiddenFields, name) != -1 {
 			fieldMasks[i] = true
 		}
 	}

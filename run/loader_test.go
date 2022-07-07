@@ -37,7 +37,6 @@ orchestration:
   type: byKeySet
   keys: [app]
   tag: development.$app
-  num: 1
 metricKeys: [host]
 `
 
@@ -96,7 +95,7 @@ func TestLoader(t *testing.T) {
 		assert.Equal(t, []string{"facility", "level", "time", "host", "app", "pid", "source", "extradata", "log"}, ld.ConfigStats.FixedFields)
 		assert.Empty(t, ld.ConfigStats.UnusedFields)
 
-		orc := ld.LaunchOrchestrator(logger.Root())
+		orc := ld.StartOrchestrator(logger.Root())
 
 		inputAddrs, shutdownInputs := ld.LaunchInputs(orc)
 		assert.Equal(t, 1, len(inputAddrs))

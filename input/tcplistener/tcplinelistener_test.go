@@ -23,7 +23,7 @@ func TestTCPLineListener(t *testing.T) {
 	lsnr, addr, err := NewTCPLineListener(rlogger, addrParam, testLine, recv, stop)
 	assert.Nil(t, err)
 	assert.NotEqual(t, addrParam, addr)
-	lsnr.Launch()
+	lsnr.Start()
 	conn, err := net.Dial("tcp", addr)
 	if !assert.Nil(t, err) {
 		t.Error(err)
@@ -49,7 +49,7 @@ func TestTCPLineListenerEnd(t *testing.T) {
 	stop := channels.NewSignalAwaitable()
 	recv, out := btest.NewLogMessageAggregator(rlogger)
 	lsnr, addr, _ := NewTCPLineListener(rlogger, "localhost:0", testLine, recv, stop)
-	lsnr.Launch()
+	lsnr.Start()
 	conn, _ := net.Dial("tcp", addr)
 	_, err := conn.Write([]byte(line1 + "\n"))
 	assert.Nil(t, err)
@@ -71,7 +71,7 @@ func TestTCPLineListenerMultiRead(t *testing.T) {
 	stop := channels.NewSignalAwaitable()
 	recv, out := btest.NewLogMessageAggregator(rlogger)
 	lsnr, addr, _ := NewTCPLineListener(rlogger, "localhost:0", testLine, recv, stop)
-	lsnr.Launch()
+	lsnr.Start()
 	conn, _ := net.Dial("tcp", addr)
 	_, err := conn.Write([]byte(line)) // no newline end - close should force flushing
 	assert.Nil(t, err)

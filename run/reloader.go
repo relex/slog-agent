@@ -9,6 +9,7 @@ import (
 	"github.com/relex/gotils/logger"
 	"github.com/relex/slog-agent/base"
 	"github.com/relex/slog-agent/util"
+	"golang.org/x/exp/slices"
 )
 
 // Reloader overrides Loader to support configuration reloading
@@ -37,9 +38,9 @@ func NewReloaderFromConfigFile(filepath string, metricPrefix string) (*Reloader,
 	}, nil
 }
 
-// LaunchOrchestrator launches a reloadable Orchestrator
-func (reloader *Reloader) LaunchOrchestrator(ologger logger.Logger) base.Orchestrator {
-	firstDownstreamOrchestrator := reloader.Loader.LaunchOrchestrator(ologger)
+// StartOrchestrator launches a reloadable Orchestrator
+func (reloader *Reloader) StartOrchestrator(ologger logger.Logger) base.Orchestrator {
+	firstDownstreamOrchestrator := reloader.Loader.StartOrchestrator(ologger)
 
 	return NewReloadableOrchestrator(firstDownstreamOrchestrator, reloader.initiateDownstreamReload)
 }
@@ -66,7 +67,7 @@ func (reloader *Reloader) initiateDownstreamReload() (CompleteReloadingFunc, err
 
 		reloader.Loader = newLoader
 		reloader.numReload++
-		return reloader.Loader.LaunchOrchestrator(reloader.logger.WithField("numReload", reloader.numReload))
+		return reloader.Loader.StartOrchestrator(reloader.logger.WithField("numReload", reloader.numReload))
 	}, nil
 
 }
@@ -114,7 +115,7 @@ func checkConfigCompatibility(
 	{
 		oldKeys := oldStats.OrchestrationKeys
 		newKeys := newStats.OrchestrationKeys
-		if util.CompareStrings(oldKeys, newKeys) != 0 {
+		if !slices.Equal(oldKeys, newKeys) {
 			return fmt.Errorf("orchestration/keys must not change: old=%s, new=%s", oldKeys, newKeys)
 		}
 	}

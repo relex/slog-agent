@@ -13,44 +13,52 @@ import (
 	"github.com/relex/slog-agent/util/localcachedmap"
 )
 
-// byKeySetOrchestrator is used to ensure fairer sharing of resource among logs of different key sets,
+// byKeySetOrchestrator is used to ensure fair sharing of CPU resource among logs of different key sets,
+//
 // e.g. using "level" as key field allows priority processing of error logs when there are massive amounts of debug logs before them
+//
 // A per-connection version has been tried and abandoned because a client may create a new connection after the old one dies, and both need to share info here
 type byKeySetOrchestrator struct {
 	logger         logger.Logger
-	workerMap      *globalPipelineChannelMap // append-only global map of merged keys => worker channel
+	workerMap      *localcachedmap.GlobalCachedMap[chan<- []*base.LogRecord, *channelInputBuffer] // append-only global map of merged keys => worker channel
 	keyLocators    []base.LogFieldLocator
 	tagBuilder     *obase.TagBuilder // builder to construct tag from keys, used when protected by globalPipelineChannelMap's mutex
 	metricCreator  promreg.MetricCreator
 	metricKeyNames []string
-	launchWorkers  base.PipelineWorkersLauncher // start workers for new pipeline (one per key-set), invoked within globalPipelineChannelMap's mutex
+	startPipeline  obase.PipelineStarter // start workers for new pipeline (one per key-set), invoked within globalPipelineChannelMap's mutex
 }
 
-// byKeySetOrchestratorSink is created for each of input sessions or connections
-// It holds local cache of pending logs to a set of real (global) workers used by this channel and flushes on demand
+// byKeySetOrchestratorSink is created for each of input sessions or incoming connections
+//
+// It holds local buffer of pending logs to a set of global channels to backend workers, used by this input sink and flushes on demand
 type byKeySetOrchestratorSink struct {
 	logger          logger.Logger
-	workerMap       *localPipelineChannelMap // append-only locac cache of byKeySetOrchestrator.workerMap
-	keySetExtractor base.FieldSetExtractor   // extractor to fetch keys from LogRecord(s)
+	workerMap       *localcachedmap.LocalCachedMap[chan<- []*base.LogRecord, *channelInputBuffer] // append-only locac cache of byKeySetOrchestrator.workerMap
+	keySetExtractor base.FieldSetExtractor                                                        // extractor to fetch keys from LogRecord(s)
 	sendTimeout     *time.Timer
 }
 
 // NewOrchestrator creates an Orchestrator to distribute logs to different pipelines by unique combinations of key labels (key set)
 func NewOrchestrator(parentLogger logger.Logger, schema base.LogSchema, keyFields []string, tagTemplate string,
-	metricCreator promreg.MetricCreator, launchWorkers base.PipelineWorkersLauncher, existingPipelineIDs []string) base.Orchestrator {
+	metricCreator promreg.MetricCreator, startPipeline obase.PipelineStarter, initialPipelineIDs []string) base.Orchestrator {
+
 	ologger := parentLogger.WithField(defs.LabelComponent, "ByKeySetOrchestrator")
+
 	keyLocators, lerr := schema.CreateFieldLocators(keyFields)
 	if lerr != nil {
 		ologger.Panicf("keyFields: %s", lerr.Error())
 	}
+
 	tagBuilder, terr := obase.NewTagBuilder(tagTemplate, keyFields)
 	if terr != nil {
 		ologger.Panicf("tagTemplate: %s", terr.Error())
 	}
+
 	metricKeyNames := make([]string, len(keyFields))
 	for i, key := range keyFields {
 		metricKeyNames[i] = "key_" + key
 	}
+
 	o := &byKeySetOrchestrator{
 		logger:         ologger,
 		workerMap:      nil,
@@ -58,14 +66,18 @@ func NewOrchestrator(parentLogger logger.Logger, schema base.LogSchema, keyField
 		tagBuilder:     tagBuilder,
 		metricCreator:  metricCreator,
 		metricKeyNames: metricKeyNames,
-		launchWorkers:  launchWorkers,
+		startPipeline:  startPipeline,
 	}
-	o.workerMap = localcachedmap.NewGlobalMap(o.newWorker, closePipelineChannel, obase.NewPipelineChannelLocalBuffer)
+	o.workerMap = localcachedmap.NewGlobalMap(
+		o.newPipeline,
+		func(ch chan<- []*base.LogRecord) { close(ch) },
+		newInputBufferForChannel,
+	)
 
-	if len(existingPipelineIDs) > 0 {
+	if len(initialPipelineIDs) > 0 {
 		localMap := o.workerMap.MakeLocalMap()
 		onCreating := func([]string) {}
-		for _, pipelineID := range existingPipelineIDs {
+		for _, pipelineID := range initialPipelineIDs {
 			keys := strings.Split(pipelineID, ",")
 			if len(keys) != len(keyFields) {
 				// FIXME: deal with new keys, shorter old keys should be okay
@@ -93,19 +105,19 @@ func (o *byKeySetOrchestrator) Shutdown() {
 	o.logger.Info("shut down all pipeline workers")
 }
 
-// newWorker creates channel and pipeline workers for a new key-set, must be protected by global mutex
-func (o *byKeySetOrchestrator) newWorker(keys []string, onStopped func()) chan<- []*base.LogRecord {
-	tag := o.tagBuilder.Build(keys)
+// newPipeline creates channel and pipeline workers for a new key-set, must be protected by global mutex
+func (o *byKeySetOrchestrator) newPipeline(keys []string, onStopped func()) chan<- []*base.LogRecord {
+	outputTag := o.tagBuilder.Build(keys)
 	workerID := strings.Join(keys, ",")
 	inputChannel := make(chan []*base.LogRecord, defs.IntermediateBufferedChannelSize)
 	pipelineLogger := o.logger.WithField(defs.LabelName, workerID)
-	pipelineLogger.Infof("new pipeline tag=%s", tag)
+	pipelineLogger.Infof("new pipeline tag=%s", outputTag)
 	pipelineMetricCreator := o.metricCreator.AddOrGetPrefix(
 		"process_",
 		append([]string{"orchestrator"}, o.metricKeyNames...),
 		append([]string{"byKeySet"}, keys...),
 	)
-	o.launchWorkers(pipelineLogger, tag, workerID, inputChannel, pipelineMetricCreator, onStopped)
+	o.startPipeline(pipelineLogger, pipelineMetricCreator, inputChannel, workerID, outputTag, onStopped)
 	return inputChannel
 }
 
@@ -142,13 +154,14 @@ func (oc *byKeySetOrchestratorSink) onNewLinkToPipeline(permKeys []string) {
 
 func (oc *byKeySetOrchestratorSink) flushAllLocalBuffers(forceAll bool) {
 	now := time.Now()
-	for mergedKey, cache := range oc.workerMap.LocalMap() {
+
+	oc.workerMap.Walk(func(mergedKey string, cache *channelInputBuffer) {
 		if len(cache.PendingLogs) == 0 {
-			continue
+			return
 		}
 		if !forceAll && now.Sub(cache.LastFlushTime) < defs.IntermediateFlushInterval {
-			continue
+			return
 		}
 		cache.Flush(now, oc.sendTimeout, oc.logger, mergedKey)
-	}
+	})
 }

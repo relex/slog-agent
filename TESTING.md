@@ -16,20 +16,6 @@ A basic test setup for slog-agent is like:
 
 ## Areas lacking tests
 
-### Orchestrate: parallel sub-pipelines
-
-It's a replacement / augment of ByKeySetOrchestrator to split each key-set pipeline into fixed numbers of parallel
-subpipelines, which receive log chunks from the ParallelDistributor which splits traffic.
-
-Due to the requirements from Loki storage, log chunks have to be collected in the original order though they may be
-processed in parallel. Mutexes in *OrderedLogBuffer* are used to synchronize and ensure the order.
-
-The code involves:
-
-  - base/bsupport/orderedlogprocessingworker.go: OrderedLogProcessingWorker
-  - base/bsupport/pipelineparallel.go: ParallelPipeline*
-  - orchestrate/obase/distributor.go: ParallelDistributor
-
 ### Output: error recovery
 
 The normal code-path for output is already covered, but not any of error related paths that are critical to production

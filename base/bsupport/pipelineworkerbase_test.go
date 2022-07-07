@@ -60,7 +60,7 @@ func TestPipelineWorkerBase(t *testing.T) {
 	tlogger := logger.WithField("test", t.Name())
 	input := make(chan []*base.LogRecord, 10)
 	worker := newTestPipelineWorker(tlogger, input)
-	worker.Launch()
+	worker.Start()
 
 	input <- []*base.LogRecord{
 		// first record is to be skipped
@@ -112,7 +112,7 @@ func TestPipelineWorkerBaseStop(t *testing.T) {
 	tlogger := logger.WithField("test", t.Name())
 	input := make(chan []*base.LogRecord, 10)
 	worker := newTestPipelineWorker(tlogger, input)
-	worker.Launch()
+	worker.Start()
 	input <- []*base.LogRecord{{}, {
 		Timestamp: time.Unix(20, 0),
 		Fields:    base.LogFields{"yes"},

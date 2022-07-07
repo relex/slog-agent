@@ -60,7 +60,7 @@ func NewTCPLineListener(parentLogger logger.Logger, address string, testRecord f
 	})
 	logger.Info("start listening")
 
-	// init taskCounter with 1 for the listener; Can't wait for Launch() because WaitGroupAwaitable below would quit immediately if it's zero.
+	// init taskCounter with 1 for the listener; Can't wait for Start() because WaitGroupAwaitable below would quit immediately if it's zero.
 	taskCounter := &sync.WaitGroup{}
 	taskCounter.Add(1)
 
@@ -76,44 +76,44 @@ func NewTCPLineListener(parentLogger logger.Logger, address string, testRecord f
 	}, boundAddr, nil
 }
 
-func (lsnr *tcpLineListener) Launch() {
-	go lsnr.run()
+func (listener *tcpLineListener) Start() {
+	go listener.run()
 }
 
-func (lsnr *tcpLineListener) Stopped() channels.Awaitable {
-	return lsnr.stopped
+func (listener *tcpLineListener) Stopped() channels.Awaitable {
+	return listener.stopped
 }
 
-func (lsnr *tcpLineListener) run() {
+func (listener *tcpLineListener) run() {
 	// background goroutine to wait and close listener on request
 	abortListener := channels.NewSignalAwaitable()
 	go func() {
-		channels.AnyAwaitables(lsnr.stopRequest, abortListener).Next(func() {
+		channels.AnyAwaitables(listener.stopRequest, abortListener).Next(func() {
 			if abortListener.Peek() {
-				lsnr.logger.Info("abort listener")
+				listener.logger.Info("abort listener")
 			} else {
-				lsnr.logger.Info("close listener on stop request")
+				listener.logger.Info("close listener on stop request")
 			}
 		}).WaitForever()
-		lsnr.socket.Close()
+		listener.socket.Close()
 	}()
 
 	// main loop
-	lsnr.logger.Info("start accept loop")
+	listener.logger.Info("start accept loop")
 	for {
-		conn, err := lsnr.socket.AcceptTCP()
+		conn, err := listener.socket.AcceptTCP()
 		if err != nil {
-			if lsnr.stopRequest.Peek() && util.IsNetworkClosed(err) {
+			if listener.stopRequest.Peek() && util.IsNetworkClosed(err) {
 				// closed on stop request
 			} else {
-				lsnr.logger.Error("accept() error: ", err)
+				listener.logger.Error("accept() error: ", err)
 				abortListener.Signal()
 			}
 			break
 		}
 
 		clientNumber := base.ClientNumber(util.GetFDFromTCPConnOrPanic(conn))
-		connLogger := lsnr.logger.WithFields(logger.Fields{
+		connLogger := listener.logger.WithFields(logger.Fields{
 			defs.LabelPart:         "connection",
 			defs.LabelClient:       conn.RemoteAddr().String(),
 			defs.LabelClientNumber: clientNumber,
@@ -125,27 +125,27 @@ func (lsnr *tcpLineListener) run() {
 		}
 
 		connLogger.Info("accepted connection")
-		lsnr.taskCounter.Add(1)
-		go lsnr.runConnection(connLogger, conn, clientNumber)
+		listener.taskCounter.Add(1)
+		go listener.runConnection(connLogger, conn, clientNumber)
 	}
-	lsnr.logger.Info("end accept loop")
+	listener.logger.Info("end accept loop")
 
 	// mark the listener itself as done, note there could still be established connections
-	lsnr.taskCounter.Done()
+	listener.taskCounter.Done()
 }
 
-func (lsnr *tcpLineListener) runConnection(connLogger logger.Logger, conn *net.TCPConn, clientNumber base.ClientNumber) {
-	defer lsnr.taskCounter.Done()
+func (listener *tcpLineListener) runConnection(connLogger logger.Logger, conn *net.TCPConn, clientNumber base.ClientNumber) {
+	defer listener.taskCounter.Done()
 	connLogger.Info("started")
 
-	recvChan := lsnr.receiver.NewSink(conn.RemoteAddr().String(), clientNumber)
+	recvChan := listener.receiver.NewSink(conn.RemoteAddr().String(), clientNumber)
 	defer recvChan.Close()
 
-	connAborter := lsnr.launchConnectionCloser(connLogger, conn)
+	connAborter := listener.launchConnectionCloser(connLogger, conn)
 
 	// short timeout for periodic flushing
-	connReader := lsnr.createConnectionReader(connLogger, conn)
-	mlineReader := newMultiLineReader(connReader.Read, lsnr.testRecord,
+	connReader := listener.createConnectionReader(connLogger, conn)
+	mlineReader := newMultiLineReader(connReader.Read, listener.testRecord,
 		defs.ListenerLineBufferSize, defs.InputLogMaxMessageBytes, recvChan.Accept)
 
 	emptyTime := time.Time{}
@@ -172,7 +172,7 @@ func (lsnr *tcpLineListener) runConnection(connLogger logger.Logger, conn *net.T
 		}
 		// error handling
 		mlineReader.FlushAll()
-		if util.IsNetworkClosed(err) && lsnr.stopRequest.Peek() {
+		if util.IsNetworkClosed(err) && listener.stopRequest.Peek() {
 			// already closed by connAborter
 			connLogger.Info("closed by stop request (delayed)")
 		} else {
@@ -188,11 +188,11 @@ func (lsnr *tcpLineListener) runConnection(connLogger logger.Logger, conn *net.T
 	connLogger.Info("ended")
 }
 
-func (lsnr *tcpLineListener) launchConnectionCloser(connLogger logger.Logger, conn *net.TCPConn) *channels.SignalAwaitable {
+func (listener *tcpLineListener) launchConnectionCloser(connLogger logger.Logger, conn *net.TCPConn) *channels.SignalAwaitable {
 	abortConn := channels.NewSignalAwaitable()
 	// background goroutine to wait and close listener on request
 	go func() {
-		channels.AnyAwaitables(lsnr.stopRequest, abortConn).Next(func() {
+		channels.AnyAwaitables(listener.stopRequest, abortConn).Next(func() {
 			if abortConn.Peek() {
 				connLogger.Info("abort connection")
 			} else {
@@ -204,7 +204,7 @@ func (lsnr *tcpLineListener) launchConnectionCloser(connLogger logger.Logger, co
 	return abortConn
 }
 
-func (lsnr *tcpLineListener) createConnectionReader(connLogger logger.Logger, conn *net.TCPConn) *util.NetConnWrapper {
+func (listener *tcpLineListener) createConnectionReader(connLogger logger.Logger, conn *net.TCPConn) *util.NetConnWrapper {
 	if err := conn.SetKeepAlive(true); err != nil {
 		connLogger.Warnf("error enabling keep-alive: %s", err.Error())
 	}

@@ -47,8 +47,6 @@ Input constructs just enough fields for orchestration, which then distributes lo
 key-fields. Such pipelines are meant for both of parallelization and fair processing (more of the latter), to ensure
 for example error logs still get through while the system is busy handling tons of debug logs.
 
-Second stage of parallelization is described by *Parallelization by traffic* below
-
 ```text
 
 LogInput: TCPListener, LogParser, LogTransform(s)
@@ -77,24 +75,10 @@ before being fed into the input channel of `FluentdForwardClient`. The fluentd f
 client are already finalized before the buffering stage or saving to disk (when needed) - which also means the output
 messages are pre-compressed.
 
-If multiple outputs become necessary in future, it'd be up to `LogProcessingWorker` and `OrderedLogProcessingWorker`
-to duplicate the results of transformation for different output routes.
+If multiple outputs become necessary in future, it'd be up to `LogProcessingWorker` to duplicate the results of
+transformation for different output routes.
 
-## Parallelization by traffic
-
-`ByKeySetOrchestrator` can create multiple sub-pipelines for each keySet and distribute logs among them while keeping
-the order of resulting chunks. The parellelization performs very poorly currently even though order locks are rarely
-touched:
-
-With 12 CPU threads on MacBook, N = 10:
-
-- long error dump logs (10-30K each): -37% wait time, +21% total CPU
-- normal logs (~200b each): -7% wait time, +4% total CPU
-
-Order is kept by using "Previous" and "Current" locks in `OrderedLogBuffer`: Processing is done in parallel while
-writing to the output channel is still sequential, maintained by the locks. 
-
-## Unintuitive designs for performance
+## Special designs for performance optimization
 
 Parsing: costly timestamp parsing is moved to transform, since dropped logs don't need timestamps.
 

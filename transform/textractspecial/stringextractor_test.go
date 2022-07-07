@@ -114,8 +114,9 @@ func TestExtractLabelAtStartWithRightBoundary(t *testing.T) {
 	}
 	{
 		tbl := make([]bool, 256)
-		util.Each(len(tbl), func(c int) { tbl[c] = true })
+		util.EachInSlice(tbl, func(index int, item bool) { tbl[index] = true })
 		tbl['='] = false
+
 		comp, log := extractLabelAtStart(msg, "", ", ", 50, tbl)
 		assert.Equal(t, "", comp)
 		assert.Equal(t, msg, log)
@@ -133,6 +134,7 @@ func TestExtractLabelAtStartWithoutRightBoundary(t *testing.T) {
 			tbl[c] = true
 		}
 		tbl['='] = true
+
 		comp, log := extractLabelAtStart(msg, "", "", 50, tbl)
 		assert.Equal(t, "id=012345", comp)
 		assert.Equal(t, " Hello World [OPEN]", log)
@@ -167,8 +169,9 @@ func TestExtractLabelAtEndWithRightBoundary(t *testing.T) {
 	}
 	{
 		tbl := make([]bool, 256)
-		util.Each(len(tbl), func(c int) { tbl[c] = true })
+		util.EachInSlice(tbl, func(index int, item bool) { tbl[index] = true })
 		tbl['='] = false
+
 		comp, log := extractLabelAtEnd(msg, "", ", ", 50, tbl)
 		assert.Equal(t, "", comp)
 		assert.Equal(t, msg, log)
@@ -182,6 +185,7 @@ func TestExtractLabelAtEndWithoutRightBoundary(t *testing.T) {
 		for c := '0'; c <= '9'; c++ {
 			tbl[c] = true
 		}
+
 		comp, log := extractLabelAtEnd(msg, "", "$", 50, tbl)
 		assert.Equal(t, "012345", comp)
 		assert.Equal(t, "Filename", log)

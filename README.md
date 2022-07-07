@@ -41,7 +41,6 @@ writing new code.
 - Buffering: hybrid disk+memory buffering - compressed and only persisted when necessary
 - Output: Fluentd Forward protocol, both compressed and uncompressed. Single output only.
 - Metrics: Prometheus metrics to count logs and log size by key fields (e.g. vhost + log level + filename)
-- Parallelization: by key fields and by fixed pipeline numbers (WIP). Log order is preserved.
 
 Dynamic fields are not supported - All fields must be known in configuration because they're packed in arrays that can
 be accessed without hashmap lookup.
@@ -160,7 +159,6 @@ See [DESIGN](DESIGN.md)
 
 Some of code is based on the internal behaviors of go runtime and marked as `GO_INTERNAL` in comments:
 
-- util/syncmutex.go `TryLockMutex()`: attempt to lock a `sync.Mutex` without waiting
 - util/syncwaitgroup.go `PeekWaitGroup()`: peek the count number from `sync.WaitGroup`
 - util/strings.go `StringFromBytes()`: make string from mutable bytes without copying, like `strings.Builder` but
   accepts mutable arrays (*dangerous*)

@@ -1,4 +1,4 @@
-package obase
+package obykeyset
 
 import (
 	"time"
@@ -10,21 +10,20 @@ import (
 	"github.com/relex/slog-agent/util"
 )
 
-// PipelineChannel is an alias to write-only channel of log records
-type PipelineChannel = chan<- []*base.LogRecord
-
-// PipelineChannelLocalBuffer acts as goroutine/worker-local cache and buffer for writing to PipelineChannel
-// It collects pending logs and only sends to channel when certain limit is reached
-type PipelineChannelLocalBuffer struct {
+// channelInputBuffer buffers input logs before flushing them into a channel
+//
+// A channel can have multiple buffers
+//
+// A buffer is NOT thread-safe and it should be created for each of gorouting sending logs to a channel
+type channelInputBuffer struct {
 	Channel       chan<- []*base.LogRecord // point to channel in global map
 	PendingLogs   []*base.LogRecord        // locally-buffered log records to be sent to channel
 	PendingBytes  int
 	LastFlushTime time.Time
 }
 
-// NewPipelineChannelLocalBuffer creates a PipelineChannelLocalBuffer
-func NewPipelineChannelLocalBuffer(ch chan<- []*base.LogRecord) *PipelineChannelLocalBuffer {
-	return &PipelineChannelLocalBuffer{
+func newInputBufferForChannel(ch chan<- []*base.LogRecord) *channelInputBuffer {
+	return &channelInputBuffer{
 		Channel:       ch,
 		PendingLogs:   make([]*base.LogRecord, 0, defs.IntermediateBufferMaxNumLogs),
 		PendingBytes:  0,
@@ -33,7 +32,7 @@ func NewPipelineChannelLocalBuffer(ch chan<- []*base.LogRecord) *PipelineChannel
 }
 
 // Append appends logs to buffer and checks whether flushing should be triggered
-func (cache *PipelineChannelLocalBuffer) Append(record *base.LogRecord) bool { // xx:inline
+func (cache *channelInputBuffer) Append(record *base.LogRecord) bool { // xx:inline
 	cache.PendingLogs = append(cache.PendingLogs, record)
 	cache.PendingBytes += record.RawLength
 	if cache.PendingBytes >= defs.IntermediateBufferMaxTotalBytes ||
@@ -44,12 +43,13 @@ func (cache *PipelineChannelLocalBuffer) Append(record *base.LogRecord) bool { /
 }
 
 // Flush flushes all pending logs to the channel
-func (cache *PipelineChannelLocalBuffer) Flush(now time.Time, sendTimeout *time.Timer, logger logger.Logger, loggingKey interface{}) {
+func (cache *channelInputBuffer) Flush(now time.Time, sendTimeout *time.Timer, logger logger.Logger, loggingKey interface{}) {
 	pendingLogs := cache.PendingLogs
 	reusableLogBuffer := bsupport.CopyLogBuffer(pendingLogs)
 	cache.PendingLogs = pendingLogs[:0]
 	cache.PendingBytes = 0
 	cache.LastFlushTime = now
+
 	select {
 	case cache.Channel <- reusableLogBuffer:
 		// TODO: update metrics

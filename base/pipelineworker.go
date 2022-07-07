@@ -6,6 +6,6 @@ import (
 
 // PipelineWorker represents a background worker in a stage of the processing pipeline, e.g. a parser or transformer
 type PipelineWorker interface {
-	Launch()
+	Start()
 	Stopped() channels.Awaitable
 }

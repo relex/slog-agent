@@ -100,6 +100,10 @@ func (man *chunkManager) OnChunkDropped(chunk base.LogChunk) {
 	man.metrics.pendingChunks.Dec()
 }
 
+func (man *chunkManager) ShouldWaitPendingChunks() bool {
+	return man.sendAllAtEnd
+}
+
 func (man *chunkManager) WaitPendingChunks() bool {
 	if man.sendAllAtEnd {
 		man.logger.Infof("waiting for pending chunks: count=%d", man.metrics.pendingChunks.Get())

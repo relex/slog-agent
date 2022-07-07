@@ -28,7 +28,7 @@ func Run(configFile string, metricAddress string, allowReload bool) {
 	}
 	loader.GetConfigStats().Log(rlogger)
 
-	orchestrator := loader.LaunchOrchestrator(logger.Root())
+	orchestrator := loader.StartOrchestrator(logger.Root())
 	_, shutdownInputs := loader.LaunchInputs(orchestrator)
 
 	msrv := promreg.LaunchMetricListener(metricAddress, loader.GetMetricGatherer(), true)

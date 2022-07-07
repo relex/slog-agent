@@ -6,7 +6,7 @@ import (
 
 // CopyLogBuffer duplicates the given buffer of log records, for passing into channel
 func CopyLogBuffer(slice []*base.LogRecord) []*base.LogRecord { // xx:inline
-	// pooling of LogBuffer has been tried and gave no improvement
+	// pooling of LogBuffer has been tried and resulted in no visible improvement
 	return append([]*base.LogRecord(nil), slice...)
 }
 

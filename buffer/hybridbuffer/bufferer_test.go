@@ -29,7 +29,7 @@ func TestBufferer(t *testing.T) {
 	defs.BufferMaxNumChunksInMemory = 5
 	mfactory := promreg.NewMetricFactory("testbuf_", nil, nil)
 	buf := newBufferer(logger.Root(), root, "b1", testMatchChunkID, mfactory, 1048576, false).(*bufferer)
-	buf.Launch()
+	buf.Start()
 	dir := buf.QueueDirPath()
 	// produce logs
 	noTimeout := make(chan time.Time)
@@ -114,7 +114,7 @@ func TestBuffererShutdown(t *testing.T) {
 	defs.BufferMaxNumChunksInMemory = 5
 	mfactory := promreg.NewMetricFactory("testbuf_shutdown_", nil, nil)
 	buf := newBufferer(logger.Root(), root, "b2", testMatchChunkID, mfactory, 1048576, false).(*bufferer)
-	buf.Launch()
+	buf.Start()
 	dir := buf.QueueDirPath()
 	noTimeout := make(chan time.Time)
 	for i := 0; i < 50; i++ {
@@ -159,7 +159,7 @@ func TestBuffererSendAllAtEnd(t *testing.T) {
 	defs.BufferMaxNumChunksInMemory = 5
 	mfactory := promreg.NewMetricFactory("testbuf_sendall_", nil, nil)
 	buf := newBufferer(logger.Root(), root, "b3", testMatchChunkID, mfactory, 1048576, true).(*bufferer)
-	buf.Launch()
+	buf.Start()
 	dir := buf.QueueDirPath()
 
 	// produce logs
@@ -233,7 +233,7 @@ func TestBuffererSpaceLimit(t *testing.T) {
 	defs.BufferShutDownTimeout = 1 * time.Second // quick shutdown in case of unread chunks
 	mfactory := promreg.NewMetricFactory("testbuf_space_", nil, nil)
 	buf := newBufferer(logger.Root(), root, "bspace", testMatchChunkID, mfactory, 100, true).(*bufferer)
-	buf.Launch()
+	buf.Start()
 	dir := buf.QueueDirPath()
 	noTimeout := make(chan time.Time)
 	for i := 0; i < 50; i++ {
