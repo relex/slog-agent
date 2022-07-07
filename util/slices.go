@@ -1,57 +1,35 @@
 package util
 
-// All returns true if all items in collection are matched
-//     list := []string{"Bob", "David", "April"}
-//     All(len(list), func(i) bool { return list[i] != "" })
-func All(length int, test func(index int) bool) bool {
-	for i := 0; i < length; i++ {
-		if !test(i) {
-			return false
-		}
-	}
-	return true
+import (
+	"golang.org/x/exp/constraints"
+)
+
+// CopySlice copies the slice to a newly-allocated one
+func CopySlice[T any](slice []T) []T { // xx:inline
+	return append([]T(nil), slice...)
 }
 
-// Any returns true if any item in collection is matched
-//     list := []string{"Bob", "David", "April"}
-//     Any(len(list), func(i) bool { return list[i] == "David" })
-func Any(length int, test func(index int) bool) bool {
-	for i := 0; i < length; i++ {
-		if test(i) {
-			return true
-		}
-	}
-	return false
-}
-
-// Each calls the given func for [0 ... length - 1]
-//     list := []string{"Bob", "David", "April"}
-//     Each(len(list), func(i) { fmt.Println(list[i]) })
-func Each(length int, action func(index int)) {
-	for i := 0; i < length; i++ {
-		action(i)
+// EachInSlice calls the given func for each of (index, value) pair in the given slice
+func EachInSlice[T any](slice []T, action func(index int, item T)) {
+	for index, item := range slice {
+		action(index, item)
 	}
 }
 
-// IndexOfString returns the index of target in the given string slice, or -1 if not found
-func IndexOfString(slice []string, target string) int {
-	for i, item := range slice {
-		if item == target {
-			return i
-		}
+// MapSlice transforms the given slice by mapping each item to something else
+func MapSlice[T any, R any](slice []T, mapper func(item T) R) []R {
+	output := make([]R, len(slice))
+	for index, item := range slice {
+		output[index] = mapper(item)
 	}
-	return -1
+	return output
 }
 
-// CopyByteSlice copies the slice to a newly-allocated one
-func CopyByteSlice(slice []byte) []byte { // xx:inline
-	return append([]byte(nil), slice...)
-}
-
-// ResetStringBuffer resets all elements in the given string slice and return [:0]
-func ResetStringBuffer(buffer []string) []string {
-	for i := range buffer {
-		buffer[i] = ""
+// SumSlice sums up the values calculated from each item in the given slice
+func SumSlice[T any, R constraints.Integer | constraints.Float](slice []T, calculate func(item T) R) R {
+	var result R
+	for _, item := range slice {
+		result += calculate(item)
 	}
-	return buffer[:0]
+	return result
 }

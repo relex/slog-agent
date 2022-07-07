@@ -9,6 +9,7 @@ import (
 	"github.com/relex/gotils/logger"
 	"github.com/relex/slog-agent/base"
 	"github.com/relex/slog-agent/util"
+	"golang.org/x/exp/slices"
 )
 
 // Reloader overrides Loader to support configuration reloading
@@ -114,7 +115,7 @@ func checkConfigCompatibility(
 	{
 		oldKeys := oldStats.OrchestrationKeys
 		newKeys := newStats.OrchestrationKeys
-		if util.CompareStrings(oldKeys, newKeys) != 0 {
+		if !slices.Equal(oldKeys, newKeys) {
 			return fmt.Errorf("orchestration/keys must not change: old=%s, new=%s", oldKeys, newKeys)
 		}
 	}

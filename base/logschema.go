@@ -8,6 +8,7 @@ import (
 	"github.com/relex/gotils/logger"
 	"github.com/relex/slog-agent/util"
 	"github.com/relex/slog-agent/util/stringtemplate"
+	"golang.org/x/exp/slices"
 )
 
 // LogSchema defines the field names and mark fields which should belong to "environment"
@@ -88,7 +89,7 @@ func (s *LogSchema) NewTestRecord2(tm time.Time, fields LogFields) *LogRecord {
 
 // CreateFieldLocator creates a LogFieldLocator by field name
 func (s *LogSchema) CreateFieldLocator(name string) (LogFieldLocator, error) {
-	index := util.IndexOfString(s.fieldNames, name)
+	index := slices.Index(s.fieldNames, name)
 	if index == -1 {
 		return MissingFieldLocator, fmt.Errorf("field '%s' is not defined in schema", name)
 	}

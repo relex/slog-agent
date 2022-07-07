@@ -9,7 +9,7 @@ import (
 	"github.com/relex/slog-agent/orchestrate/obykeyset"
 	"github.com/relex/slog-agent/orchestrate/osingleton"
 	"github.com/relex/slog-agent/run"
-	"github.com/relex/slog-agent/util"
+	"golang.org/x/exp/slices"
 )
 
 type agent struct {
@@ -34,14 +34,14 @@ func startAgent(loader *run.Loader, newChunkSaver base.ChunkConsumerConstructor,
 			newMetricKeys := make([]string, 0, len(orcConf.Keys)+len(loader.MetricKeys))
 			// move original orchestration Keys to config.MetricKeys
 			for _, ok := range orcConf.Keys {
-				if util.IndexOfString(keysOverride, ok) == -1 {
+				if slices.Index(keysOverride, ok) == -1 {
 					newMetricKeys = append(newMetricKeys, ok)
 				}
 			}
 			orcConf.Keys = keysOverride
 			// remove dup keys from loader.MetricKeys
 			for _, mk := range loader.MetricKeys {
-				if util.IndexOfString(keysOverride, mk) == -1 {
+				if slices.Index(keysOverride, mk) == -1 {
 					newMetricKeys = append(newMetricKeys, mk)
 				}
 			}

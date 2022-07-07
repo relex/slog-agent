@@ -39,12 +39,10 @@ type switchCaseResult bool
 
 // NewTransform creates switchTransform
 func (c *Config) NewTransform(schema base.LogSchema, parentLogger logger.Logger, customCounterRegistry base.LogCustomCounterRegistry) base.LogTransform {
-	cases := make([]switchCase, len(c.Cases))
-	util.Each(len(c.Cases), func(i int) {
-		cases[i] = c.Cases[i].newCase(schema, parentLogger, customCounterRegistry)
-	})
 	return &switchTransform{
-		cases: cases,
+		cases: util.MapSlice(c.Cases, func(caseConfig CaseConfig) switchCase {
+			return caseConfig.newCase(schema, parentLogger, customCounterRegistry)
+		}),
 	}
 }
 

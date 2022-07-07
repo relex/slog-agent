@@ -25,8 +25,7 @@ func RunBenchmarkPipeline(inputPath string, outputPath string, repeat int, confi
 	writeChunk, closeOutput := openLogChunkConsumingFunc(outputPath, outputConfig)
 
 	inputRecords := loadInputRecords(inputPath)
-	inputLength := 0
-	util.Each(len(inputRecords), func(i int) { inputLength += len(inputRecords[i]) + 1 })
+	inputLength := util.SumSlice(inputRecords, func(record []byte) int { return len(record) + 1 /* +1 for newline char */ })
 
 	totalInputCount := len(inputRecords) * repeat
 	totalInputLength := int64(inputLength) * int64(repeat)

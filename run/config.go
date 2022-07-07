@@ -15,6 +15,7 @@ import (
 	"github.com/relex/slog-agent/rewrite"
 	"github.com/relex/slog-agent/transform"
 	"github.com/relex/slog-agent/util"
+	"golang.org/x/exp/slices"
 	"gopkg.in/yaml.v3"
 )
 
@@ -138,7 +139,7 @@ func checkMetricKeys(conf Config, schema base.LogSchema, orchestrationKeys []str
 		return fmt.Errorf("metricKeys: %w", err)
 	}
 	for i, key := range conf.MetricKeys {
-		if util.IndexOfString(orchestrationKeys, key) != -1 {
+		if slices.Index(orchestrationKeys, key) != -1 {
 			return fmt.Errorf("metricKeys[%d]: field '%s' cannot be listed in both .metricKeys and .orchestration/keys", i, key)
 		}
 	}
