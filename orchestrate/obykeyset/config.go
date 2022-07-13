@@ -26,7 +26,7 @@ func (cfg *Config) StartOrchestrator(parentLogger logger.Logger, args bconfig.Pi
 	// until clients send logs from the same source to trigger the recreation of their corresponding pipelines
 	initialPipelineIDs := make(map[string]struct{})
 	for _, pair := range args.OutputBufferPairs {
-		ids := pair.BufferConfig.ListBufferIDs(parentLogger, pair.OutputConfig.MatchChunkID, metricCreator.AddOrGetPrefix("recovery_", nil, nil))
+		ids := pair.BufferConfig.Value.ListBufferIDs(parentLogger, pair.OutputConfig.Value.MatchChunkID, metricCreator.AddOrGetPrefix("recovery_", nil, nil))
 
 		for _, id := range ids {
 			initialPipelineIDs[id] = struct{}{}

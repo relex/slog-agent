@@ -32,7 +32,7 @@ func PrepareSequentialPipeline(args bconfig.PipelineArgs) PipelineStarter {
 
 		outputSettingsSlice := util.MapSlice(args.OutputBufferPairs, func(pair bconfig.OutputBufferConfig) pipelineWorkerSettings {
 			settings := pipelineWorkerSettings{
-				bufferer: pair.BufferConfig.NewBufferer(parentLogger, bufferID, pair.OutputConfig.MatchChunkID,
+				bufferer: pair.BufferConfig.Value.NewBufferer(parentLogger, bufferID, pair.OutputConfig.Value.MatchChunkID,
 					metricCreator, args.SendAllAtEnd),
 			}
 
@@ -47,12 +47,12 @@ func PrepareSequentialPipeline(args bconfig.PipelineArgs) PipelineStarter {
 				settings.consumer.Start()
 			} else {
 				parentLogger.Info("launch consumer")
-				settings.consumer = pair.OutputConfig.NewForwarder(parentLogger, settings.bufferer.RegisterNewConsumer(), metricCreator)
+				settings.consumer = pair.OutputConfig.Value.NewForwarder(parentLogger, settings.bufferer.RegisterNewConsumer(), metricCreator)
 				settings.consumer.Start()
 			}
 
-			settings.serializer = pair.OutputConfig.NewSerializer(parentLogger, args.Schema, args.Deallocator)
-			settings.chunkMaker = pair.OutputConfig.NewChunkMaker(parentLogger, outputTag)
+			settings.serializer = pair.OutputConfig.Value.NewSerializer(parentLogger, args.Schema, args.Deallocator)
+			settings.chunkMaker = pair.OutputConfig.Value.NewChunkMaker(parentLogger, outputTag)
 
 			return settings
 		})
