@@ -79,8 +79,7 @@ func NewLoaderFromConfigFile(filepath string, metricPrefix string) (*Loader, err
 			Deallocator:         base.NewLogAllocator(schema),
 			MetricKeyLocators:   schema.MustCreateFieldLocators(config.MetricKeys), // should have been verified in config parsing
 			TransformConfigs:    config.Transformations,
-			BufferConfig:        config.Buffer.Value,
-			OutputConfig:        config.Output.Value,
+			OutputBufferPairs:   config.OutputBuffersPairs,
 			NewConsumerOverride: nil,
 			SendAllAtEnd:        false,
 		},

@@ -30,14 +30,13 @@ func init() {
 
 // Config defines the root of slog-agent config file
 type Config struct {
-	Anchors         AnchorsConfig                      `yaml:"anchors"`
-	Schema          SchemaConfig                       `yaml:"schema"`
-	Inputs          []bconfig.LogInputConfigHolder     `yaml:"inputs"`
-	Orchestration   bconfig.OrchestratorConfigHolder   `yaml:"orchestration"`
-	MetricKeys      []string                           `yaml:"metricKeys"`
-	Transformations []bconfig.LogTransformConfigHolder `yaml:"transformations"`
-	Buffer          bconfig.ChunkBufferConfigHolder    `yaml:"buffer"`
-	Output          bconfig.LogOutputConfigHolder      `yaml:"output"`
+	Anchors            AnchorsConfig                      `yaml:"anchors"`
+	Schema             SchemaConfig                       `yaml:"schema"`
+	Inputs             []bconfig.LogInputConfigHolder     `yaml:"inputs"`
+	Orchestration      bconfig.OrchestratorConfigHolder   `yaml:"orchestration"`
+	MetricKeys         []string                           `yaml:"metricKeys"`
+	Transformations    []bconfig.LogTransformConfigHolder `yaml:"transformations"`
+	OutputBuffersPairs []bconfig.OutputBufferConfig       `yaml:"outputBufferPairs"`
 }
 
 // AnchorsConfig defines the anchors section in config file
@@ -103,12 +102,14 @@ func ParseConfigFile(filepath string) (Config, base.LogSchema, ConfigStats, erro
 		return conf, schema, stats, err
 	}
 
-	if err := conf.Buffer.Value.VerifyConfig(); err != nil {
-		return conf, schema, stats, fmt.Errorf("buffer: %w", err)
-	}
+	for _, pair := range conf.OutputBuffersPairs {
+		if err := pair.BufferConfig.Value.VerifyConfig(); err != nil {
+			return conf, schema, stats, fmt.Errorf("buffer: %w", err)
+		}
+		if err := pair.OutputConfig.Value.VerifyConfig(schema); err != nil {
+			return conf, schema, stats, fmt.Errorf("output: %w", err)
+		}
 
-	if err := conf.Output.Value.VerifyConfig(schema); err != nil {
-		return conf, schema, stats, fmt.Errorf("output: %w", err)
 	}
 
 	statsBuilder.Finish(&stats)
