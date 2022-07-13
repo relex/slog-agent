@@ -237,20 +237,55 @@ transformations:
           - time
 
 
+outputBufferPairs: 
+  - name: "logPipeline"
+    buffer:
+      type: hybridBuffer                              # hybridBuffer is the only buffer type for now
+                                                      # All chunks are kept in per-pipeline go-channel of fixed size
+                                                      # When the count reaches 500, newly processed chunks have their main bodies moved to individual files
+                                                      # ... and only loaded back when ready to be forwarded to upstream
+                                                      #
+      rootPath: $TMPDIR/slog-buffer                   # rootPath: storage root. There may be subdirs for each pipeline, depending on the orchestration type
+      maxBufSize: 1GB                                 # maxBufSize: limit per queue (per pipeline)
+    output:
+        type: fluentdForward                            # fluentdForward: Forward Protocol v1
+                                                  # with a specific "environment" field, e.g.
+                                                  #  {log: "User A logged in", "environment": {"app": "sshd", "host": "google.com"}}
+        serialization:
+          environmentFields: [host, vhost, app, source] # List of fields to be nested under the "environment" field
+          hiddenFields: [task, class, pnum]             # List of fields to be omitted from output
+          rewriteFields:                                # Fields to be rewritten during serialization, as simple and efficient alternatives to transformations
+                                                        #   field: [list of rewrite steps]
+            log:
+              - type: inline                            # inline: insert a field to the beginning if present (not empty)
+                field: class                            #   e.g. "class=MyClass1 Original log message"
+
+              - type: unescape                          # unescape: Unescape special chars, same as the "unescape" transform
+                                                        # Skipped if a log is marked by input as unescaped (e.g. multiline message via Syslog)
+                                                        #
+                                                        # Note unescaping at the this stage breaks certain cases, e.g. "log\nbob@gmail.com",
+                                                        # where the wrong email "nbob@gmail.com" is reacted before unescaping of "\n"
+
+                                                        # The last step must be "copy" or "unescape"
+
+        messageMode: CompressedPackedForward            # fluentd forward modes: Forward, PackedForward, or CompressedPackedForward
+                                                        # Use compression wherever possible, otherwise buffering would be done uncompressed.
+                                                        # In our experiences the compression ratio is 20-50 times for logs, which is critical
+                                                        # for (not running out of) disk space and IO performance.
+
+        upstream:                                       # Forward destination, see https://docs.fluentd.org/input/forward for explanations
+          address: localhost:24224
+          tls: true
+          secret: guess
+          maxDuration: 30m
+
+
 ########################################################################################################################
 # Buffer offers storage / queues to store processed log chunks outside of memory when needed
 #
 # Buffering is applied on output chunks, AFTER logs are processed into the final output form (as defined in output section)
 # The data persisted is determined solely by the output, while the buffer has no idea what's inside.
 #
-buffer:
-  type: hybridBuffer                              # hybridBuffer is the only buffer type for now
-                                                  # All chunks are kept in per-pipeline go-channel of fixed size
-                                                  # When the count reaches 500, newly processed chunks have their main bodies moved to individual files
-                                                  # ... and only loaded back when ready to be forwarded to upstream
-                                                  #
-  rootPath: $TMPDIR/slog-buffer                   # rootPath: storage root. There may be subdirs for each pipeline, depending on the orchestration type
-  maxBufSize: 1GB                                 # maxBufSize: limit per queue (per pipeline)
 
 
 ########################################################################################################################
@@ -258,34 +293,3 @@ buffer:
 #
 # Serialization and compression are done on the log-processing pipelines before buffering.
 # The serialization stage also allows certain in-place transformations ("rewrites") without introducing additional heap allocations and memory copying
-output:
-  type: fluentdForward                            # fluentdForward: Forward Protocol v1
-                                                  # with a specific "environment" field, e.g.
-                                                  #  {log: "User A logged in", "environment": {"app": "sshd", "host": "google.com"}}
-  serialization:
-    environmentFields: [host, vhost, app, source] # List of fields to be nested under the "environment" field
-    hiddenFields: [task, class, pnum]             # List of fields to be omitted from output
-    rewriteFields:                                # Fields to be rewritten during serialization, as simple and efficient alternatives to transformations
-                                                  #   field: [list of rewrite steps]
-      log:
-        - type: inline                            # inline: insert a field to the beginning if present (not empty)
-          field: class                            #   e.g. "class=MyClass1 Original log message"
-
-        - type: unescape                          # unescape: Unescape special chars, same as the "unescape" transform
-                                                  # Skipped if a log is marked by input as unescaped (e.g. multiline message via Syslog)
-                                                  #
-                                                  # Note unescaping at the this stage breaks certain cases, e.g. "log\nbob@gmail.com",
-                                                  # where the wrong email "nbob@gmail.com" is reacted before unescaping of "\n"
-
-                                                  # The last step must be "copy" or "unescape"
-
-  messageMode: CompressedPackedForward            # fluentd forward modes: Forward, PackedForward, or CompressedPackedForward
-                                                  # Use compression wherever possible, otherwise buffering would be done uncompressed.
-                                                  # In our experiences the compression ratio is 20-50 times for logs, which is critical
-                                                  # for (not running out of) disk space and IO performance.
-
-  upstream:                                       # Forward destination, see https://docs.fluentd.org/input/forward for explanations
-    address: localhost:24224
-    tls: true
-    secret: guess
-    maxDuration: 30m
