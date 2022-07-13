@@ -6,7 +6,15 @@ import (
 	"github.com/relex/slog-agent/base"
 	"github.com/relex/slog-agent/base/bconfig"
 	"github.com/relex/slog-agent/base/bsupport"
+	"github.com/relex/slog-agent/util"
 )
+
+type pipelineWorkerSettings struct {
+	bufferer   base.ChunkBufferer
+	serializer base.LogSerializer
+	chunkMaker base.LogChunkMaker
+	consumer   base.ChunkConsumer
+}
 
 // PipelineStarter represents a function to launch workers for a top-level pipeline under Orchestrator
 //
@@ -22,22 +30,32 @@ func PrepareSequentialPipeline(args bconfig.PipelineArgs) PipelineStarter {
 	return func(parentLogger logger.Logger, metricCreator promreg.MetricCreator,
 		input <-chan []*base.LogRecord, bufferID string, outputTag string, onStopped func()) {
 
-		// bufferer in the middle of pipeline has to be started first and shut down last for persistance of pending outputs
-		outputBufferer := args.BufferConfig.NewBufferer(parentLogger, bufferID, args.OutputConfig.MatchChunkID,
-			metricCreator, args.SendAllAtEnd)
-		outputBufferer.Start()
+		outputSettingsSlice := util.MapSlice(args.OutputBufferPairs, func(pair bconfig.OutputBufferConfig) pipelineWorkerSettings {
+			settings := pipelineWorkerSettings{
+				bufferer: pair.BufferConfig.NewBufferer(parentLogger, bufferID, pair.OutputConfig.MatchChunkID,
+					metricCreator, args.SendAllAtEnd),
+			}
 
-		// then start output forwarder which is at the end of pipeline.
-		// if there are queued logs from bufferer, the consumer would immediately start sending them.
-		if args.NewConsumerOverride != nil {
-			parentLogger.Info("launch override consumer")
-			outputConsumer := args.NewConsumerOverride(parentLogger, outputBufferer.RegisterNewConsumer())
-			outputConsumer.Start()
-		} else {
-			parentLogger.Info("launch consumer")
-			outputConsumer := args.OutputConfig.NewForwarder(parentLogger, outputBufferer.RegisterNewConsumer(), metricCreator)
-			outputConsumer.Start()
-		}
+			// bufferer in the middle of pipeline has to be started first and shut down last for persistance of pending outputs
+			settings.bufferer.Start()
+
+			// then start output forwarder which is at the end of pipeline.
+			// if there are queued logs from bufferer, the consumer would immediately start sending them.
+			if args.NewConsumerOverride != nil {
+				parentLogger.Info("launch override consumer")
+				settings.consumer = args.NewConsumerOverride(parentLogger, settings.bufferer.RegisterNewConsumer())
+				settings.consumer.Start()
+			} else {
+				parentLogger.Info("launch consumer")
+				settings.consumer = pair.OutputConfig.NewForwarder(parentLogger, settings.bufferer.RegisterNewConsumer(), metricCreator)
+				settings.consumer.Start()
+			}
+
+			settings.serializer = pair.OutputConfig.NewSerializer(parentLogger, args.Schema, args.Deallocator)
+			settings.chunkMaker = pair.OutputConfig.NewChunkMaker(parentLogger, outputTag)
+
+			return settings
+		})
 
 		// then prepare processing worker which is at the head of pipeline
 		procTracker := base.NewLogProcessCounter(metricCreator, args.Schema, args.MetricKeyLocators)
@@ -47,12 +65,18 @@ func PrepareSequentialPipeline(args bconfig.PipelineArgs) PipelineStarter {
 			args.Deallocator,
 			procTracker,
 			bsupport.NewTransformsFromConfig(args.TransformConfigs, args.Schema, parentLogger, procTracker),
-			args.OutputConfig.NewSerializer(parentLogger, args.Schema, args.Deallocator),
-			args.OutputConfig.NewChunkMaker(parentLogger, outputTag),
-			outputBufferer.Accept,
+			util.MapSlice(outputSettingsSlice, func(outputSettings pipelineWorkerSettings) bsupport.ProcessingWorkerOutputComponentSet {
+				return bsupport.ProcessingWorkerOutputComponentSet{
+					Serializer:  outputSettings.serializer,
+					ChunkMaker:  outputSettings.chunkMaker,
+					AcceptChunk: outputSettings.bufferer.Accept,
+				}
+			}),
 		)
 		procWorker.Stopped().Next(func() {
-			outputBufferer.Destroy()
+			util.EachInSlice(outputSettingsSlice, func(_ int, settings pipelineWorkerSettings) {
+				settings.bufferer.Destroy()
+			})
 			onStopped()
 		})
 
