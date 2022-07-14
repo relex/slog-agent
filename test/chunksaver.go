@@ -1,7 +1,13 @@
 package test
 
 import (
+	"bufio"
 	"bytes"
+	"fmt"
+	"io/ioutil"
+	"os"
+	"path"
+	"strings"
 
 	"github.com/relex/gotils/channels"
 	"github.com/relex/gotils/logger"
@@ -77,6 +83,50 @@ func openLogChunkConsumingFunc(outputPath string) (func(chunk base.LogChunk), fu
 	if outputPath == "null" {
 		logger.Infof("open chunk null output")
 		return func(chunk base.LogChunk) {}, func() {}
+	}
+
+	ext := strings.ToLower(path.Ext(outputPath))
+	switch ext {
+	case ".json":
+		logger.Infof("open JSON file output %s", outputPath)
+		if strings.Contains("outputPath", "%s") {
+			return func(chunk base.LogChunk) {
+				chunkFilePath := fmt.Sprintf(outputPath, chunk.ID)
+				tmp := &bytes.Buffer{}
+				tmp.WriteString("[\n")
+				if _, err := fluentdforward.ConvertMsgpackToJSON(chunk, []byte(",\n"), true, tmp); err != nil {
+					logger.Panicf("error dumping records: %s", err.Error())
+				}
+				tmp.WriteString("\n]\n")
+				if err := ioutil.WriteFile(chunkFilePath, tmp.Bytes(), 0644); err != nil {
+					logger.Panicf("error writing to %s: %s", chunkFilePath, err.Error())
+				}
+			}, func() {}
+		}
+		file, ferr := os.Create(outputPath)
+		if ferr != nil {
+			logger.Panicf("error creating %s: %s", outputPath, ferr.Error())
+		}
+		buffer := bufio.NewWriterSize(file, 1048576)
+		if _, err := buffer.WriteString("[\n"); err != nil {
+			logger.Panicf("error writing to %s: %s", outputPath, ferr.Error())
+		}
+		return func(chunk base.LogChunk) {
+				_, err := fluentdforward.ConvertMsgpackToJSON(chunk, []byte(",\n"), true, buffer)
+				if err != nil {
+					logger.Panicf("error writing to %s: %s", outputPath, err.Error())
+				}
+			}, func() {
+				if _, err := buffer.WriteString("\n]\n"); err != nil {
+					logger.Panicf("error writing JSON end to %s: %s", outputPath, err.Error())
+				}
+				if err := buffer.Flush(); err != nil {
+					logger.Panicf("error flushing %s: %s", outputPath, err.Error())
+				}
+				if err := file.Close(); err != nil {
+					logger.Panicf("error closing %s: %s", outputPath, err.Error())
+				}
+			}
 	}
 
 	panic("unsupported output path " + outputPath)
