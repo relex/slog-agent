@@ -127,9 +127,10 @@ func openLogChunkConsumingFunc(outputPath string) (func(chunk base.LogChunk), fu
 					logger.Panicf("error closing %s: %s", outputPath, err.Error())
 				}
 			}
-	}
 
-	panic("unsupported output path " + outputPath)
+	default:
+		panic("unsupported output path " + outputPath)
+	}
 }
 
 func openJSONMemWriter() (func(chunk base.LogChunk), func(), func() string) {
