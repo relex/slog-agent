@@ -11,7 +11,7 @@ import (
 	"github.com/vmihailenco/msgpack/v4"
 )
 
-func decodeAndDumpRecordsAsJSON(chunk base.LogChunk, separator []byte, indented bool, writer io.Writer) (base.LogChunkInfo, error) {
+func ConvertMsgpackToJSON(chunk base.LogChunk, separator []byte, indented bool, writer io.Writer) (base.LogChunkInfo, error) {
 	reader := bytes.NewReader(chunk.Data)
 	var message forwardprotocol.Message
 	if merr := msgpack.NewDecoder(reader).Decode(&message); merr != nil {

@@ -2,7 +2,6 @@ package fluentdforward
 
 import (
 	"fmt"
-	"io"
 	"net"
 	"strings"
 	"time"
@@ -36,11 +35,6 @@ type UpstreamConfig struct {
 	TLS         bool          `yaml:"tls"`
 	Secret      string        `yaml:"secret"`
 	MaxDuration time.Duration `yaml:"maxDuration"`
-}
-
-// DumpRecordsAsJSON decodes and dumps log records in chunk as JSON format
-func (cfg *Config) DumpRecordsAsJSON(chunk base.LogChunk, separator []byte, indented bool, destination io.Writer) (base.LogChunkInfo, error) {
-	return decodeAndDumpRecordsAsJSON(chunk, separator, indented, destination)
 }
 
 // MatchChunkID checks whether given ID is valid for a fluentdforward chunk file

@@ -245,7 +245,7 @@ outputBufferPairs:
                                                       # When the count reaches 500, newly processed chunks have their main bodies moved to individual files
                                                       # ... and only loaded back when ready to be forwarded to upstream
                                                       #
-      rootPath: $TMPDIR/slog-buffer                   # rootPath: storage root. There may be subdirs for each pipeline, depending on the orchestration type
+      rootPath: /tmp/slog-buffer                      # rootPath: storage root. There may be subdirs for each pipeline, depending on the orchestration type
       maxBufSize: 1GB                                 # maxBufSize: limit per queue (per pipeline)
     output:
         type: fluentdForward                            # fluentdForward: Forward Protocol v1

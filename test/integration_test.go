@@ -14,6 +14,7 @@ import (
 	"github.com/relex/gotils/promexporter/promreg"
 	"github.com/relex/slog-agent/base"
 	"github.com/relex/slog-agent/base/bconfig"
+	"github.com/relex/slog-agent/output/fluentdforward"
 	"github.com/relex/slog-agent/run"
 	"github.com/relex/slog-agent/testdata"
 	"github.com/relex/slog-agent/util"
@@ -29,9 +30,9 @@ func TestDataGeneration(t *testing.T) {
 	for _, inPath := range testdata.ListInputFiles(t, "*") {
 		inLines := loadInputRecords(inPath)
 		title := testdata.GetInputTitle(t, inPath)
-		outConfig, process, endProcess := preparePipeline(testdata.GetConfigPath(), title, mfactory)
+		process, endProcess := preparePipeline(testdata.GetConfigPath(), title, mfactory)
 		outPath := testdata.GetOutputFilename(t, inPath)
-		outWrite, outClose := openLogChunkConsumingFunc(outPath, outConfig)
+		outWrite, outClose := openLogChunkConsumingFunc(outPath)
 		runPipeline(process, endProcess, inLines, 1, outWrite)
 		outClose()
 	}
@@ -51,8 +52,8 @@ func TestPipeline(t *testing.T) {
 		t.Run(title, func(tt *testing.T) {
 			expectedOutput, eOutErr := ioutil.ReadFile(expectedOutPath)
 			assert.Nil(t, eOutErr)
-			outConfig, process, endProcess := preparePipeline(testdata.GetConfigPath(), title, mfactory)
-			outWrite, outClose, outGet := openJSONMemWriter(outConfig)
+			process, endProcess := preparePipeline(testdata.GetConfigPath(), title, mfactory)
+			outWrite, outClose, outGet := openJSONMemWriter()
 			runPipeline(process, endProcess, loadInputRecords(localInPath), 1, outWrite)
 			outClose()
 			assert.Equal(t, string(expectedOutput), outGet())
@@ -74,7 +75,7 @@ func TestAgent(t *testing.T) {
 	assert.Nil(t, confErr)
 	loader.ConfigStats.Log(logger.WithField("test", t.Name()))
 
-	outputWritersByTag, newChunkSaver := prepareOutputWriters(t, loader.Output.Value)
+	outputWritersByTag, newChunkSaver := prepareOutputWriters(t, loader.OutputBuffersPairs[0].OutputConfig.Value)
 	// Override tag for output splitting and keys (labelsets) for distribution: order of logs would be messed up if keys are different
 	agt := startAgent(loader, newChunkSaver, []string{"host"}, "$host")
 
@@ -172,7 +173,7 @@ func prepareOutputWriters(t *testing.T, outputConfig bconfig.LogOutputConfig) (m
 		mutex.Lock()
 		defer mutex.Unlock()
 		buf := bytes.Buffer{}
-		info, derr := outputConfig.DumpRecordsAsJSON(chunk, []byte(",\n"), true, &buf)
+		info, derr := fluentdforward.ConvertMsgpackToJSON(chunk, []byte(",\n"), true, &buf)
 		if derr != nil {
 			t.Errorf("failed to decode chunk: %s", derr.Error())
 			return
