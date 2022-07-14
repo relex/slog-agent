@@ -1,8 +1,6 @@
 package bconfig
 
 import (
-	"io"
-
 	"github.com/relex/gotils/logger"
 	"github.com/relex/gotils/promexporter/promreg"
 	"github.com/relex/slog-agent/base"
@@ -20,8 +18,6 @@ import (
 // All the implementations should support YAML unmarshalling
 type LogOutputConfig interface {
 	BaseConfig
-
-	DumpRecordsAsJSON(chunk base.LogChunk, separator []byte, indented bool, destination io.Writer) (base.LogChunkInfo, error)
 
 	MatchChunkID(chunkID string) bool
 

@@ -17,7 +17,7 @@ import (
 )
 
 func testMatchChunkID(chunkID string) bool {
-	return true
+	return chunkID != idFileName // excluding special .id file from matching it as a chunk
 }
 
 func TestBufferer(t *testing.T) {

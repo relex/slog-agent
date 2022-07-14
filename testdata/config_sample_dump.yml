@@ -143,30 +143,33 @@ transformations:
       - type: delFields
         keys:
           - time
-buffer:
-  type: hybridBuffer
-  rootPath: $TMPDIR/slog-buffer
-  maxBufSize: 1GB
-output:
-  type: fluentdForward
-  serialization:
-    environmentFields:
-      - host
-      - vhost
-      - app
-      - source
-    hiddenFields:
-      - task
-      - class
-      - pnum
-    rewriteFields:
-      log:
-        - type: inline
-          field: class
-        - type: unescape
-  messageMode: CompressedPackedForward
-  upstream:
-    address: localhost:24224
-    tls: true
-    secret: guess
-    maxDuration: 30m0s
+outputBufferPairs:
+  - baseconfig: null
+    name: logPipeline
+    buffer:
+      type: hybridBuffer
+      rootPath: /tmp/slog-buffer
+      maxBufSize: 1GB
+    output:
+      type: fluentdForward
+      serialization:
+        environmentFields:
+          - host
+          - vhost
+          - app
+          - source
+        hiddenFields:
+          - task
+          - class
+          - pnum
+        rewriteFields:
+          log:
+            - type: inline
+              field: class
+            - type: unescape
+      messageMode: CompressedPackedForward
+      upstream:
+        address: localhost:24224
+        tls: true
+        secret: guess
+        maxDuration: 30m0s
