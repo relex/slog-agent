@@ -32,7 +32,7 @@ type ClientWorker struct {
 
 // NewClientWorker creates ClientWorker
 func NewClientWorker(parentLogger logger.Logger, args base.ChunkConsumerArgs, metricCreator promreg.MetricCreator,
-	openConn EstablishConnectionFunc, maxDuration time.Duration) base.ChunkConsumer {
+	openConn EstablishConnectionFunc, maxDuration time.Duration, outputType string) base.ChunkConsumer {
 
 	client := &ClientWorker{
 		logger:        parentLogger,
@@ -42,7 +42,7 @@ func NewClientWorker(parentLogger logger.Logger, args base.ChunkConsumerArgs, me
 		onChunkLeft:   args.OnChunkLeftover,
 		onFinished:    args.OnFinished,
 		stopped:       channels.NewSignalAwaitable(),
-		metrics:       newClientMetrics(metricCreator),
+		metrics:       newClientMetrics(metricCreator, outputType),
 		openConn:      openConn,
 		maxDuration:   maxDuration,
 		activeSession: util.AtomicRef[clientSession]{},
