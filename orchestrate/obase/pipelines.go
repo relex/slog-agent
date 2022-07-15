@@ -65,8 +65,8 @@ func PrepareSequentialPipeline(args bconfig.PipelineArgs) PipelineStarter {
 			args.Deallocator,
 			procTracker,
 			bsupport.NewTransformsFromConfig(args.TransformConfigs, args.Schema, parentLogger, procTracker),
-			util.MapSlice(outputSettingsSlice, func(outputSettings outputWorkerSettings) bsupport.ProcessingWorkerOutputComponentSet {
-				return bsupport.ProcessingWorkerOutputComponentSet{
+			util.MapSlice(outputSettingsSlice, func(outputSettings outputWorkerSettings) bsupport.OutputInterface {
+				return bsupport.OutputInterface{
 					Serializer:  outputSettings.serializer,
 					ChunkMaker:  outputSettings.chunkMaker,
 					AcceptChunk: outputSettings.bufferer.Accept,
