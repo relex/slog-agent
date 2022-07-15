@@ -34,7 +34,7 @@ func makeBufferQueueDir(parentLogger logger.Logger, rootPath string, bufferID st
 	if derr := os.MkdirAll(path, 0755); derr != nil {
 		parentLogger.Errorf("error creating queue dir path='%s': %s", path, derr.Error())
 	}
-	if err := os.WriteFile(path+"/"+idFileName, []byte(bufferID), 0644); err != nil {
+	if err := os.WriteFile(filepath.Join(path, idFileName), []byte(bufferID), 0644); err != nil {
 		parentLogger.Errorf("error creating an id file on queue dir path='%s': %s", path, err)
 	}
 	return path
@@ -78,7 +78,7 @@ func listBufferQueueIDs(parentLogger logger.Logger, rootPath string, matchChunkI
 		}
 
 		// read ID from extended attribute
-		idBytes, idErr := os.ReadFile(path + "/" + idFileName)
+		idBytes, idErr := os.ReadFile(filepath.Join(path, idFileName))
 		if idErr != nil {
 			idBytes, idErr = xattr.Get(path, xattrBufferID)
 			if idErr != nil {
