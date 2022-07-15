@@ -9,7 +9,7 @@ import (
 	"github.com/relex/slog-agent/util"
 )
 
-type pipelineWorkerSettings struct {
+type outputWorkerSettings struct {
 	bufferer   base.ChunkBufferer
 	serializer base.LogSerializer
 	chunkMaker base.LogChunkMaker
@@ -30,8 +30,8 @@ func PrepareSequentialPipeline(args bconfig.PipelineArgs) PipelineStarter {
 	return func(parentLogger logger.Logger, metricCreator promreg.MetricCreator,
 		input <-chan []*base.LogRecord, bufferID string, outputTag string, onStopped func()) {
 
-		outputSettingsSlice := util.MapSlice(args.OutputBufferPairs, func(pair bconfig.OutputBufferConfig) pipelineWorkerSettings {
-			settings := pipelineWorkerSettings{
+		outputSettingsSlice := util.MapSlice(args.OutputBufferPairs, func(pair bconfig.OutputBufferConfig) outputWorkerSettings {
+			settings := outputWorkerSettings{
 				bufferer: pair.BufferConfig.Value.NewBufferer(parentLogger, bufferID, pair.OutputConfig.Value.MatchChunkID,
 					metricCreator, args.SendAllAtEnd),
 			}
@@ -65,7 +65,7 @@ func PrepareSequentialPipeline(args bconfig.PipelineArgs) PipelineStarter {
 			args.Deallocator,
 			procTracker,
 			bsupport.NewTransformsFromConfig(args.TransformConfigs, args.Schema, parentLogger, procTracker),
-			util.MapSlice(outputSettingsSlice, func(outputSettings pipelineWorkerSettings) bsupport.ProcessingWorkerOutputComponentSet {
+			util.MapSlice(outputSettingsSlice, func(outputSettings outputWorkerSettings) bsupport.ProcessingWorkerOutputComponentSet {
 				return bsupport.ProcessingWorkerOutputComponentSet{
 					Serializer:  outputSettings.serializer,
 					ChunkMaker:  outputSettings.chunkMaker,
@@ -74,7 +74,7 @@ func PrepareSequentialPipeline(args bconfig.PipelineArgs) PipelineStarter {
 			}),
 		)
 		procWorker.Stopped().Next(func() {
-			util.EachInSlice(outputSettingsSlice, func(_ int, settings pipelineWorkerSettings) {
+			util.EachInSlice(outputSettingsSlice, func(_ int, settings outputWorkerSettings) {
 				settings.bufferer.Destroy()
 			})
 			onStopped()
