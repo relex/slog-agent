@@ -60,7 +60,7 @@ transformations:
 
 const sampleOutputConf = `
 outputBufferPairs:
-  - name: "testPairName"
+  - name: testPairName
     buffer:
         type: hybridBuffer
         rootPath: %s

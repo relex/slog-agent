@@ -238,7 +238,7 @@ transformations:
 
 
 outputBufferPairs: 
-  - name: "logPipeline"
+  - name: logPipeline
     buffer:
       type: hybridBuffer                              # hybridBuffer is the only buffer type for now
                                                       # All chunks are kept in per-pipeline go-channel of fixed size
