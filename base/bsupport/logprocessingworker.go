@@ -14,7 +14,7 @@ type LogProcessingWorker struct {
 	deallocator   *base.LogAllocator
 	procCounter   *base.LogProcessCounter
 	transformList []base.LogTransformFunc
-	components    []ProcessingWorkerOutputComponentSet
+	outputList    []ProcessingWorkerOutputComponentSet
 	lastChunkTime time.Time
 }
 
@@ -36,7 +36,7 @@ func NewLogProcessingWorker(parentLogger logger.Logger,
 		deallocator:   deallocator,
 		procCounter:   procCounter,
 		transformList: transforms,
-		components:    components,
+		outputList:    components,
 		lastChunkTime: time.Now(),
 	}
 	worker.InitInternal(worker.onInput, worker.onTick, worker.onStop)
@@ -56,13 +56,13 @@ func (worker *LogProcessingWorker) onInput(buffer []*base.LogRecord, timeout <-c
 		}
 		icounter.CountRecordPass(record)
 
-		for _, component := range worker.components {
-			stream := component.Serializer.SerializeRecord(record)
+		for _, output := range worker.outputList {
+			stream := output.Serializer.SerializeRecord(record)
 			worker.procCounter.CountStream(stream)
-			maybeChunk := component.ChunkMaker.WriteStream(stream)
+			maybeChunk := output.ChunkMaker.WriteStream(stream)
 			if maybeChunk != nil {
 				worker.procCounter.CountChunk(maybeChunk)
-				component.AcceptChunk(*maybeChunk, timeout)
+				output.AcceptChunk(*maybeChunk, timeout)
 			}
 		}
 	}
@@ -83,11 +83,11 @@ func (worker *LogProcessingWorker) onStop(timeout <-chan time.Time) {
 }
 
 func (worker *LogProcessingWorker) flushChunk(timeout <-chan time.Time) {
-	for _, component := range worker.components {
-		maybeChunk := component.ChunkMaker.FlushBuffer()
+	for _, output := range worker.outputList {
+		maybeChunk := output.ChunkMaker.FlushBuffer()
 		if maybeChunk != nil {
 			worker.procCounter.CountChunk(maybeChunk)
-			component.AcceptChunk(*maybeChunk, timeout)
+			output.AcceptChunk(*maybeChunk, timeout)
 		}
 	}
 }
