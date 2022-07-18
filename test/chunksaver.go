@@ -12,7 +12,6 @@ import (
 	"github.com/relex/gotils/channels"
 	"github.com/relex/gotils/logger"
 	"github.com/relex/slog-agent/base"
-	"github.com/relex/slog-agent/base/bconfig"
 	"github.com/relex/slog-agent/output/fluentdforward"
 )
 
@@ -64,7 +63,7 @@ func (saver *chunkSaver) run() {
 	}
 }
 
-func openLogChunkSavers(outputPath string, outputConfig []bconfig.OutputBufferConfig) base.ChunkConsumerConstructor {
+func openLogChunkSavers(outputPath string) base.ChunkConsumerConstructor {
 	write, close := openLogChunkConsumingFunc(outputPath)
 	if write == nil {
 		return nil
