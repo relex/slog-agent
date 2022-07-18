@@ -41,13 +41,14 @@ func PrepareSequentialPipeline(args bconfig.PipelineArgs) PipelineStarter {
 
 			// then start output forwarder which is at the end of pipeline.
 			// if there are queued logs from bufferer, the consumer would immediately start sending them.
+			consumerLogger := parentLogger.WithField("output", pair.Name)
 			if args.NewConsumerOverride != nil {
-				parentLogger.Info("launch override consumer")
-				settings.consumer = args.NewConsumerOverride(parentLogger, settings.bufferer.RegisterNewConsumer())
+				consumerLogger.Info("launch override consumer")
+				settings.consumer = args.NewConsumerOverride(consumerLogger, settings.bufferer.RegisterNewConsumer())
 				settings.consumer.Start()
 			} else {
-				parentLogger.Info("launch consumer")
-				settings.consumer = pair.OutputConfig.Value.NewForwarder(parentLogger, settings.bufferer.RegisterNewConsumer(), metricCreator)
+				consumerLogger.Info("launch consumer")
+				settings.consumer = pair.OutputConfig.Value.NewForwarder(consumerLogger, settings.bufferer.RegisterNewConsumer(), metricCreator)
 				settings.consumer.Start()
 			}
 
