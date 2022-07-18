@@ -88,7 +88,7 @@ func openLogChunkConsumingFunc(outputPath string) (func(chunk base.LogChunk), fu
 	switch ext {
 	case ".json":
 		logger.Infof("open JSON file output %s", outputPath)
-		if strings.Contains("outputPath", "%s") {
+		if strings.Contains(outputPath, "%s") {
 			return func(chunk base.LogChunk) {
 				chunkFilePath := fmt.Sprintf(outputPath, chunk.ID)
 				tmp := &bytes.Buffer{}
