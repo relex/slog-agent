@@ -10,7 +10,7 @@ import (
 
 var testSchema = base.MustNewLogSchema([]string{"vhost", "app", "message", "extra", "comp"})
 
-var testAllocator = base.NewLogAllocator(testSchema)
+var testAllocator = base.NewLogAllocator(testSchema, 1)
 
 var testSerializationConfig = SerializationConfig{
 	EnvironmentFields: []string{"vhost", "app"},

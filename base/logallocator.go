@@ -2,6 +2,7 @@ package base
 
 import (
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/relex/gotils/logger"
@@ -14,10 +15,11 @@ import (
 type LogAllocator struct {
 	recordPool   *sync.Pool         // pool of *LogRecord
 	backbufPools util.BytesPoolBy2n // pools of the backing buffers of LogRecord(s), i.e. pools of raw input copies
+	outputCount  int
 }
 
 // NewLogAllocator creates LogAllocator linked to the given schema
-func NewLogAllocator(schema LogSchema) *LogAllocator {
+func NewLogAllocator(schema LogSchema, outputCount int) *LogAllocator {
 	maxFields := schema.GetMaxFields()
 	recordPool := &sync.Pool{}
 	recordPool.New = func() interface{} {
@@ -26,6 +28,7 @@ func NewLogAllocator(schema LogSchema) *LogAllocator {
 	return &LogAllocator{
 		recordPool:   recordPool,
 		backbufPools: util.NewBytesPoolBy2n(),
+		outputCount:  outputCount,
 	}
 }
 
@@ -43,7 +46,7 @@ func newLogRecord(maxFields int) *LogRecord {
 // NewRecord creates new record of empty values
 func (alloc *LogAllocator) NewRecord(input []byte) (*LogRecord, string) {
 	record := alloc.recordPool.Get().(*LogRecord)
-	record._refCount++
+	atomic.AddInt32(&record._refCount, int32(alloc.outputCount))
 	if len(input) > defs.InputLogMinMessageBytesToPool {
 		backbuf := alloc.backbufPools.Get(len(input))
 		record._backbuf = backbuf
@@ -55,9 +58,12 @@ func (alloc *LogAllocator) NewRecord(input []byte) (*LogRecord, string) {
 
 // Release releases this log record for recycling
 func (alloc *LogAllocator) Release(record *LogRecord) {
-	record._refCount--
+	atomic.AddInt32(&record._refCount, -1)
 	if record._refCount < 0 {
 		logger.Panic("negative reference count in record: ", record)
+	}
+	if record._refCount > 0 {
+		return
 	}
 	for i := range record.Fields {
 		record.Fields[i] = ""
