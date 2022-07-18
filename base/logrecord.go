@@ -11,7 +11,7 @@ type LogRecord struct {
 	Timestamp time.Time // Timestamp, might be zero until processed by a LogTransform
 	Unescaped bool      // Whether the main message field has been un-escaped. Multi-line logs start with true.
 	_backbuf  *[]byte   // Backing buffer where initial field values come from, nil if buffer pooling isn't used
-	_refCount int       // reference count, +1 for new, -1 for release (back to pool)
+	_refCount int32     // reference count, +1 for new, -1 for release (back to pool)
 }
 
 // LogFields represents named fields in LogRecord, to be used with LogSchema
