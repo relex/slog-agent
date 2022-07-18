@@ -22,19 +22,19 @@ type clientMetrics struct {
 }
 
 func newClientMetrics(metricCreator promreg.MetricCreator) clientMetrics {
-	queuedChunks := metricCreator.AddOrGetGaugeVec("output_queued_chunks", "Numbers of currently queued chunks", []string{"type"}, nil)
+	queuedChunks := metricCreator.AddOrGetGaugeVec("queued_chunks", "Numbers of currently queued chunks", []string{"type"}, nil)
 
 	metrics := clientMetrics{
 		queuedChunksLeftover:    queuedChunks.WithLabelValues("leftover"),
 		queuedChunksPendingAck:  queuedChunks.WithLabelValues("pendingAck"),
-		networkErrorsTotal:      metricCreator.AddOrGetCounter("output_network_errors_total", "Numbers of network errors", nil, nil),
-		nonNetworkErrorsTotal:   metricCreator.AddOrGetCounter("output_nonnetwork_errors_total", "Numbers of non-network errors (auth, unexpected response, etc) from upstream", nil, nil),
-		openedSessionsTotal:     metricCreator.AddOrGetCounter("output_opened_sessions_total", "Numbers of opened sessions", nil, nil),
-		forwardAttemptsTotal:    metricCreator.AddOrGetCounter("output_forward_attempts_total", "Numbers of chunk forwarding attempts", nil, nil),
-		forwardedCountTotal:     metricCreator.AddOrGetCounter("output_forwarded_chunks_total", "Numbers of forwarded chunks", nil, nil),
-		forwardedLengthTotal:    metricCreator.AddOrGetCounter("output_forwarded_chunk_bytes_total", "Total length in bytes of forwarded chunks", nil, nil),
-		acknowledgedCountTotal:  metricCreator.AddOrGetCounter("output_acknowledged_chunks_total", "Numbers of acknowledged chunks", nil, nil),
-		acknowledgedLengthTotal: metricCreator.AddOrGetCounter("output_acknowledged_chunk_bytes_total", "Total length in bytes of acknowledged chunks", nil, nil),
+		networkErrorsTotal:      metricCreator.AddOrGetCounter("network_errors_total", "Numbers of network errors", nil, nil),
+		nonNetworkErrorsTotal:   metricCreator.AddOrGetCounter("nonnetwork_errors_total", "Numbers of non-network errors (auth, unexpected response, etc) from upstream", nil, nil),
+		openedSessionsTotal:     metricCreator.AddOrGetCounter("opened_sessions_total", "Numbers of opened sessions", nil, nil),
+		forwardAttemptsTotal:    metricCreator.AddOrGetCounter("forward_attempts_total", "Numbers of chunk forwarding attempts", nil, nil),
+		forwardedCountTotal:     metricCreator.AddOrGetCounter("forwarded_chunks_total", "Numbers of forwarded chunks", nil, nil),
+		forwardedLengthTotal:    metricCreator.AddOrGetCounter("forwarded_chunk_bytes_total", "Total length in bytes of forwarded chunks", nil, nil),
+		acknowledgedCountTotal:  metricCreator.AddOrGetCounter("acknowledged_chunks_total", "Numbers of acknowledged chunks", nil, nil),
+		acknowledgedLengthTotal: metricCreator.AddOrGetCounter("acknowledged_chunk_bytes_total", "Total length in bytes of acknowledged chunks", nil, nil),
 	}
 	// reset gauges in case metricCreator is reused, e.g. 2nd orchestrator for recovery mode
 	metrics.queuedChunksLeftover.Set(0)
