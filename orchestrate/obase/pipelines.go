@@ -48,7 +48,11 @@ func PrepareSequentialPipeline(args bconfig.PipelineArgs) PipelineStarter {
 				settings.consumer.Start()
 			} else {
 				consumerLogger.Info("launch consumer")
-				settings.consumer = pair.OutputConfig.Value.NewForwarder(consumerLogger, settings.bufferer.RegisterNewConsumer(), metricCreator)
+				settings.consumer = pair.OutputConfig.Value.NewForwarder(
+					consumerLogger,
+					settings.bufferer.RegisterNewConsumer(),
+					metricCreator.AddOrGetPrefix("output_", []string{"output"}, []string{pair.Name}),
+				)
 				settings.consumer.Start()
 			}
 
