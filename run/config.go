@@ -102,14 +102,16 @@ func ParseConfigFile(filepath string) (Config, base.LogSchema, ConfigStats, erro
 		return conf, schema, stats, err
 	}
 
+	nameDuplicationCheckMap := make(map[string]struct{}, len(conf.OutputBuffersPairs))
 	for _, pair := range conf.OutputBuffersPairs {
-		if err := pair.BufferConfig.Value.VerifyConfig(); err != nil {
-			return conf, schema, stats, fmt.Errorf("buffer: %w", err)
+		if _, ok := nameDuplicationCheckMap[pair.Name]; ok {
+			return conf, schema, stats, fmt.Errorf("found duplicate outputBufferPair names in config: %s", pair.Name)
 		}
-		if err := pair.OutputConfig.Value.VerifyConfig(schema); err != nil {
-			return conf, schema, stats, fmt.Errorf("output: %w", err)
-		}
+		nameDuplicationCheckMap[pair.Name] = struct{}{}
 
+		if err := pair.VerifyConfig(schema); err != nil {
+			return conf, schema, stats, err
+		}
 	}
 
 	statsBuilder.Finish(&stats)
