@@ -11,6 +11,7 @@ import (
 	"github.com/vmihailenco/msgpack/v4"
 )
 
+// ConvertMsgpackToJSON converts msgpack (fluentd protocol) to json
 func ConvertMsgpackToJSON(chunk base.LogChunk, separator []byte, indented bool, writer io.Writer) (base.LogChunkInfo, error) {
 	reader := bytes.NewReader(chunk.Data)
 	var message forwardprotocol.Message
