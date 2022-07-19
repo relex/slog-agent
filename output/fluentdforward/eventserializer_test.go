@@ -12,7 +12,7 @@ import (
 )
 
 func TestForwardLogEventSerializer(t *testing.T) {
-	serializer, err := NewEventSerializer(logger.Root(), testSchema, testSerializationConfig, testAllocator)
+	serializer, err := NewEventSerializer(logger.Root(), testSchema, testSerializationConfig)
 	assert.Nil(t, err)
 	for i, record := range testInputRecords {
 		stream := serializer.SerializeRecord(testSchema.CopyTestRecord(record))

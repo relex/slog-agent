@@ -15,7 +15,7 @@ import (
 )
 
 func TestForwardMessageMaker(t *testing.T) {
-	serializer, err := NewEventSerializer(logger.Root(), testSchema, testSerializationConfig, testAllocator)
+	serializer, err := NewEventSerializer(logger.Root(), testSchema, testSerializationConfig)
 	assert.Nil(t, err)
 	chunkMaker := NewMessagePacker(logger.Root(), "hello", forwardprotocol.ModeCompressedPackedForward)
 	for i, record := range testInputRecords {
@@ -46,7 +46,7 @@ func TestForwardMessageMakerJoining(t *testing.T) {
 	// test records of 120 bytes each
 	inputRecords := generateMassTestLogRecords(100)
 	// generate stream parts, each should be 360 bytes
-	serializer, serr := NewEventSerializer(logger.Root(), testSchema, testSerializationConfig, testAllocator)
+	serializer, serr := NewEventSerializer(logger.Root(), testSchema, testSerializationConfig)
 	assert.Nil(t, serr)
 	oldChunkLimit := defs.OutputChunkMaxDataBytes
 	defs.OutputChunkMaxDataBytes = 3000

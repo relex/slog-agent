@@ -21,7 +21,7 @@ type LogOutputConfig interface {
 
 	MatchChunkID(chunkID string) bool
 
-	NewSerializer(parentLogger logger.Logger, schema base.LogSchema, deallocator *base.LogAllocator) base.LogSerializer
+	NewSerializer(parentLogger logger.Logger, schema base.LogSchema) base.LogSerializer
 
 	NewChunkMaker(parentLogger logger.Logger, tag string) base.LogChunkMaker
 

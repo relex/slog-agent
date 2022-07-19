@@ -20,16 +20,14 @@ type eventSerializer struct {
 	serializedFieldKeys    []msgpackBlock         // pre-serialized field keys
 	serializedEnvFieldKeys []msgpackBlock         // pre-serialized environment field keys
 	buffer                 []byte                 // use fastmsgpack+array is 2.5x faster than msgpack+bytes.Buffer due to massive inlining
-	deallocator            *base.LogAllocator
 }
 
 type msgpackBlock []byte
 
 // MustNewEventSerializer creates ForwardLogEventSerializer or panic
-func MustNewEventSerializer(parentLogger logger.Logger, schema base.LogSchema, config SerializationConfig,
-	allocator *base.LogAllocator) base.LogSerializer {
+func MustNewEventSerializer(parentLogger logger.Logger, schema base.LogSchema, config SerializationConfig) base.LogSerializer {
 
-	s, err := NewEventSerializer(parentLogger, schema, config, allocator)
+	s, err := NewEventSerializer(parentLogger, schema, config)
 	if err != nil {
 		logger.Panic("failed to create FluentdForwardEventSerializer: ", err)
 	}
@@ -39,8 +37,7 @@ func MustNewEventSerializer(parentLogger logger.Logger, schema base.LogSchema, c
 // NewEventSerializer creates a LogSerializer to serialize log records into fluentd's MessagePackEventStream (as ForwardMessage.Entries)
 // MessagePackEventStream is a sequence of log records in msgpack format: [timestamp, map of fields]
 // "environment" map is nested inside the map of fields
-func NewEventSerializer(parentLogger logger.Logger, schema base.LogSchema, config SerializationConfig,
-	deallocator *base.LogAllocator) (base.LogSerializer, error) {
+func NewEventSerializer(parentLogger logger.Logger, schema base.LogSchema, config SerializationConfig) (base.LogSerializer, error) {
 
 	fieldNames := schema.GetFieldNames()
 
@@ -80,14 +77,12 @@ func NewEventSerializer(parentLogger logger.Logger, schema base.LogSchema, confi
 		serializedFieldKeys:    preSerializeStrings(fieldNames),
 		serializedEnvFieldKeys: preSerializeStrings(config.EnvironmentFields),
 		buffer:                 make([]byte, 2*defs.InputLogMaxMessageBytes),
-		deallocator:            deallocator,
 	}, nil
 }
 
 // SerializeRecord serializes log records into streams
 func (packer *eventSerializer) SerializeRecord(record *base.LogRecord) base.LogStream {
 	len := packer.encodeRecord(record, packer.buffer)
-	packer.deallocator.Release(record)
 	return packer.buffer[:len]
 }
 
