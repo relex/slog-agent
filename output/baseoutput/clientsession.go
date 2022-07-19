@@ -29,8 +29,10 @@ type clientSession struct {
 	unacked      atomic.Value              // *[]base.LogChunk, un-ACK'ed chunks set when acknowledger quits (to be resent in next session)
 }
 
-type reconnectPolicy string
-type acknowledgerEnding string
+type (
+	reconnectPolicy    string
+	acknowledgerEnding string
+)
 
 const (
 	reconnectWithDelay reconnectPolicy    = "reconnectWithDelay"

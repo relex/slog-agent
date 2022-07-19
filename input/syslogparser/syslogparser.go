@@ -40,8 +40,8 @@ type syslogParser struct {
 
 // MustNewParser creates a new syslogParser or panic
 func MustNewParser(parentLogger logger.Logger, allocator *base.LogAllocator, schema base.LogSchema,
-	levelMapping []string, inputCounter *base.LogInputCounter) base.LogParser {
-
+	levelMapping []string, inputCounter *base.LogInputCounter,
+) base.LogParser {
 	parser, err := NewParser(parentLogger, allocator, schema, levelMapping, inputCounter)
 	if err != nil {
 		parentLogger.Panic("failed to create SyslogParser: ", err)
@@ -52,8 +52,8 @@ func MustNewParser(parentLogger logger.Logger, allocator *base.LogAllocator, sch
 
 // NewParser creates a new syslogParser
 func NewParser(parentLogger logger.Logger, allocator *base.LogAllocator, schema base.LogSchema,
-	levelMapping []string, inputCounter *base.LogInputCounter) (base.LogParser, error) {
-
+	levelMapping []string, inputCounter *base.LogInputCounter,
+) (base.LogParser, error) {
 	if len(levelMapping) == 0 {
 		levelMapping = syslogprotocol.SeverityNames
 	} else if len(levelMapping) != 8 {

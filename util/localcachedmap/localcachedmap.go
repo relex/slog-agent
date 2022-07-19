@@ -34,7 +34,6 @@ func NewGlobalMap[G any, L any](
 	delete GlobalObjectDestructor[G],
 	wrap LocalWrapperConstructor[G, L],
 ) *GlobalCachedMap[G, L] {
-
 	return &GlobalCachedMap[G, L]{
 		globalMap:     make(map[string]G, 2000),
 		globalMutex:   &sync.Mutex{},
