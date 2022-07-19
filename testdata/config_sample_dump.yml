@@ -144,8 +144,7 @@ transformations:
         keys:
           - time
 outputBufferPairs:
-  - baseconfig: null
-    name: logPipeline
+  - name: logPipeline
     buffer:
       type: hybridBuffer
       rootPath: /tmp/slog-buffer
