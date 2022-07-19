@@ -15,7 +15,7 @@ import (
 type LogAllocator struct {
 	recordPool   *sync.Pool         // pool of *LogRecord
 	backbufPools util.BytesPoolBy2n // pools of the backing buffers of LogRecord(s), i.e. pools of raw input copies
-	outputCount  int
+	outputCount  int                // the amount of outputs and consecutively initial refcount
 }
 
 // NewLogAllocator creates LogAllocator linked to the given schema
