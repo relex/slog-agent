@@ -31,9 +31,15 @@ func PrepareSequentialPipeline(args bconfig.PipelineArgs) PipelineStarter {
 		input <-chan []*base.LogRecord, bufferID string, outputTag string, onStopped func()) {
 
 		outputSettingsSlice := util.MapSlice(args.OutputBufferPairs, func(pair bconfig.OutputBufferConfig) outputWorkerSettings {
+			consumerLogger := parentLogger.WithField("output", pair.Name)
+
 			settings := outputWorkerSettings{
-				bufferer: pair.BufferConfig.Value.NewBufferer(parentLogger, bufferID, pair.OutputConfig.Value.MatchChunkID,
-					metricCreator, args.SendAllAtEnd),
+				bufferer: pair.BufferConfig.Value.NewBufferer(
+					consumerLogger,
+					bufferID,
+					pair.OutputConfig.Value.MatchChunkID,
+					metricCreator.AddOrGetPrefix("buffer_", []string{"output"}, []string{pair.Name}),
+					args.SendAllAtEnd),
 			}
 
 			// bufferer in the middle of pipeline has to be started first and shut down last for persistance of pending outputs
@@ -41,7 +47,7 @@ func PrepareSequentialPipeline(args bconfig.PipelineArgs) PipelineStarter {
 
 			// then start output forwarder which is at the end of pipeline.
 			// if there are queued logs from bufferer, the consumer would immediately start sending them.
-			consumerLogger := parentLogger.WithField("output", pair.Name)
+
 			if args.NewConsumerOverride != nil {
 				consumerLogger.Info("launch override consumer")
 				settings.consumer = args.NewConsumerOverride(consumerLogger, settings.bufferer.RegisterNewConsumer())
@@ -56,8 +62,8 @@ func PrepareSequentialPipeline(args bconfig.PipelineArgs) PipelineStarter {
 				settings.consumer.Start()
 			}
 
-			settings.serializer = pair.OutputConfig.Value.NewSerializer(parentLogger, args.Schema)
-			settings.chunkMaker = pair.OutputConfig.Value.NewChunkMaker(parentLogger, outputTag)
+			settings.serializer = pair.OutputConfig.Value.NewSerializer(consumerLogger, args.Schema)
+			settings.chunkMaker = pair.OutputConfig.Value.NewChunkMaker(consumerLogger, outputTag)
 
 			return settings
 		})
