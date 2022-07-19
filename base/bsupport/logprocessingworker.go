@@ -18,6 +18,7 @@ type LogProcessingWorker struct {
 	lastChunkTime time.Time
 }
 
+// OutputInterface is a joint interface of output components
 type OutputInterface struct {
 	base.LogSerializer
 	base.LogChunkMaker
