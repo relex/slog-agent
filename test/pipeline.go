@@ -27,7 +27,7 @@ func preparePipeline(configFile string, tagOverride string, metricCreator promre
 	}
 
 	inputConfig := conf.Inputs[0].Value // we support only one input for testing
-	allocator := base.NewLogAllocator(schema, 1)
+	allocator := base.NewLogAllocator(schema, len(conf.OutputBuffersPairs))
 	inputCounter := base.NewLogInputCounter(metricCreator.AddOrGetPrefix("input_", nil, nil))
 
 	parser, perr := inputConfig.NewParser(logger.Root(), allocator, schema, inputCounter)
@@ -37,7 +37,7 @@ func preparePipeline(configFile string, tagOverride string, metricCreator promre
 
 	procCounter := base.NewLogProcessCounter(metricCreator.AddOrGetPrefix("process_", nil, nil), schema, schema.MustCreateFieldLocators(conf.MetricKeys))
 	transforms := bsupport.NewTransformsFromConfig(conf.Transformations, schema, logger.Root(), procCounter)
-	serializer := conf.OutputBuffersPairs[0].OutputConfig.Value.NewSerializer(logger.Root(), schema, allocator)
+	serializer := conf.OutputBuffersPairs[0].OutputConfig.Value.NewSerializer(logger.Root(), schema)
 	chunkMaker := conf.OutputBuffersPairs[0].OutputConfig.Value.NewChunkMaker(logger.Root(), tagOverride)
 
 	now := time.Now() // fallback timestamp

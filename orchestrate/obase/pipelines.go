@@ -56,7 +56,7 @@ func PrepareSequentialPipeline(args bconfig.PipelineArgs) PipelineStarter {
 				settings.consumer.Start()
 			}
 
-			settings.serializer = pair.OutputConfig.Value.NewSerializer(parentLogger, args.Schema, args.Deallocator)
+			settings.serializer = pair.OutputConfig.Value.NewSerializer(parentLogger, args.Schema)
 			settings.chunkMaker = pair.OutputConfig.Value.NewChunkMaker(parentLogger, outputTag)
 
 			return settings

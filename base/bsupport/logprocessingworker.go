@@ -58,6 +58,7 @@ func (worker *LogProcessingWorker) onInput(buffer []*base.LogRecord, timeout <-c
 
 		for _, output := range worker.outputList {
 			stream := output.SerializeRecord(record)
+			worker.deallocator.Release(record)
 			worker.procCounter.CountStream(stream)
 			maybeChunk := output.WriteStream(stream)
 			if maybeChunk != nil {

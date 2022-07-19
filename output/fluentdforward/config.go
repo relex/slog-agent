@@ -43,8 +43,8 @@ func (cfg *Config) MatchChunkID(chunkID string) bool {
 }
 
 // NewSerializer creates LogSerializer
-func (cfg *Config) NewSerializer(parentLogger logger.Logger, schema base.LogSchema, deallocator *base.LogAllocator) base.LogSerializer {
-	return MustNewEventSerializer(parentLogger, schema, cfg.Serialization, deallocator)
+func (cfg *Config) NewSerializer(parentLogger logger.Logger, schema base.LogSchema) base.LogSerializer {
+	return MustNewEventSerializer(parentLogger, schema, cfg.Serialization)
 }
 
 // NewChunkMaker creates LogChunkMaker
