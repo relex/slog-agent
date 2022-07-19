@@ -1,11 +1,11 @@
 testagent_input_passed_record_bytes_total{protocol="syslog"} 135311
 testagent_input_passed_records_total{protocol="syslog"} 24
-testagent_process_buffer_consumed_chunks_total{key_host="basic-1",orchestrator="byKeySet",storage="hybridBuffer"} 1
-testagent_process_buffer_consumed_chunks_total{key_host="basic-2",orchestrator="byKeySet",storage="hybridBuffer"} 1
-testagent_process_buffer_consumed_chunks_total{key_host="errors",orchestrator="byKeySet",storage="hybridBuffer"} 1
-testagent_process_buffer_input_chunks_total{key_host="basic-1",orchestrator="byKeySet",state="transient",storage="hybridBuffer"} 1
-testagent_process_buffer_input_chunks_total{key_host="basic-2",orchestrator="byKeySet",state="transient",storage="hybridBuffer"} 1
-testagent_process_buffer_input_chunks_total{key_host="errors",orchestrator="byKeySet",state="transient",storage="hybridBuffer"} 1
+testagent_process_buffer_consumed_chunks_total{key_host="basic-1",orchestrator="byKeySet",output="logPipeline",storage="hybridBuffer"} 1
+testagent_process_buffer_consumed_chunks_total{key_host="basic-2",orchestrator="byKeySet",output="logPipeline",storage="hybridBuffer"} 1
+testagent_process_buffer_consumed_chunks_total{key_host="errors",orchestrator="byKeySet",output="logPipeline",storage="hybridBuffer"} 1
+testagent_process_buffer_input_chunks_total{key_host="basic-1",orchestrator="byKeySet",output="logPipeline",state="transient",storage="hybridBuffer"} 1
+testagent_process_buffer_input_chunks_total{key_host="basic-2",orchestrator="byKeySet",output="logPipeline",state="transient",storage="hybridBuffer"} 1
+testagent_process_buffer_input_chunks_total{key_host="errors",orchestrator="byKeySet",output="logPipeline",state="transient",storage="hybridBuffer"} 1
 testagent_process_chunk_bytes_total{key_host="basic-1",orchestrator="byKeySet"} 475
 testagent_process_chunk_bytes_total{key_host="basic-2",orchestrator="byKeySet"} 1660
 testagent_process_chunk_bytes_total{key_host="errors",orchestrator="byKeySet"} 14808

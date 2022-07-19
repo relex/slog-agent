@@ -27,7 +27,7 @@ func TestBufferer(t *testing.T) {
 	}
 	defs.BufferMaxNumChunksInQueue = 100
 	defs.BufferMaxNumChunksInMemory = 5
-	mfactory := promreg.NewMetricFactory("testbuf_", nil, nil)
+	mfactory := promreg.NewMetricFactory("testbuf_buffer_", nil, nil)
 	buf := newBufferer(logger.Root(), root, "b1", testMatchChunkID, mfactory, 1048576, false).(*bufferer)
 	buf.Start()
 	dir := buf.QueueDirPath()
@@ -112,7 +112,7 @@ func TestBuffererShutdown(t *testing.T) {
 	}
 	defs.BufferMaxNumChunksInQueue = 100
 	defs.BufferMaxNumChunksInMemory = 5
-	mfactory := promreg.NewMetricFactory("testbuf_shutdown_", nil, nil)
+	mfactory := promreg.NewMetricFactory("testbuf_shutdown_buffer_", nil, nil)
 	buf := newBufferer(logger.Root(), root, "b2", testMatchChunkID, mfactory, 1048576, false).(*bufferer)
 	buf.Start()
 	dir := buf.QueueDirPath()
@@ -145,8 +145,8 @@ testbuf_shutdown_buffer_persistent_chunks{storage="hybridBuffer"} 50
 `, regexp.MustCompile(`testbuf_shutdown_buffer_.*state=.*\n`).ReplaceAllString(promext.DumpMetrics("", true, false, mfactory), ""))
 
 	assert.Equal(t, uint64(50),
-		mfactory.AddOrGetCounter("buffer_input_chunks_total", "", []string{"state", "storage"}, []string{"persistent", "hybridBuffer"}).Get()+
-			mfactory.AddOrGetCounter("buffer_input_chunks_total", "", []string{"state", "storage"}, []string{"transient", "hybridBuffer"}).Get(),
+		mfactory.AddOrGetCounter("input_chunks_total", "", []string{"state", "storage"}, []string{"persistent", "hybridBuffer"}).Get()+
+			mfactory.AddOrGetCounter("input_chunks_total", "", []string{"state", "storage"}, []string{"transient", "hybridBuffer"}).Get(),
 	)
 }
 
@@ -157,7 +157,7 @@ func TestBuffererSendAllAtEnd(t *testing.T) {
 	}
 	defs.BufferMaxNumChunksInQueue = 100
 	defs.BufferMaxNumChunksInMemory = 5
-	mfactory := promreg.NewMetricFactory("testbuf_sendall_", nil, nil)
+	mfactory := promreg.NewMetricFactory("testbuf_sendall_buffer_", nil, nil)
 	buf := newBufferer(logger.Root(), root, "b3", testMatchChunkID, mfactory, 1048576, true).(*bufferer)
 	buf.Start()
 	dir := buf.QueueDirPath()
@@ -218,8 +218,8 @@ testbuf_sendall_buffer_persistent_chunks{storage="hybridBuffer"} 0
 `, regexp.MustCompile(`testbuf_sendall_buffer_.*state=.*\n`).ReplaceAllString(promext.DumpMetrics("", true, false, mfactory), ""))
 
 	assert.Equal(t, uint64(50),
-		mfactory.AddOrGetCounter("buffer_input_chunks_total", "", []string{"state", "storage"}, []string{"persistent", "hybridBuffer"}).Get()+
-			mfactory.AddOrGetCounter("buffer_input_chunks_total", "", []string{"state", "storage"}, []string{"transient", "hybridBuffer"}).Get(),
+		mfactory.AddOrGetCounter("input_chunks_total", "", []string{"state", "storage"}, []string{"persistent", "hybridBuffer"}).Get()+
+			mfactory.AddOrGetCounter("input_chunks_total", "", []string{"state", "storage"}, []string{"transient", "hybridBuffer"}).Get(),
 	)
 }
 
@@ -231,7 +231,7 @@ func TestBuffererSpaceLimit(t *testing.T) {
 	defs.BufferMaxNumChunksInQueue = 100
 	defs.BufferMaxNumChunksInMemory = 0          // force all chunks to be persisted
 	defs.BufferShutDownTimeout = 1 * time.Second // quick shutdown in case of unread chunks
-	mfactory := promreg.NewMetricFactory("testbuf_space_", nil, nil)
+	mfactory := promreg.NewMetricFactory("testbuf_space_buffer_", nil, nil)
 	buf := newBufferer(logger.Root(), root, "bspace", testMatchChunkID, mfactory, 100, true).(*bufferer)
 	buf.Start()
 	dir := buf.QueueDirPath()
