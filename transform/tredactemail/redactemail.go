@@ -6,8 +6,10 @@ import (
 	"github.com/relex/slog-agent/util"
 )
 
-var validAddressChars = make([]bool, 256)
-var validWordChars = make([]bool, 256)
+var (
+	validAddressChars = make([]bool, 256)
+	validWordChars    = make([]bool, 256)
+)
 
 func init() {
 	for c := byte('A'); c <= byte('Z'); c++ {

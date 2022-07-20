@@ -6,7 +6,6 @@ package base
 //
 // The only production implementations are Orchestrator(s)
 type MultiSinkBufferReceiver interface {
-
 	// NewSink creates a sink to receive logs from the input identified by the given id
 	//
 	// clientAddress is a descriptive string of address, e.g. "10.1.0.1:50001"
@@ -17,7 +16,6 @@ type MultiSinkBufferReceiver interface {
 
 // BufferReceiverSink under MultiSinkBufferReceiver receives buffered logs from a single source, e.g. a client TCP connection
 type BufferReceiverSink interface {
-
 	// Accept receives a buffer of log records from input
 	//
 	// The buffer is NOT usable after the function exits

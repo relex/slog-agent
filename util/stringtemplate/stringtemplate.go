@@ -40,9 +40,11 @@ var partRegex = regexp.MustCompile(`(\$\w+|\$\{\w+[^}]*\}|[^$]+)`)
 // variableExpressionRegex supports simple substring inside "${VARIABLE}", for example "name[-5:]"
 var variableExpressionRegex = regexp.MustCompile(`^(?P<name>\w+)(\[(?P<start>-?[0-9]+)?:(?P<end>-?[0-9]+)?\])?$`)
 
-var capturedNameIndex int
-var capturedStartIndex int
-var capturedEndIndex int
+var (
+	capturedNameIndex  int
+	capturedStartIndex int
+	capturedEndIndex   int
+)
 
 func init() {
 	capturedNameIndex = variableExpressionRegex.SubexpIndex("name")
