@@ -33,8 +33,7 @@ type logParsingReceiverSink struct {
 //
 // Actual parsers are created on demand for each of connections
 func NewLogParsingReceiver(parentLogger logger.Logger, createParser LogParserConstructor, nextReceiver base.MultiSinkBufferReceiver,
-	metricCreator promreg.MetricCreator,
-) base.MultiSinkMessageReceiver {
+	metricCreator promreg.MetricCreator) base.MultiSinkMessageReceiver {
 	return &logParsingReceiver{
 		logger:         parentLogger.WithField(defs.LabelComponent, "LogParsingReceiver"),
 		createParser:   createParser,

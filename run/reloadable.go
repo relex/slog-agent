@@ -54,7 +54,7 @@ func NewReloadableOrchestrator(downstream base.Orchestrator, initiateReload Init
 	}
 
 	// listen to signal: unbuffered since we want to discard any new SIGHUPs while reloading
-	c := make(chan os.Signal, 1)
+	c := make(chan os.Signal, 1) //nolint:govet
 	signal.Notify(c, syscall.SIGHUP)
 	go func() {
 		for {
@@ -70,6 +70,7 @@ func NewReloadableOrchestrator(downstream base.Orchestrator, initiateReload Init
 
 // NewSink creates a new reloadable sink for an input source (e.g. incoming TCP connection)
 func (orc *ReloadableOrchestrator) NewSink(clientAddress string, clientNumber base.ClientNumber) base.BufferReceiverSink {
+
 	newDownstream := orc.downstream.NewSink(clientAddress, clientNumber)
 
 	lockT := orc.downstreamMutex.RLock() // only read-lock since we assume clientNumber is unique and nobody else is accessing it

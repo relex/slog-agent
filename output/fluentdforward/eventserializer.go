@@ -26,6 +26,7 @@ type msgpackBlock []byte
 
 // MustNewEventSerializer creates ForwardLogEventSerializer or panic
 func MustNewEventSerializer(parentLogger logger.Logger, schema base.LogSchema, config SerializationConfig) base.LogSerializer {
+
 	s, err := NewEventSerializer(parentLogger, schema, config)
 	if err != nil {
 		logger.Panic("failed to create FluentdForwardEventSerializer: ", err)
@@ -37,6 +38,7 @@ func MustNewEventSerializer(parentLogger logger.Logger, schema base.LogSchema, c
 // MessagePackEventStream is a sequence of log records in msgpack format: [timestamp, map of fields]
 // "environment" map is nested inside the map of fields
 func NewEventSerializer(parentLogger logger.Logger, schema base.LogSchema, config SerializationConfig) (base.LogSerializer, error) {
+
 	fieldNames := schema.GetFieldNames()
 
 	envFieldLocators := make([]base.LogFieldLocator, len(config.EnvironmentFields))

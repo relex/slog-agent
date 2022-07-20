@@ -8,7 +8,7 @@ import (
 
 // LogOutput is split into
 //   1. LogSerializer: serialize log records one by one
-//   2. LogChunkMaker: aggregate serialized records into chunks ready for persistence or transport
+//   2. LogChunkMaker: aggregate serialized records into chunks ready for persistance or transport
 //   3. ChunkConsumer: save or forward chunks to somewhere
 //
 // A ChunkBufferer is inserted between one or more LogChunkMaker(s) and one ChunkConsumer to support e.g. on-disk buffering

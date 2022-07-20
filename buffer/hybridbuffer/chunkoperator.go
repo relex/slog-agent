@@ -27,8 +27,8 @@ type chunkOperatorMetrics struct {
 }
 
 func newChunkOperator(parentLogger logger.Logger, path string, matchID func(string) bool, metricCreator promreg.MetricCreator,
-	spaceLimit int64,
-) chunkOperator {
+	spaceLimit int64) chunkOperator {
+
 	ologger := parentLogger
 
 	metrics := chunkOperatorMetrics{
@@ -160,7 +160,7 @@ func (op *chunkOperator) UnloadChunk(chunkRef *base.LogChunk) bool {
 		return false
 	}
 
-	if werr := util.WriteFileAt(op.maybeDir, chunkRef.ID, chunkRef.Data, 0o644); werr != nil {
+	if werr := util.WriteFileAt(op.maybeDir, chunkRef.ID, chunkRef.Data, 0644); werr != nil {
 		op.metrics.ioErrorsTotal.Inc()
 		op.logger.Errorf("error writing chunk id=%s: %s", chunkRef.ID, werr.Error())
 		return false

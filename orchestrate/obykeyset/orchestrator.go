@@ -40,8 +40,8 @@ type byKeySetOrchestratorSink struct {
 
 // NewOrchestrator creates an Orchestrator to distribute logs to different pipelines by unique combinations of key labels (key set)
 func NewOrchestrator(parentLogger logger.Logger, schema base.LogSchema, keyFields []string, tagTemplate string,
-	metricCreator promreg.MetricCreator, startPipeline obase.PipelineStarter, initialPipelineIDs []string,
-) base.Orchestrator {
+	metricCreator promreg.MetricCreator, startPipeline obase.PipelineStarter, initialPipelineIDs []string) base.Orchestrator {
+
 	ologger := parentLogger.WithField(defs.LabelComponent, "ByKeySetOrchestrator")
 
 	keyLocators, lerr := schema.CreateFieldLocators(keyFields)

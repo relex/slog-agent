@@ -15,6 +15,7 @@ type EstablishConnectionFunc func() (ClosableClientConnection, error)
 // It must support full-duplex or desynchronized input and output to allow pipelining, i.e. send next chunks without
 // waiting for the current chunk to be acknowledged.
 type ClientConnection interface {
+
 	// Logger returns the logger bound to this connection
 	Logger() logger.Logger
 

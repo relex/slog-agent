@@ -23,8 +23,7 @@ type outputFeeder struct {
 }
 
 func newOutputFeeder(parentLogger logger.Logger, chunkMan chunkManager,
-	inputChannel <-chan base.LogChunk, inputClosed channels.Awaitable, metrics bufferMetrics,
-) outputFeeder {
+	inputChannel <-chan base.LogChunk, inputClosed channels.Awaitable, metrics bufferMetrics) outputFeeder {
 	flogger := parentLogger.WithField(defs.LabelPart, "OutputFeeder")
 	return outputFeeder{
 		logger:          flogger,

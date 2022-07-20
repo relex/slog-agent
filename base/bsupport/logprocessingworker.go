@@ -28,8 +28,7 @@ type OutputInterface struct {
 // NewLogProcessingWorker creates LogProcessingWorker
 func NewLogProcessingWorker(parentLogger logger.Logger,
 	input <-chan []*base.LogRecord, deallocator *base.LogAllocator, procCounter *base.LogProcessCounter,
-	transforms []base.LogTransformFunc, components []OutputInterface,
-) *LogProcessingWorker {
+	transforms []base.LogTransformFunc, components []OutputInterface) *LogProcessingWorker {
 	worker := &LogProcessingWorker{
 		PipelineWorkerBase: NewPipelineWorkerBase(
 			parentLogger.WithField(defs.LabelComponent, "LogProcessingWorker"),

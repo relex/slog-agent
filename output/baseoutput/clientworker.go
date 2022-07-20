@@ -32,8 +32,8 @@ type ClientWorker struct {
 
 // NewClientWorker creates ClientWorker
 func NewClientWorker(parentLogger logger.Logger, args base.ChunkConsumerArgs, metricCreator promreg.MetricCreator,
-	openConn EstablishConnectionFunc, maxDuration time.Duration,
-) base.ChunkConsumer {
+	openConn EstablishConnectionFunc, maxDuration time.Duration) base.ChunkConsumer {
+
 	client := &ClientWorker{
 		logger:        parentLogger,
 		inputChannel:  args.InputChannel,
@@ -117,6 +117,7 @@ func (client *ClientWorker) run() {
 }
 
 func (client *ClientWorker) runSession(leftovers chan base.LogChunk) (chan base.LogChunk, reconnectPolicy) {
+
 	// open the connection in the background so we can abort anytime by signal
 	connCh := make(chan ClosableClientConnection)
 	go func() {

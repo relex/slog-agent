@@ -65,7 +65,7 @@ Inside pipelines:
 
     LogProcessingWorker (per pipeline)                      ChunkBufferer            ChunkConsumer
     ----------------------------------------------------    --------------------     ---------------
- => (keySet 1) transform => serialize => compress/pack   => buffer / persistence  => forward & retry
+ => (keySet 1) transform => serialize => compress/pack   => buffer / persistance  => forward & retry
  => (keySet 2) ...
 
 ```

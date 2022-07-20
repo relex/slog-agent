@@ -21,8 +21,7 @@ func RunTransforms(record *base.LogRecord, transforms []base.LogTransformFunc) b
 
 // NewTransformsFromConfig creates transforms from a list of transform configurations
 func NewTransformsFromConfig(transformConfigs []bconfig.LogTransformConfigHolder, schema base.LogSchema,
-	parentLogger logger.Logger, customCounterHost base.LogCustomCounterRegistry,
-) []base.LogTransformFunc {
+	parentLogger logger.Logger, customCounterHost base.LogCustomCounterRegistry) []base.LogTransformFunc {
 	transforms := make([]base.LogTransformFunc, len(transformConfigs))
 	for i, tc := range transformConfigs {
 		tlogger := parentLogger.WithFields(logger.Fields{

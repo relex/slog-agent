@@ -22,8 +22,8 @@ type Config struct {
 
 // ListBufferIDs lists existing buffer IDs
 func (cfg *Config) ListBufferIDs(parentLogger logger.Logger, matchChunkID func(string) bool,
-	metricCreator promreg.MetricCreator,
-) []string {
+	metricCreator promreg.MetricCreator) []string {
+
 	clogger := parentLogger.WithField(defs.LabelComponent, "HybridBufferConfig")
 
 	rootPath := os.ExpandEnv(cfg.RootPath)
@@ -33,8 +33,8 @@ func (cfg *Config) ListBufferIDs(parentLogger logger.Logger, matchChunkID func(s
 // NewBufferer creates a HybridBufferer
 // If bufferID is empty, the queue dir is the root dir as defined in .path
 func (cfg *Config) NewBufferer(parentLogger logger.Logger, bufferID string, matchChunkID func(string) bool,
-	metricCreator promreg.MetricCreator, sendAllAtEnd bool,
-) base.ChunkBufferer {
+	metricCreator promreg.MetricCreator, sendAllAtEnd bool) base.ChunkBufferer {
+
 	rootPath := os.ExpandEnv(cfg.RootPath)
 	if strings.Contains(rootPath, "$") {
 		parentLogger.Warnf("possibly misconfigured .rootPath: '%s'", rootPath)

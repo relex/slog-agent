@@ -16,6 +16,7 @@ import (
 //
 // TODO: remove interface and call Reloader direcrly after it's proved stable
 type loaderIface interface {
+
 	// StartOrchestrator launches an Orchestrator in background and returns it
 	StartOrchestrator(ologger logger.Logger) base.Orchestrator
 

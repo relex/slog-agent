@@ -25,6 +25,7 @@ const MaxClientNumber ClientNumber = 262144
 //
 // The only production implementation is LogParsingReceiver
 type MultiSinkMessageReceiver interface {
+
 	// NewSink creates a sink to receive raw messages from the input source identified by the given id or client number
 	//
 	// clientAddress is a descriptive string of address, e.g. "10.1.0.1:50001"
@@ -35,6 +36,7 @@ type MultiSinkMessageReceiver interface {
 
 // MessageReceiverSink receives raw log messages from a single source, e.g. a client TCP connection
 type MessageReceiverSink interface {
+
 	// Accept receives a raw message from input
 	//
 	// The message slice is NOT usable after the function exits

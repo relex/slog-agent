@@ -3,6 +3,7 @@ package base
 // LogTransform filters and/or transforms logs one by one
 // May have persistent states
 type LogTransform interface {
+
 	// Transform transforms the given record and returns PASS or DROP in addition to the new log record
 	// The returned record may share children with the input, modified in-place.
 	// The input record shall not be used afterwards

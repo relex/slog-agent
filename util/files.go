@@ -14,7 +14,7 @@ func ListFiles(directoryOrFilePattern string) ([]string, error) {
 	if gerr != nil {
 		return nil, gerr
 	}
-	pathList := make([]string, 0, len(inputList)*2+10)
+	var pathList = make([]string, 0, len(inputList)*2+10)
 	for _, input := range inputList {
 		stat, serr := os.Stat(input)
 		if serr != nil {
@@ -37,7 +37,7 @@ func ListFiles(directoryOrFilePattern string) ([]string, error) {
 
 // ReadFileAt reads full contents of a file in given directory
 func ReadFileAt(dir *os.File, filename string) ([]byte, error) {
-	fd, oerr := unix.Openat(int(dir.Fd()), filename, unix.O_RDONLY, 0o644)
+	fd, oerr := unix.Openat(int(dir.Fd()), filename, unix.O_RDONLY, 0644)
 	if oerr != nil {
 		return nil, oerr
 	}
