@@ -76,11 +76,10 @@ func NewLoaderFromConfigFile(filepath string, metricPrefix string) (*Loader, err
 
 		PipelineArgs: bconfig.PipelineArgs{
 			Schema:              schema,
-			Deallocator:         base.NewLogAllocator(schema),
+			Deallocator:         base.NewLogAllocator(schema, len(config.OutputBuffersPairs)),
 			MetricKeyLocators:   schema.MustCreateFieldLocators(config.MetricKeys), // should have been verified in config parsing
 			TransformConfigs:    config.Transformations,
-			BufferConfig:        config.Buffer.Value,
-			OutputConfig:        config.Output.Value,
+			OutputBufferPairs:   config.OutputBuffersPairs,
 			NewConsumerOverride: nil,
 			SendAllAtEnd:        false,
 		},

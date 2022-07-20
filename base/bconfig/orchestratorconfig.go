@@ -28,9 +28,8 @@ type PipelineArgs struct {
 	Schema              base.LogSchema
 	Deallocator         *base.LogAllocator
 	MetricKeyLocators   []base.LogFieldLocator
-	TransformConfigs    []LogTransformConfigHolder    // Verified config list of transforms
-	BufferConfig        ChunkBufferConfig             // Verified buffer config
-	OutputConfig        LogOutputConfig               // Verified output config
+	TransformConfigs    []LogTransformConfigHolder // Verified config list of transforms
+	OutputBufferPairs   []OutputBufferConfig
 	NewConsumerOverride base.ChunkConsumerConstructor // nil or override ChunkConsumer (ex: forwarder) for test
 	SendAllAtEnd        bool                          // send all chunks to ChunkConsumer until consumed for test
 }

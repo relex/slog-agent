@@ -12,7 +12,7 @@ import (
 	"github.com/relex/gotils/channels"
 	"github.com/relex/gotils/logger"
 	"github.com/relex/slog-agent/base"
-	"github.com/relex/slog-agent/base/bconfig"
+	"github.com/relex/slog-agent/output/fluentdforward"
 )
 
 type chunkSaver struct {
@@ -63,8 +63,8 @@ func (saver *chunkSaver) run() {
 	}
 }
 
-func openLogChunkSaver(outputPath string, outputConfig bconfig.LogOutputConfig) base.ChunkConsumerConstructor {
-	write, close := openLogChunkConsumingFunc(outputPath, outputConfig)
+func openLogChunkSavers(outputPath string) base.ChunkConsumerConstructor {
+	write, close := openLogChunkConsumingFunc(outputPath)
 	if write == nil {
 		return nil
 	}
@@ -73,25 +73,27 @@ func openLogChunkSaver(outputPath string, outputConfig bconfig.LogOutputConfig) 
 	}
 }
 
-func openLogChunkConsumingFunc(outputPath string, outputConfig bconfig.LogOutputConfig) (func(chunk base.LogChunk), func()) {
+func openLogChunkConsumingFunc(outputPath string) (func(chunk base.LogChunk), func()) {
 	if outputPath == "" {
 		logger.Infof("open default output")
 		return nil, nil
 	}
+
 	if outputPath == "null" {
 		logger.Infof("open chunk null output")
 		return func(chunk base.LogChunk) {}, func() {}
 	}
+
 	ext := strings.ToLower(path.Ext(outputPath))
 	switch ext {
 	case ".json":
 		logger.Infof("open JSON file output %s", outputPath)
-		if strings.Contains("outputPath", "%s") {
+		if strings.Contains(outputPath, "%s") {
 			return func(chunk base.LogChunk) {
 				chunkFilePath := fmt.Sprintf(outputPath, chunk.ID)
 				tmp := &bytes.Buffer{}
 				tmp.WriteString("[\n")
-				if _, err := outputConfig.DumpRecordsAsJSON(chunk, []byte(",\n"), true, tmp); err != nil {
+				if _, err := fluentdforward.ConvertMsgpackToJSON(chunk, []byte(",\n"), true, tmp); err != nil {
 					logger.Panicf("error dumping records: %s", err.Error())
 				}
 				tmp.WriteString("\n]\n")
@@ -109,7 +111,7 @@ func openLogChunkConsumingFunc(outputPath string, outputConfig bconfig.LogOutput
 			logger.Panicf("error writing to %s: %s", outputPath, ferr.Error())
 		}
 		return func(chunk base.LogChunk) {
-				_, err := outputConfig.DumpRecordsAsJSON(chunk, []byte(",\n"), true, buffer)
+				_, err := fluentdforward.ConvertMsgpackToJSON(chunk, []byte(",\n"), true, buffer)
 				if err != nil {
 					logger.Panicf("error writing to %s: %s", outputPath, err.Error())
 				}
@@ -124,42 +126,17 @@ func openLogChunkConsumingFunc(outputPath string, outputConfig bconfig.LogOutput
 					logger.Panicf("error closing %s: %s", outputPath, err.Error())
 				}
 			}
+
 	default:
-		logger.Infof("open chunk file output %s", outputPath)
-		if strings.Contains(outputPath, "%s") {
-			return func(chunk base.LogChunk) {
-				chunkFilePath := fmt.Sprintf(outputPath, chunk.ID)
-				if err := ioutil.WriteFile(chunkFilePath, chunk.Data, 0644); err != nil {
-					logger.Panicf("error writing to %s: %s", chunkFilePath, err.Error())
-				}
-			}, func() {}
-		}
-		file, ferr := os.Create(outputPath)
-		if ferr != nil {
-			logger.Panicf("error creating %s: %s", outputPath, ferr.Error())
-		}
-		buffer := bufio.NewWriterSize(file, 1048576)
-		return func(chunk base.LogChunk) {
-				_, err := buffer.Write(chunk.Data)
-				if err != nil {
-					logger.Panicf("error writing to %s: %s", outputPath, err.Error())
-				}
-			}, func() {
-				if err := buffer.Flush(); err != nil {
-					logger.Panicf("error flushing %s: %s", outputPath, err.Error())
-				}
-				if err := file.Close(); err != nil {
-					logger.Panicf("error closing %s: %s", outputPath, err.Error())
-				}
-			}
+		panic("unsupported output path " + outputPath)
 	}
 }
 
-func openJSONMemWriter(outputConfig bconfig.LogOutputConfig) (func(chunk base.LogChunk), func(), func() string) {
+func openJSONMemWriter() (func(chunk base.LogChunk), func(), func() string) {
 	buffer := &bytes.Buffer{}
 	buffer.WriteString("[\n")
 	return func(chunk base.LogChunk) {
-			_, err := outputConfig.DumpRecordsAsJSON(chunk, []byte(",\n"), true, buffer)
+			_, err := fluentdforward.ConvertMsgpackToJSON(chunk, []byte(",\n"), true, buffer)
 			if err != nil {
 				logger.Panicf("error writing: %s", err.Error())
 			}

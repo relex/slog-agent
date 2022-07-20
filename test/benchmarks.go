@@ -21,8 +21,8 @@ type benchmarkMetric struct {
 // RunBenchmarkPipeline benchmarks a workerless pipeline
 func RunBenchmarkPipeline(inputPath string, outputPath string, repeat int, configFile string) {
 	mfactory := promreg.NewMetricFactory("benchpipeline_", nil, nil)
-	outputConfig, process, endProcess := preparePipeline(configFile, testOutputTag, mfactory)
-	writeChunk, closeOutput := openLogChunkConsumingFunc(outputPath, outputConfig)
+	process, endProcess := preparePipeline(configFile, testOutputTag, mfactory)
+	writeChunk, closeOutput := openLogChunkConsumingFunc(outputPath)
 
 	inputRecords := loadInputRecords(inputPath)
 	inputLength := util.SumSlice(inputRecords, func(record []byte) int { return len(record) + 1 /* +1 for newline char */ })
@@ -46,8 +46,8 @@ func RunBenchmarkAgent(inputPath string, outputPath string, repeat int, configFi
 	}
 	loader.ConfigStats.Log(logger.Root())
 
-	chunkSaver := openLogChunkSaver(outputPath, loader.Output.Value)
-	agentInstance := startAgent(loader, chunkSaver, nil, "")
+	chunkSavers := openLogChunkSavers(outputPath)
+	agentInstance := startAgent(loader, chunkSavers, nil, "")
 
 	// feed input
 	inputData, numRecords := loadInput(inputPath)

@@ -1,8 +1,6 @@
 package bconfig
 
 import (
-	"io"
-
 	"github.com/relex/gotils/logger"
 	"github.com/relex/gotils/promexporter/promreg"
 	"github.com/relex/slog-agent/base"
@@ -21,11 +19,9 @@ import (
 type LogOutputConfig interface {
 	BaseConfig
 
-	DumpRecordsAsJSON(chunk base.LogChunk, separator []byte, indented bool, destination io.Writer) (base.LogChunkInfo, error)
-
 	MatchChunkID(chunkID string) bool
 
-	NewSerializer(parentLogger logger.Logger, schema base.LogSchema, deallocator *base.LogAllocator) base.LogSerializer
+	NewSerializer(parentLogger logger.Logger, schema base.LogSchema) base.LogSerializer
 
 	NewChunkMaker(parentLogger logger.Logger, tag string) base.LogChunkMaker
 

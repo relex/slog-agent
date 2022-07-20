@@ -12,20 +12,22 @@ import (
 // LogAllocator allocates empty log records and backing buffers
 // Local-cache with buffers of recycled logs has been tried and made minimal improvement
 type LogAllocator struct {
-	recordPool   *sync.Pool         // pool of *LogRecord
-	backbufPools util.BytesPoolBy2n // pools of the backing buffers of LogRecord(s), i.e. pools of raw input copies
+	recordPool      *sync.Pool         // pool of *LogRecord
+	backbufPools    util.BytesPoolBy2n // pools of the backing buffers of LogRecord(s), i.e. pools of raw input copies
+	initialRefCount int                // equal to the total amount of outputs
 }
 
 // NewLogAllocator creates LogAllocator linked to the given schema
-func NewLogAllocator(schema LogSchema) *LogAllocator {
+func NewLogAllocator(schema LogSchema, outputCount int) *LogAllocator {
 	maxFields := schema.GetMaxFields()
 	recordPool := &sync.Pool{}
 	recordPool.New = func() interface{} {
 		return newLogRecord(maxFields)
 	}
 	return &LogAllocator{
-		recordPool:   recordPool,
-		backbufPools: util.NewBytesPoolBy2n(),
+		recordPool:      recordPool,
+		backbufPools:    util.NewBytesPoolBy2n(),
+		initialRefCount: outputCount,
 	}
 }
 
@@ -43,7 +45,7 @@ func newLogRecord(maxFields int) *LogRecord {
 // NewRecord creates new record of empty values
 func (alloc *LogAllocator) NewRecord(input []byte) (*LogRecord, string) {
 	record := alloc.recordPool.Get().(*LogRecord)
-	record._refCount++
+	record._refCount += alloc.initialRefCount
 	if len(input) > defs.InputLogMinMessageBytesToPool {
 		backbuf := alloc.backbufPools.Get(len(input))
 		record._backbuf = backbuf
@@ -58,6 +60,9 @@ func (alloc *LogAllocator) Release(record *LogRecord) {
 	record._refCount--
 	if record._refCount < 0 {
 		logger.Panic("negative reference count in record: ", record)
+	}
+	if record._refCount > 0 {
+		return
 	}
 	for i := range record.Fields {
 		record.Fields[i] = ""

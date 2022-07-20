@@ -14,17 +14,21 @@ type LogProcessingWorker struct {
 	deallocator   *base.LogAllocator
 	procCounter   *base.LogProcessCounter
 	transformList []base.LogTransformFunc
-	serializer    base.LogSerializer
-	chunkMaker    base.LogChunkMaker
-	acceptChunk   base.LogChunkAccepter
+	outputList    []OutputInterface
 	lastChunkTime time.Time
+}
+
+// OutputInterface is a joint interface of output components
+type OutputInterface struct {
+	base.LogSerializer
+	base.LogChunkMaker
+	AcceptChunk base.LogChunkAccepter
 }
 
 // NewLogProcessingWorker creates LogProcessingWorker
 func NewLogProcessingWorker(parentLogger logger.Logger,
 	input <-chan []*base.LogRecord, deallocator *base.LogAllocator, procCounter *base.LogProcessCounter,
-	transforms []base.LogTransformFunc, serializer base.LogSerializer, chunkMaker base.LogChunkMaker,
-	acceptChunk base.LogChunkAccepter) *LogProcessingWorker {
+	transforms []base.LogTransformFunc, components []OutputInterface) *LogProcessingWorker {
 	worker := &LogProcessingWorker{
 		PipelineWorkerBase: NewPipelineWorkerBase(
 			parentLogger.WithField(defs.LabelComponent, "LogProcessingWorker"),
@@ -33,9 +37,7 @@ func NewLogProcessingWorker(parentLogger logger.Logger,
 		deallocator:   deallocator,
 		procCounter:   procCounter,
 		transformList: transforms,
-		serializer:    serializer,
-		chunkMaker:    chunkMaker,
-		acceptChunk:   acceptChunk,
+		outputList:    components,
 		lastChunkTime: time.Now(),
 	}
 	worker.InitInternal(worker.onInput, worker.onTick, worker.onStop)
@@ -54,12 +56,16 @@ func (worker *LogProcessingWorker) onInput(buffer []*base.LogRecord, timeout <-c
 			continue
 		}
 		icounter.CountRecordPass(record)
-		stream := worker.serializer.SerializeRecord(record)
-		worker.procCounter.CountStream(stream)
-		maybeChunk := worker.chunkMaker.WriteStream(stream)
-		if maybeChunk != nil {
-			worker.procCounter.CountChunk(maybeChunk)
-			worker.acceptChunk(*maybeChunk, timeout)
+
+		for _, output := range worker.outputList {
+			stream := output.SerializeRecord(record)
+			worker.deallocator.Release(record)
+			worker.procCounter.CountStream(stream)
+			maybeChunk := output.WriteStream(stream)
+			if maybeChunk != nil {
+				worker.procCounter.CountChunk(maybeChunk)
+				output.AcceptChunk(*maybeChunk, timeout)
+			}
 		}
 	}
 }
@@ -79,9 +85,11 @@ func (worker *LogProcessingWorker) onStop(timeout <-chan time.Time) {
 }
 
 func (worker *LogProcessingWorker) flushChunk(timeout <-chan time.Time) {
-	maybeChunk := worker.chunkMaker.FlushBuffer()
-	if maybeChunk != nil {
-		worker.procCounter.CountChunk(maybeChunk)
-		worker.acceptChunk(*maybeChunk, timeout)
+	for _, output := range worker.outputList {
+		maybeChunk := output.FlushBuffer()
+		if maybeChunk != nil {
+			worker.procCounter.CountChunk(maybeChunk)
+			output.AcceptChunk(*maybeChunk, timeout)
+		}
 	}
 }

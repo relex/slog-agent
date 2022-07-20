@@ -6,7 +6,6 @@ import (
 	"github.com/relex/gotils/logger"
 	"github.com/relex/gotils/promexporter/promreg"
 	"github.com/relex/slog-agent/base"
-	"github.com/relex/slog-agent/base/bconfig"
 	"github.com/relex/slog-agent/base/bsupport"
 	"github.com/relex/slog-agent/run"
 )
@@ -14,7 +13,7 @@ import (
 type logProcessor func(s []byte) *base.LogChunk
 type logProcessCloser func() *base.LogChunk
 
-func preparePipeline(configFile string, tagOverride string, metricCreator promreg.MetricCreator) (bconfig.LogOutputConfig, logProcessor, logProcessCloser) {
+func preparePipeline(configFile string, tagOverride string, metricCreator promreg.MetricCreator) (logProcessor, logProcessCloser) {
 	conf, schema, stats, err := run.ParseConfigFile(configFile)
 	if err != nil {
 		logger.Fatalf("config: %s", err.Error())
@@ -23,9 +22,12 @@ func preparePipeline(configFile string, tagOverride string, metricCreator promre
 	if len(conf.Inputs) != 1 {
 		logger.Fatal("only one input source is supported")
 	}
+	if len(conf.OutputBuffersPairs) > 1 {
+		logger.Fatal("only one output buffer pair is supported in pipeline testing")
+	}
 
 	inputConfig := conf.Inputs[0].Value // we support only one input for testing
-	allocator := base.NewLogAllocator(schema)
+	allocator := base.NewLogAllocator(schema, len(conf.OutputBuffersPairs))
 	inputCounter := base.NewLogInputCounter(metricCreator.AddOrGetPrefix("input_", nil, nil))
 
 	parser, perr := inputConfig.NewParser(logger.Root(), allocator, schema, inputCounter)
@@ -35,8 +37,8 @@ func preparePipeline(configFile string, tagOverride string, metricCreator promre
 
 	procCounter := base.NewLogProcessCounter(metricCreator.AddOrGetPrefix("process_", nil, nil), schema, schema.MustCreateFieldLocators(conf.MetricKeys))
 	transforms := bsupport.NewTransformsFromConfig(conf.Transformations, schema, logger.Root(), procCounter)
-	serializer := conf.Output.Value.NewSerializer(logger.Root(), schema, allocator)
-	chunkMaker := conf.Output.Value.NewChunkMaker(logger.Root(), tagOverride)
+	serializer := conf.OutputBuffersPairs[0].OutputConfig.Value.NewSerializer(logger.Root(), schema)
+	chunkMaker := conf.OutputBuffersPairs[0].OutputConfig.Value.NewChunkMaker(logger.Root(), tagOverride)
 
 	now := time.Now() // fallback timestamp
 	process := func(s []byte) *base.LogChunk {
@@ -73,7 +75,7 @@ func preparePipeline(configFile string, tagOverride string, metricCreator promre
 		return maybeChunk
 	}
 
-	return conf.Output.Value, process, endProcess
+	return process, endProcess
 }
 
 func runPipeline(process logProcessor, endProcess logProcessCloser, inputLines [][]byte, repeat int, writeChunk func(chunk base.LogChunk)) {

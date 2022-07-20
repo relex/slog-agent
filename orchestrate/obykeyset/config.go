@@ -8,6 +8,7 @@ import (
 	"github.com/relex/slog-agent/base"
 	"github.com/relex/slog-agent/base/bconfig"
 	"github.com/relex/slog-agent/orchestrate/obase"
+	"golang.org/x/exp/maps"
 )
 
 // Config defines the configuration for ByKeySet Orchestrator
@@ -23,10 +24,16 @@ func (cfg *Config) StartOrchestrator(parentLogger logger.Logger, args bconfig.Pi
 
 	// to create pipelines for queued logs on disk immediately after starting, otherwise queues can't be processed
 	// until clients send logs from the same source to trigger the recreation of their corresponding pipelines
-	initialPipelineIDs := args.BufferConfig.ListBufferIDs(parentLogger, args.OutputConfig.MatchChunkID,
-		metricCreator.AddOrGetPrefix("recovery_", nil, nil))
+	initialPipelineIDs := make(map[string]struct{})
+	for _, pair := range args.OutputBufferPairs {
+		ids := pair.BufferConfig.Value.ListBufferIDs(parentLogger, pair.OutputConfig.Value.MatchChunkID, metricCreator.AddOrGetPrefix("recovery_", nil, nil))
 
-	return NewOrchestrator(parentLogger, args.Schema, cfg.Keys, cfg.TagTemplate, metricCreator, startPipeline, initialPipelineIDs)
+		for _, id := range ids {
+			initialPipelineIDs[id] = struct{}{}
+		}
+	}
+
+	return NewOrchestrator(parentLogger, args.Schema, cfg.Keys, cfg.TagTemplate, metricCreator, startPipeline, maps.Keys(initialPipelineIDs))
 }
 
 // VerifyConfig verifies orchestration config and returns key fields
