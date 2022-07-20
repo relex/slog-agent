@@ -8,11 +8,9 @@ import (
 
 const chunkIDSuffix = ".ff"
 
-var (
-	chunkIDLock      = &sync.Mutex{}
-	chunkIDEpochNano int64
-	chunkIDSequence  int32
-)
+var chunkIDLock = &sync.Mutex{}
+var chunkIDEpochNano int64
+var chunkIDSequence int32
 
 // nextChunkID returns the next chunk ID, which consists of a nanosecond timestamp and a sequence number
 // The sequence number is incremented by one every time until the time is changed

@@ -17,7 +17,7 @@ type LogSchema struct {
 	fieldNames []string
 	maxFields  int
 
-	OnLocated func(index int) // optional callback invoked after successful CreateFieldLocator calls
+	OnLocated func(index int) // optional callback invoked after sucessful CreateFieldLocator calls
 }
 
 // MustNewLogSchema creates a new LogSchema or panic

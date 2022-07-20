@@ -16,7 +16,8 @@ type Config struct {
 	bconfig.Header `yaml:",inline"`
 }
 
-type copyRewriter struct{}
+type copyRewriter struct {
+}
 
 // NewRewriter creates copyRewriter for test
 func NewRewriter() base.LogRewriter {

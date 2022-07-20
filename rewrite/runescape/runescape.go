@@ -23,7 +23,8 @@ type Config struct {
 	bconfig.Header `yaml:",inline"`
 }
 
-type unescapeRewriter struct{}
+type unescapeRewriter struct {
+}
 
 var unescaper = bsupport.NewSyslogUnescaper()
 

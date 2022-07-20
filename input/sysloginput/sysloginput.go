@@ -43,8 +43,8 @@ func init() {
 // NewInput creates a SyslogInput and starts the network listener
 func (cfg *Config) NewInput(parentLogger logger.Logger, allocator *base.LogAllocator, schema base.LogSchema,
 	logBufferReceiver base.MultiSinkBufferReceiver, metricCreator promreg.MetricCreator,
-	stopRequest channels.Awaitable,
-) (base.LogInput, error) {
+	stopRequest channels.Awaitable) (base.LogInput, error) {
+
 	if len(cfg.LevelMapping) == 0 {
 		return nil, fmt.Errorf(".levelMapping is empty")
 	}
@@ -81,8 +81,8 @@ func (cfg *Config) NewInput(parentLogger logger.Logger, allocator *base.LogAlloc
 
 // NewParser creates a parser for test pipeline
 func (cfg *Config) NewParser(parentLogger logger.Logger, allocator *base.LogAllocator, schema base.LogSchema,
-	inputCounter *base.LogInputCounter,
-) (base.LogParser, error) {
+	inputCounter *base.LogInputCounter) (base.LogParser, error) {
+
 	if len(cfg.LevelMapping) == 0 {
 		return nil, fmt.Errorf(".levelMapping is empty")
 	}

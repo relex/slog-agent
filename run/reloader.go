@@ -69,6 +69,7 @@ func (reloader *Reloader) initiateDownstreamReload() (CompleteReloadingFunc, err
 		reloader.numReload++
 		return reloader.Loader.StartOrchestrator(reloader.logger.WithField("numReload", reloader.numReload))
 	}, nil
+
 }
 
 // GetMetricGatherer returns a metric gatherer containing default metrics and metrics from both input and pipeline(s)
@@ -83,8 +84,7 @@ func (reloader *Reloader) GetMetricGatherer() prometheus.Gatherer {
 
 func checkConfigCompatibility(
 	oldConf Config, oldSchema base.LogSchema, oldStats ConfigStats,
-	newConf Config, newSchema base.LogSchema, newStats ConfigStats,
-) error {
+	newConf Config, newSchema base.LogSchema, newStats ConfigStats) error {
 	{
 		oldMax := oldConf.Schema.MaxFields
 		newMax := newConf.Schema.MaxFields

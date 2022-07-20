@@ -12,10 +12,8 @@ import (
 	"github.com/relex/slog-agent/util"
 )
 
-const (
-	tcpReadBufferMax = 8 * 1024 * 1024 // Less than /proc/sys/net/ipv4/tcp_mem
-	tcpReadBufferMin = 65536
-)
+const tcpReadBufferMax = 8 * 1024 * 1024 // Less than /proc/sys/net/ipv4/tcp_mem
+const tcpReadBufferMin = 65536
 
 var tcpLastReadBufferSize = tcpReadBufferMax // shared for all connections. No need to sync access as it's just a cached number.
 
@@ -47,8 +45,8 @@ type tcpLineListener struct {
 //
 // Returns the listener, actual address including final port, and error if failed
 func NewTCPLineListener(parentLogger logger.Logger, address string, testRecord func(ln []byte) bool,
-	receiver base.MultiSinkMessageReceiver, stopRequest channels.Awaitable,
-) (base.LogListener, string, error) {
+	receiver base.MultiSinkMessageReceiver, stopRequest channels.Awaitable) (base.LogListener, string, error) {
+
 	// open TCP socket
 	socket, err := net.Listen("tcp", address)
 	if err != nil {

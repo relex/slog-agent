@@ -26,9 +26,10 @@ type PipelineStarter func(parentLogger logger.Logger, metricCreator promreg.Metr
 
 // PrepareSequentialPipeline makes a starter for pipelines including transformer, serializer and output forwarder
 func PrepareSequentialPipeline(args bconfig.PipelineArgs) PipelineStarter {
+
 	return func(parentLogger logger.Logger, metricCreator promreg.MetricCreator,
-		input <-chan []*base.LogRecord, bufferID string, outputTag string, onStopped func(),
-	) {
+		input <-chan []*base.LogRecord, bufferID string, outputTag string, onStopped func()) {
+
 		outputSettingsSlice := util.MapSlice(args.OutputBufferPairs, func(pair bconfig.OutputBufferConfig) outputWorkerSettings {
 			consumerLogger := parentLogger.WithField("output", pair.Name)
 
@@ -41,7 +42,7 @@ func PrepareSequentialPipeline(args bconfig.PipelineArgs) PipelineStarter {
 					args.SendAllAtEnd),
 			}
 
-			// bufferer in the middle of pipeline has to be started first and shut down last for persistence of pending outputs
+			// bufferer in the middle of pipeline has to be started first and shut down last for persistance of pending outputs
 			settings.bufferer.Start()
 
 			// then start output forwarder which is at the end of pipeline.

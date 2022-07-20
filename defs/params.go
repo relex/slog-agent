@@ -73,7 +73,7 @@ var (
 
 	// BufferMaxNumChunksInMemory is the max numbers of of loaded chunks to be held in a queue
 	//
-	// Disk persistence starts when output queue length hits value / 2, because length reading is delayed and inaccurate
+	// Disk persistance starts when output queue length hits value / 2, because length reading is delayed and inaccurate
 	BufferMaxNumChunksInMemory = 500
 
 	// BufferShutDownTimeout is the duration to wait for LogBuffer to save or send all pending log chunks when shutdown

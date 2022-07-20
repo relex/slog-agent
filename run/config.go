@@ -42,7 +42,8 @@ type Config struct {
 // AnchorsConfig defines the anchors section in config file
 //
 // The section is meant to host user-defined YAML variables for other sections and doesn't need to be processed itself
-type AnchorsConfig struct{}
+type AnchorsConfig struct {
+}
 
 // MarshalYAML does nothing
 func (holder AnchorsConfig) MarshalYAML() (interface{}, error) {

@@ -6,6 +6,7 @@ package base
 // writing directly to the buffer for serialized log records without any string concentration
 // Each LogRewriter takes the field value, the record and the next LogRewriter
 type LogRewriter interface {
+
 	// MaxFieldLength returns the maximum possible length of the rewritten value
 	MaxFieldLength(value string, record *LogRecord) int
 
