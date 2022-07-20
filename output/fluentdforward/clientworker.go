@@ -75,7 +75,7 @@ func connect(connLogger logger.Logger, useTLS bool, address string) (net.Conn, e
 		dialer := &net.Dialer{}
 		dialer.Timeout = defs.ForwarderConnectionTimeout
 		dialer.Deadline = time.Now().Add(defs.ForwarderConnectionTimeout)
-		tlsConfig := &tls.Config{}
+		tlsConfig := &tls.Config{} //nolint:gosec // we don't veryfy certs anyway
 		tlsConfig.InsecureSkipVerify = true
 		sock, err = tls.DialWithDialer(dialer, "tcp", address, tlsConfig)
 	} else {

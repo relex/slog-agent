@@ -34,6 +34,8 @@ func makeBufferQueueDir(parentLogger logger.Logger, rootPath string, bufferID st
 	if derr := os.MkdirAll(path, 0o755); derr != nil {
 		parentLogger.Errorf("error creating queue dir path='%s': %s", path, derr.Error())
 	}
+
+	//nolint:gosec // need extra permissions here
 	if err := os.WriteFile(filepath.Join(path, idFileName), []byte(bufferID), 0o644); err != nil {
 		parentLogger.Errorf("error creating an id file on queue dir path='%s': %s", path, err)
 	}

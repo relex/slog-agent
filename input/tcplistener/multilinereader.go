@@ -65,7 +65,7 @@ func (mlr *multiLineReader) Flush() {
 	if n == -1 {
 		return
 	}
-	record := buffer[:n] // nolint:ifshort
+	record := buffer[:n] //nolint:ifshort // more readable this way
 	if len(record) > 0 && mlr.testRecordStart(record) {
 		mlr.consumeRecord(record)
 	}
