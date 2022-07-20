@@ -2,7 +2,6 @@ package base
 
 import (
 	"sync"
-	"sync/atomic"
 	"time"
 
 	"github.com/relex/gotils/logger"
@@ -46,7 +45,7 @@ func newLogRecord(maxFields int) *LogRecord {
 // NewRecord creates new record of empty values
 func (alloc *LogAllocator) NewRecord(input []byte) (*LogRecord, string) {
 	record := alloc.recordPool.Get().(*LogRecord)
-	atomic.AddInt32(&record._refCount, int32(alloc.initialRefCount))
+	record._refCount += alloc.initialRefCount
 	if len(input) > defs.InputLogMinMessageBytesToPool {
 		backbuf := alloc.backbufPools.Get(len(input))
 		record._backbuf = backbuf
@@ -58,7 +57,7 @@ func (alloc *LogAllocator) NewRecord(input []byte) (*LogRecord, string) {
 
 // Release releases this log record for recycling
 func (alloc *LogAllocator) Release(record *LogRecord) {
-	atomic.AddInt32(&record._refCount, -1)
+	record._refCount--
 	if record._refCount < 0 {
 		logger.Panic("negative reference count in record: ", record)
 	}
