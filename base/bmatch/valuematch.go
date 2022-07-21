@@ -49,15 +49,17 @@ func (match valueMatch) String() string {
 }
 
 func (match *valueMatch) UnmarshalYAML(value *yaml.Node) error {
-	if creator, found := valueMatcherConstructors[value.Tag]; found {
-		m, err := creator(value.Value)
-		if err != nil {
-			return util.NewYamlError(value, fmt.Sprintf("Failed value-match of tag %s: %s", value.Tag, err.Error()))
-		}
-		*match = m
-	} else {
+	creator, found := valueMatcherConstructors[value.Tag]
+	if !found {
 		return util.NewYamlError(value, fmt.Sprintf("Unsupported value-match tag: %s", value.Tag))
 	}
+
+	m, err := creator(value.Value)
+	if err != nil {
+		return util.NewYamlError(value, fmt.Sprintf("Failed value-match of tag %s: %s", value.Tag, err.Error()))
+	}
+
+	*match = m
 	return nil
 }
 

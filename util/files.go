@@ -35,6 +35,7 @@ func ListFiles(directoryOrFilePattern string) ([]string, error) {
 	return pathList, nil
 }
 
+//nolint:revive
 // ReadFileAt reads full contents of a file in given directory
 func ReadFileAt(dir *os.File, filename string) ([]byte, error) {
 	fd, oerr := unix.Openat(int(dir.Fd()), filename, unix.O_RDONLY, 0o644)
@@ -71,6 +72,7 @@ func UnlinkFileAt(dir *os.File, filename string) error {
 	return unix.Unlinkat(int(dir.Fd()), filename, 0)
 }
 
+//nolint:revive
 // WriteFileAt writes to a new file in given directory
 func WriteFileAt(dir *os.File, filename string, data []byte, perm os.FileMode) error {
 	fd, oerr := unix.Openat(int(dir.Fd()), filename, unix.O_WRONLY|unix.O_CREAT|unix.O_TRUNC, uint32(perm))

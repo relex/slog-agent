@@ -27,7 +27,7 @@ type extractSpecialTransform struct {
 }
 
 // NewTransform creates extractSpecialTransform
-func (c *Config) NewTransform(schema base.LogSchema, parentLogger logger.Logger, customCounterRegistry base.LogCustomCounterRegistry) base.LogTransform {
+func (c *Config) NewTransform(schema base.LogSchema, _ logger.Logger, _ base.LogCustomCounterRegistry) base.LogTransform {
 	ex, err := newStringExtractorSimple(c.getPosition(), c.Pattern, c.MaxLength)
 	if err != nil {
 		panic(err)

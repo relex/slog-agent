@@ -7,6 +7,7 @@
 // unescaping.
 //
 // The 'unescape' rewriter serves as the last rewriter in the chain, in place of 'copy'
+//nolint:revive
 package runescape
 
 import (

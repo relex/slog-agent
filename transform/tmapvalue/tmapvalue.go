@@ -25,7 +25,7 @@ type mapValueTransform struct {
 }
 
 // NewTransform creates mapValueTransform
-func (c *Config) NewTransform(schema base.LogSchema, parentLogger logger.Logger, customCounterRegistry base.LogCustomCounterRegistry) base.LogTransform {
+func (c *Config) NewTransform(schema base.LogSchema, _ logger.Logger, _ base.LogCustomCounterRegistry) base.LogTransform {
 	return &mapValueTransform{
 		keyLocator:   schema.MustCreateFieldLocator(c.Key),
 		mapping:      c.Mapping,

@@ -50,9 +50,8 @@ func redactEmailFindFirst(src string) int {
 		nextAt := strings.IndexByte(src[sAt:], '@')
 		if nextAt == -1 {
 			break
-		} else {
-			sAt += nextAt
 		}
+		sAt += nextAt
 	}
 	return -1
 }
@@ -86,9 +85,8 @@ func redactEmail1(src string, start int) (string, int) {
 		nextAt := strings.IndexByte(src[sAt:], '@')
 		if nextAt == -1 {
 			break
-		} else {
-			sAt += nextAt
 		}
+		sAt += nextAt
 	}
 	dst = append(dst, src[sCopied:]...)
 	return util.StringFromBytes(dst), numRedacted

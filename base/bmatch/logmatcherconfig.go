@@ -24,13 +24,13 @@ func (cmap LogMatcherConfig) NewMatcher(schema base.LogSchema) LogMatcher {
 	ufieldMatches := make([]unsortedKeyValueMatch, 0, len(cmap))
 	for key, match := range cmap {
 		loc := schema.MustCreateFieldLocator(key)
-		ufieldMatches = append(ufieldMatches, unsortedKeyValueMatch{loc, match})
+		ufieldMatches = append(ufieldMatches, unsortedKeyValueMatch{locator: loc, match: match})
 	}
 	sort.Sort(sortableKeyValueMatches{ufieldMatches})
 
 	sfieldMatches := make([]keyValueMatch, 0, len(cmap))
 	for _, pair := range ufieldMatches {
-		sfieldMatches = append(sfieldMatches, keyValueMatch{pair.locator, pair.match.match})
+		sfieldMatches = append(sfieldMatches, keyValueMatch{locator: pair.locator, match: pair.match.match})
 	}
 	return LogMatcher{sfieldMatches}
 }

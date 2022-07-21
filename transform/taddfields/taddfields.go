@@ -29,7 +29,7 @@ type addFieldPair struct {
 }
 
 // NewTransform creates addFieldsTransform
-func (c *Config) NewTransform(schema base.LogSchema, parentLogger logger.Logger, customCounterRegistry base.LogCustomCounterRegistry) base.LogTransform {
+func (c *Config) NewTransform(schema base.LogSchema, _ logger.Logger, _ base.LogCustomCounterRegistry) base.LogTransform {
 	pairList := make([]addFieldPair, 0, len(c.Fields))
 	for dstKey, valExpr := range c.Fields {
 		dstSel := schema.MustCreateFieldLocator(dstKey)
@@ -37,7 +37,7 @@ func (c *Config) NewTransform(schema base.LogSchema, parentLogger logger.Logger,
 		if err != nil {
 			panic(err)
 		}
-		pairList = append(pairList, addFieldPair{dstSel, srcTpl})
+		pairList = append(pairList, addFieldPair{destination: dstSel, sourceTemplate: srcTpl})
 	}
 	return &addFieldsTransform{
 		fieldPairs: pairList,

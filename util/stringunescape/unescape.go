@@ -22,7 +22,7 @@ func NewUnescaper(escapeChar byte, mapping map[byte]byte) Unescaper {
 		cmap[key] = val
 	}
 	cmap[escapeChar] = escapeChar
-	return Unescaper{escapeChar, cmap}
+	return Unescaper{escapeChar: escapeChar, escapableCharMap: cmap}
 }
 
 // FindFirst finds the index of the first escape char, or -1

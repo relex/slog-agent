@@ -45,11 +45,11 @@ type Loader struct {
 	logger                logger.Logger
 	inputMetricFactory    *promreg.MetricFactory
 	pipelineMetricFactory *promreg.MetricFactory
-	PipelineArgs          bconfig.PipelineArgs
 	filepath              string
 	metricPrefix          string
+	ConfigStats           ConfigStats
 	Config
-	ConfigStats ConfigStats
+	PipelineArgs bconfig.PipelineArgs
 }
 
 // NewLoaderFromConfigFile creates a new Loader from the given config file

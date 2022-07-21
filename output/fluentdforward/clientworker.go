@@ -51,11 +51,15 @@ func openForwardConnection(parentLogger logger.Logger, config UpstreamConfig) (b
 
 	success, reason, herr := forwardprotocol.DoClientHandshake(sock, config.Secret, defs.ForwarderHandshakeTimeout)
 	if herr != nil {
-		sock.Close()
+		if err := sock.Close(); err != nil {
+			connLogger.Error("error closing socket: ", err)
+		}
 		return nil, fmt.Errorf("failed to handshake: %w", herr)
 	}
 	if !success {
-		sock.Close()
+		if err := sock.Close(); err != nil {
+			connLogger.Error("error closing socket: ", err)
+		}
 		return nil, fmt.Errorf("failed to handshake: %s", reason)
 	}
 
@@ -131,7 +135,9 @@ func (fconn *forwardConnection) ReadChunkAck(deadline time.Time) (string, error)
 }
 
 func (fconn *forwardConnection) Close() {
-	fconn.socket.Close()
+	if err := fconn.socket.Close(); err != nil {
+		fconn.logger.Error("error closing socket: ", err)
+	}
 }
 
 func buildInternalPingMessage() []byte {

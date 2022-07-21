@@ -22,7 +22,7 @@ type redactEmailTransform struct {
 }
 
 // NewTransform creates redactEmailTransform
-func (cfg *Config) NewTransform(schema base.LogSchema, parentLogger logger.Logger, customCounterRegistry base.LogCustomCounterRegistry) base.LogTransform {
+func (cfg *Config) NewTransform(schema base.LogSchema, _ logger.Logger, customCounterRegistry base.LogCustomCounterRegistry) base.LogTransform {
 	tf := &redactEmailTransform{
 		keyLocator: schema.MustCreateFieldLocator(cfg.Key),
 		counter:    customCounterRegistry.RegisterCustomCounter(cfg.MetricLabel),

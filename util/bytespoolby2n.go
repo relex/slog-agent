@@ -32,8 +32,8 @@ func NewBytesPoolBy2n() BytesPoolBy2n {
 // Get fetches an empty byte array suitable for given length of data
 // The array returned may be longer than the given length
 func (pools BytesPoolBy2n) Get(length int) *[]byte {
-	cap := 32 - bits.LeadingZeros32(uint32(length))
-	buf := pools[cap].Get().(*[]byte)
+	capacity := 32 - bits.LeadingZeros32(uint32(length))
+	buf := pools[capacity].Get().(*[]byte)
 	return buf
 }
 
@@ -41,6 +41,6 @@ func (pools BytesPoolBy2n) Get(length int) *[]byte {
 // The array specified must come from BytesPoolBy2n.Get()
 func (pools BytesPoolBy2n) Put(buf *[]byte) {
 	length := len(*buf)
-	cap := 32 - bits.LeadingZeros32(uint32(length)) - 1
-	pools[cap].Put(buf)
+	capacity := 32 - bits.LeadingZeros32(uint32(length)) - 1
+	pools[capacity].Put(buf)
 }

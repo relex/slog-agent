@@ -24,7 +24,7 @@ func (cfg *Config) StartOrchestrator(parentLogger logger.Logger, args bconfig.Pi
 }
 
 // VerifyConfig verifies orchestration config
-func (cfg *Config) VerifyConfig(schema base.LogSchema) ([]string, error) {
+func (cfg *Config) VerifyConfig(_ base.LogSchema) ([]string, error) {
 	if len(cfg.Tag) == 0 {
 		return nil, fmt.Errorf(".tag is unspecified")
 	}

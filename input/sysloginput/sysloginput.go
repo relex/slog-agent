@@ -41,7 +41,7 @@ func init() {
 }
 
 // NewInput creates a SyslogInput and starts the network listener
-func (cfg *Config) NewInput(parentLogger logger.Logger, allocator *base.LogAllocator, schema base.LogSchema,
+func (cfg *Config) NewInput(_ logger.Logger, allocator *base.LogAllocator, schema base.LogSchema,
 	logBufferReceiver base.MultiSinkBufferReceiver, metricCreator promreg.MetricCreator,
 	stopRequest channels.Awaitable,
 ) (base.LogInput, error) {
@@ -124,11 +124,7 @@ func (cfg *Config) VerifyConfig(schema base.LogSchema) error {
 		return fmt.Errorf("incompatible with schema: %w", err)
 	}
 
-	if err := bsupport.VerifyTransformConfigs(cfg.Extractions, schema, ".extractions"); err != nil {
-		return err
-	}
-
-	return nil
+	return bsupport.VerifyTransformConfigs(cfg.Extractions, schema, ".extractions")
 }
 
 func (in *input) Address() string {

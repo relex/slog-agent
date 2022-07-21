@@ -168,7 +168,6 @@ func (session *clientSession) sendChunk(chunk base.LogChunk) (bool, reconnectPol
 	// pass forwarded chunk to acknowledger
 	select {
 	case session.ackerChan <- chunk:
-		break
 	case <-session.inputClosed.Channel():
 		session.logger.Infof("aborted before queueing chunk for ack due to stop request: %s", chunk.String())
 		return false, noReconnect

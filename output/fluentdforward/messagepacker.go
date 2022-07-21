@@ -178,9 +178,6 @@ func (packer *messagePacker) encodeChunkAsMessage(header forwardMessageOpenChunk
 	if header.gzipWriter != nil {
 		option.Compressed = forwardprotocol.CompressionFormat
 	}
-	if err := encoder.Encode(option); err != nil {
-		return err
-	}
 
-	return nil
+	return encoder.Encode(option)
 }

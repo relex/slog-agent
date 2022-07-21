@@ -13,13 +13,13 @@ import (
 
 type eventSerializer struct {
 	logger                 logger.Logger
+	buffer                 []byte
+	fieldMasks             []bool
+	envFieldLocators       []base.LogFieldLocator
+	fieldRewriters         []base.LogRewriter
+	serializedFieldKeys    []msgpackBlock
+	serializedEnvFieldKeys []msgpackBlock
 	schema                 base.LogSchema
-	fieldMasks             []bool                 // mark environment fields and hidden fields, same length as LogRecords.Fields
-	envFieldLocators       []base.LogFieldLocator // locators of environment fields
-	fieldRewriters         []base.LogRewriter     // head writers for each of fields or nil, same length as LogRecords.Fields
-	serializedFieldKeys    []msgpackBlock         // pre-serialized field keys
-	serializedEnvFieldKeys []msgpackBlock         // pre-serialized environment field keys
-	buffer                 []byte                 // use fastmsgpack+array is 2.5x faster than msgpack+bytes.Buffer due to massive inlining
 }
 
 type msgpackBlock []byte
@@ -80,8 +80,8 @@ func NewEventSerializer(parentLogger logger.Logger, schema base.LogSchema, confi
 
 // SerializeRecord serializes log records into streams
 func (packer *eventSerializer) SerializeRecord(record *base.LogRecord) base.LogStream {
-	len := packer.encodeRecord(record, packer.buffer)
-	return packer.buffer[:len]
+	length := packer.encodeRecord(record, packer.buffer)
+	return packer.buffer[:length]
 }
 
 // encodeRecord encodes the given log record to buffer and returns the end position

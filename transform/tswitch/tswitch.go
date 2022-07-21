@@ -77,10 +77,8 @@ func (c *CaseConfig) verify(schema base.LogSchema) error {
 	if len(c.Then) == 0 {
 		return fmt.Errorf(".then is empty")
 	}
-	if err := bsupport.VerifyTransformConfigs(c.Then, schema, ".then"); err != nil {
-		return err
-	}
-	return nil
+
+	return bsupport.VerifyTransformConfigs(c.Then, schema, ".then")
 }
 
 func (tf *switchTransform) Transform(record *base.LogRecord) base.FilterResult {
