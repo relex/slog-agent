@@ -26,13 +26,13 @@ type (
 //
 // Multi-line reading is optional and not needed for our own logs
 type multiLineReader struct {
-	readInput       ioReader       // io.Reader.Read
-	testRecordStart headTester     // test whether a line is the start of a valid record, not including newline
-	consumeRecord   recordConsumer // callback to consume a record, not including last newline and may be oversized
-	softRecordLimit int            // soft limit of record length, may not be applied to every consumeRecord calls
-	buffer          []byte         // preallocated buffer
-	offsetSearch    int            // point to start of the last line, could be end of buffer
-	offsetAppend    int            // point to end of buffer
+	readInput       ioReader
+	testRecordStart headTester
+	consumeRecord   recordConsumer
+	buffer          []byte
+	softRecordLimit int
+	offsetSearch    int
+	offsetAppend    int
 }
 
 func newMultiLineReader(read ioReader, test headTester, minBufferSize, softRecordLimit int, consume recordConsumer) *multiLineReader {

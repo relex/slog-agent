@@ -12,14 +12,14 @@ import (
 
 type outputFeeder struct {
 	logger          logger.Logger
-	chunkMan        chunkManager
-	consumerCounter *sync.WaitGroup
-	inputChannel    <-chan base.LogChunk // internal; LogChunk.Data can be nil if unloaded / saved on disk
-	inputClosed     channels.Awaitable   // internal; to abort ongoing input processing
 	metrics         bufferMetrics
-	outputChannel   chan base.LogChunk        // normal LogChunk
-	outputClosed    *channels.SignalAwaitable // to abort output processing if consumers are not waiting on output
+	inputClosed     channels.Awaitable
+	outputClosed    *channels.SignalAwaitable
+	consumerCounter *sync.WaitGroup
+	inputChannel    <-chan base.LogChunk
+	outputChannel   chan base.LogChunk
 	stopped         *channels.SignalAwaitable
+	chunkMan        chunkManager
 }
 
 func newOutputFeeder(parentLogger logger.Logger, chunkMan chunkManager,

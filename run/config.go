@@ -31,12 +31,12 @@ func init() {
 // Config defines the root of slog-agent config file
 type Config struct {
 	Anchors            AnchorsConfig                      `yaml:"anchors"`
-	Schema             SchemaConfig                       `yaml:"schema"`
-	Inputs             []bconfig.LogInputConfigHolder     `yaml:"inputs"`
 	Orchestration      bconfig.OrchestratorConfigHolder   `yaml:"orchestration"`
+	Inputs             []bconfig.LogInputConfigHolder     `yaml:"inputs"`
 	MetricKeys         []string                           `yaml:"metricKeys"`
 	Transformations    []bconfig.LogTransformConfigHolder `yaml:"transformations"`
 	OutputBuffersPairs []bconfig.OutputBufferConfig       `yaml:"outputBufferPairs"`
+	Schema             SchemaConfig                       `yaml:"schema"`
 }
 
 // AnchorsConfig defines the anchors section in config file

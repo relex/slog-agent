@@ -19,10 +19,10 @@ type Config struct {
 }
 
 type parseTimeTransform struct {
-	keyLocator    base.LogFieldLocator
-	timezoneCache map[string]*time.Location
 	errorLogger   logger.Logger
+	timezoneCache map[string]*time.Location
 	errorCounter  func(length int)
+	keyLocator    base.LogFieldLocator
 }
 
 // NewTransform creates parseTimeTransform

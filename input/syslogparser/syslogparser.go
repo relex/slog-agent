@@ -27,15 +27,15 @@ const maxLoggingMessageSize = 200 // 200 bytes should be enough to include all k
 type syslogParser struct {
 	logger               logger.Logger
 	allocator            *base.LogAllocator
-	schema               base.LogSchema
-	levelMapping         []string
 	inputCounter         *base.LogInputCounter
 	timezoneCache        map[string]*time.Location
+	overflowCounter      func(length int)
+	restFieldLocators    []base.LogFieldLocator
+	levelMapping         []string
+	schema               base.LogSchema
 	fieldFacilityLocator base.LogFieldLocator
 	fieldLevelLocator    base.LogFieldLocator
 	fieldLogLocator      base.LogFieldLocator
-	restFieldLocators    []base.LogFieldLocator
-	overflowCounter      func(length int)
 }
 
 // MustNewParser creates a new syslogParser or panic

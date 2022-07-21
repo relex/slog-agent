@@ -15,14 +15,14 @@ type Config struct {
 	bconfig.Header `yaml:",inline"`
 	Key            string `yaml:"key"`
 	Pattern        string `yaml:"pattern"`
-	MaxLength      int    `yaml:"maxLen"`
 	DestKey        string `yaml:"destKey"`
+	MaxLength      int    `yaml:"maxLen"`
 }
 
 type extractSpecialTransform struct {
 	schema      base.LogSchema
-	srcLocator  base.LogFieldLocator
 	extractor   stringExtractor
+	srcLocator  base.LogFieldLocator
 	destLocator base.LogFieldLocator
 }
 

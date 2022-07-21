@@ -42,17 +42,14 @@ type loaderIface interface {
 //
 // Orchstrator and inputs are exposed in place of a simple main loop to allow customization, see Run()
 type Loader struct {
-	Config
-	ConfigStats ConfigStats
-
-	filepath     string // config file path
-	metricPrefix string
-	logger       logger.Logger
-
-	PipelineArgs bconfig.PipelineArgs // parameters for to run a pipeline, may be modified in-place
-
+	logger                logger.Logger
 	inputMetricFactory    *promreg.MetricFactory
 	pipelineMetricFactory *promreg.MetricFactory
+	PipelineArgs          bconfig.PipelineArgs
+	filepath              string
+	metricPrefix          string
+	Config
+	ConfigStats ConfigStats
 }
 
 // NewLoaderFromConfigFile creates a new Loader from the given config file

@@ -17,8 +17,8 @@ type Config struct {
 }
 
 type redactEmailTransform struct {
-	keyLocator base.LogFieldLocator
 	counter    func(length int)
+	keyLocator base.LogFieldLocator
 }
 
 // NewTransform creates redactEmailTransform

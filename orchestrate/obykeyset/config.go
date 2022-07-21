@@ -14,8 +14,8 @@ import (
 // Config defines the configuration for ByKeySet Orchestrator
 type Config struct {
 	bconfig.Header `yaml:",inline"`
-	Keys           []string `yaml:"keys"` // Key field names
-	TagTemplate    string   `yaml:"tag"`  // Tag is evaluated at the creation of new pipeline and can only reference key fields
+	TagTemplate    string   `yaml:"tag"`
+	Keys           []string `yaml:"keys"`
 }
 
 // StartOrchestrator constructs and launches a by-keySet orchestrator and pipeline(s)

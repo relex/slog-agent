@@ -23,9 +23,9 @@ type Config struct {
 }
 
 type extractTransform struct {
-	keyLocator          base.LogFieldLocator
 	pattern             *regexp.Regexp
 	subexpFieldLocators []base.LogFieldLocator
+	keyLocator          base.LogFieldLocator
 }
 
 // NewTransform creates extractTransform

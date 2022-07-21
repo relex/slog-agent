@@ -24,17 +24,17 @@ type Config struct {
 
 // SerializationConfig defines the serialization section in config file
 type SerializationConfig struct {
+	RewriteFields     map[string][]bconfig.LogRewriterConfigHolder `yaml:"rewriteFields"`
 	EnvironmentFields []string                                     `yaml:"environmentFields"`
 	HiddenFields      []string                                     `yaml:"hiddenFields"`
-	RewriteFields     map[string][]bconfig.LogRewriterConfigHolder `yaml:"rewriteFields"`
 }
 
 // UpstreamConfig defines the upstream section in config file
 type UpstreamConfig struct {
 	Address     string        `yaml:"address"`
-	TLS         bool          `yaml:"tls"`
 	Secret      string        `yaml:"secret"`
 	MaxDuration time.Duration `yaml:"maxDuration"`
+	TLS         bool          `yaml:"tls"`
 }
 
 // MatchChunkID checks whether given ID is valid for a fluentdforward chunk file

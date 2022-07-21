@@ -14,10 +14,9 @@ import (
 // LogSchema defines the field names and mark fields which should belong to "environment"
 // In case of runtime schema update, only new fields should be appended at the end
 type LogSchema struct {
+	OnLocated  func(index int)
 	fieldNames []string
 	maxFields  int
-
-	OnLocated func(index int) // optional callback invoked after successful CreateFieldLocator calls
 }
 
 // MustNewLogSchema creates a new LogSchema or panic

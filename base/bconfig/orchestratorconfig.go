@@ -25,11 +25,11 @@ type OrchestratorConfigCreatorTable = ConfigCreatorTable[OrchestratorConfig]
 
 // PipelineArgs defines the common arguments to construct pipeline(s)
 type PipelineArgs struct {
-	Schema              base.LogSchema
 	Deallocator         *base.LogAllocator
+	NewConsumerOverride base.ChunkConsumerConstructor
 	MetricKeyLocators   []base.LogFieldLocator
-	TransformConfigs    []LogTransformConfigHolder // Verified config list of transforms
+	TransformConfigs    []LogTransformConfigHolder
 	OutputBufferPairs   []OutputBufferConfig
-	NewConsumerOverride base.ChunkConsumerConstructor // nil or override ChunkConsumer (ex: forwarder) for test
-	SendAllAtEnd        bool                          // send all chunks to ChunkConsumer until consumed for test
+	Schema              base.LogSchema
+	SendAllAtEnd        bool
 }

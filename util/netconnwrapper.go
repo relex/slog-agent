@@ -8,13 +8,13 @@ import (
 // NetConnWrapper wraps a connection with with timeouts updated infrequently in trade of accuracy
 // The real timeouts could be anything from specified timeout values to double of them
 type NetConnWrapper struct {
+	writeDeadline   time.Time
+	readDeadline    time.Time
 	conn            net.Conn
 	readTimeoutMin  time.Duration
 	readTimeoutMax  time.Duration
-	readDeadline    time.Time
 	writeTimeoutMin time.Duration
 	writeTimeoutMax time.Duration
-	writeDeadline   time.Time
 }
 
 // WrapNetConn creates a NetConnWrapper for given network connection

@@ -13,8 +13,8 @@ import (
 //
 // The medium is used to support YAML unmarshalling of interfaces
 type ConfigHolder[C BaseConfig] struct {
-	Location string `yaml:"-"`
 	Value    C
+	Location string `yaml:"-"`
 }
 
 func (holder ConfigHolder[C]) String() string {

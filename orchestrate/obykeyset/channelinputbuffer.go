@@ -16,10 +16,10 @@ import (
 //
 // A buffer is NOT thread-safe and it should be created for each of gorouting sending logs to a channel
 type channelInputBuffer struct {
-	Channel       chan<- []*base.LogRecord // point to channel in global map
-	PendingLogs   []*base.LogRecord        // locally-buffered log records to be sent to channel
-	PendingBytes  int
 	LastFlushTime time.Time
+	Channel       chan<- []*base.LogRecord
+	PendingLogs   []*base.LogRecord
+	PendingBytes  int
 }
 
 func newInputBufferForChannel(ch chan<- []*base.LogRecord) *channelInputBuffer {

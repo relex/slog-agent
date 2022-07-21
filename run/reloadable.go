@@ -32,12 +32,12 @@ type CompleteReloadingFunc func() base.Orchestrator
 //
 // The type is to be paired with Reloader, which provides the function to reload configuration file and create real Orchestrator(s)
 type ReloadableOrchestrator struct {
-	logger          logger.Logger
-	downstream      base.Orchestrator     // the real orchestrator
-	initiateReload  InitiateReloadingFunc // function to start reloading and launch a new downstream orchestrator
 	downstreamSinks sinksByClientNumber
+	logger          logger.Logger
+	downstream      base.Orchestrator
+	initiateReload  InitiateReloadingFunc
+	downstreamMutex *xsync.RBMutex
 	downstreamAddrs addrsByClientNumber
-	downstreamMutex *xsync.RBMutex // read-lock for using/adding downstream sinks, write-lock for renewing the downstream Orchestrator
 }
 
 // NewReloadableOrchestrator creates a reloadable orchestrator wrapping the given downstream orchestrator

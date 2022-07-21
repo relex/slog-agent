@@ -13,14 +13,14 @@ import (
 type Config struct {
 	bconfig.Header `yaml:",inline"`
 	Key            string `yaml:"key"`
-	MaxLength      int    `yaml:"maxLen"`
 	Suffix         string `yaml:"suffix"`
+	MaxLength      int    `yaml:"maxLen"`
 }
 
 type truncateTransform struct {
+	suffix     string
 	keyLocator base.LogFieldLocator
 	maxLength  int
-	suffix     string
 }
 
 // NewTransform creates truncateTransform

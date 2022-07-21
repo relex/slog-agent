@@ -14,8 +14,8 @@ import (
 
 type agent struct {
 	loader         *run.Loader
-	inputAddresses []string
 	shutdownFn     func()
+	inputAddresses []string
 	runRecovery    bool
 }
 

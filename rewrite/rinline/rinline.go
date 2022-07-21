@@ -18,10 +18,10 @@ type Config struct {
 }
 
 type inlineRewriter struct {
+	next         base.LogRewriter
 	header       string
 	separator    string
 	fieldLocator base.LogFieldLocator
-	next         base.LogRewriter
 }
 
 // NewRewriter creates inlineRewriter

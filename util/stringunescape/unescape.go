@@ -11,8 +11,8 @@ import (
 // Unescaper is used to search and unescape characters like '\n', '\t' etc
 // Unescaper instances contain no buffer and may be copied or concurrently used.
 type Unescaper struct {
-	escapeChar       byte
 	escapableCharMap []byte
+	escapeChar       byte
 }
 
 // NewUnescaper creates a StringEscaper to be used with map[string]string sources

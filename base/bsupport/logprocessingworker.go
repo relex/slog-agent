@@ -11,11 +11,11 @@ import (
 // LogProcessingWorker is a worker for transformation, serialization and chunk making
 type LogProcessingWorker struct {
 	PipelineWorkerBase[[]*base.LogRecord]
+	lastChunkTime time.Time
 	deallocator   *base.LogAllocator
 	procCounter   *base.LogProcessCounter
 	transformList []base.LogTransformFunc
 	outputList    []OutputInterface
-	lastChunkTime time.Time
 }
 
 // OutputInterface is a joint interface of output components

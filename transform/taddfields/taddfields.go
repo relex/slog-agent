@@ -14,8 +14,8 @@ import (
 
 // Config for addFieldsTransform
 type Config struct {
-	bconfig.Header `yaml:",inline"`
 	Fields         map[string]string `yaml:"fields"`
+	bconfig.Header `yaml:",inline"`
 }
 
 type addFieldsTransform struct {
@@ -24,8 +24,8 @@ type addFieldsTransform struct {
 }
 
 type addFieldPair struct {
-	destination    base.LogFieldLocator
 	sourceTemplate stringtemplate.Expander
+	destination    base.LogFieldLocator
 }
 
 // NewTransform creates addFieldsTransform

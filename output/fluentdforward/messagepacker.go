@@ -27,20 +27,20 @@ const messageBufferCapacity = 1 * 1024 * 1024
 
 type messagePacker struct {
 	logger               logger.Logger
+	currentChunk         *forwardMessageOpenChunk
+	reusedGzipBuffer     *bytes.Buffer
+	reusedMessageBuffer  *bytes.Buffer
+	reusedMessageEncoder *msgpack.Encoder
 	tag                  string
 	asArray              bool
 	compressed           bool
-	reusedGzipBuffer     *bytes.Buffer            // buffer for gzipWriter for log records
-	reusedMessageBuffer  *bytes.Buffer            // buffer for final message
-	reusedMessageEncoder *msgpack.Encoder         // encoder for final message
-	currentChunk         *forwardMessageOpenChunk // current chunk before being made into final message
 }
 
 type forwardMessageOpenChunk struct {
-	id             string       // chunk ID
-	gzipWriter     *gzip.Writer // gzip writer can be nil if no compression, write to reusedGzipBuffer
-	numRecords     int          // numbers of collected log records
-	numStreamBytes int          // uncompressed length of written stream data
+	gzipWriter     *gzip.Writer
+	id             string
+	numRecords     int
+	numStreamBytes int
 }
 
 // NewMessagePacker creates a LogChunkMaker to pack MessagePackEventStream(s) into Message(s)

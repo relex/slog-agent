@@ -15,8 +15,8 @@ type sortableKeyValueMatches struct {
 }
 
 type unsortedKeyValueMatch struct {
-	locator base.LogFieldLocator
 	match   valueMatch
+	locator base.LogFieldLocator
 }
 
 // NewMatcher creates a LogMatcher from a set of field names and ValueMatch(s)

@@ -14,14 +14,14 @@ import (
 
 // bufferer is an intermediate buffer buf which saves log chunks to disk temporarily if needed
 type bufferer struct {
-	logger       logger.Logger
-	queueDirPath string
-	matchChunkID func(string) bool
-	chunkMan     chunkManager
 	feeder       outputFeeder
-	inputChannel chan base.LogChunk        // internal; LogChunk.Data can be nil if unloaded / saved on disk
-	inputClosed  *channels.SignalAwaitable // internal; to abort ongoing input processing
+	logger       logger.Logger
 	metrics      bufferMetrics
+	matchChunkID func(string) bool
+	inputChannel chan base.LogChunk
+	inputClosed  *channels.SignalAwaitable
+	queueDirPath string
+	chunkMan     chunkManager
 }
 
 type bufferMetrics struct {

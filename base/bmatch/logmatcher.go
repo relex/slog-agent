@@ -10,8 +10,8 @@ type LogMatcher struct {
 }
 
 type keyValueMatch struct {
-	locator base.LogFieldLocator
 	match   valueMatcher
+	locator base.LogFieldLocator
 }
 
 // Match checks whether the given record matches the condition of this matcher

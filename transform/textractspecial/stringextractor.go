@@ -22,11 +22,11 @@ var patternUnescaper = stringunescape.NewUnescaper('\\', map[byte]byte{
 
 // stringExtractor is a fast alternative to string extraction by regular expression, using simple boundaries and table of valid characters
 type stringExtractor struct {
-	position   stringExtractorPosition
 	leftBound  string
 	rightBound string
-	maxRange   int
 	validChars []bool
+	position   stringExtractorPosition
+	maxRange   int
 }
 
 var emptyExtractor = stringExtractor{}

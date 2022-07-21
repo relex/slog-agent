@@ -12,17 +12,17 @@ import (
 
 // Config for dropTransform
 type Config struct {
-	bconfig.Header `yaml:",inline"`
 	Match          bmatch.LogMatcherConfig `yaml:"match"`
-	Percentage     int                     `yaml:"percentage"`
-	MetricLabel    string                  `yaml:"metricLabel"`
+	bconfig.Header `yaml:",inline"`
+	MetricLabel    string `yaml:"metricLabel"`
+	Percentage     int    `yaml:"percentage"`
 }
 
 type dropTransform struct {
-	matcher       bmatch.LogMatcher
 	countDropped  func(length int)
 	countRetained func(length int)
-	targetRate    int64 // rate to drop matched logs, from 0 to 100 (percent)
+	matcher       bmatch.LogMatcher
+	targetRate    int64
 	totalMatched  int64
 	totalDropped  int64
 }

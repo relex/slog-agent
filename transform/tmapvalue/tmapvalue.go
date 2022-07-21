@@ -19,9 +19,9 @@ type Config struct {
 }
 
 type mapValueTransform struct {
-	keyLocator   base.LogFieldLocator
 	mapping      map[string]string
 	defaultValue string
+	keyLocator   base.LogFieldLocator
 }
 
 // NewTransform creates mapValueTransform

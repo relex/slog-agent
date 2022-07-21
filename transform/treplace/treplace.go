@@ -22,9 +22,9 @@ type Config struct {
 }
 
 type replaceTransform struct {
-	keyLocator  base.LogFieldLocator
 	pattern     *regexp.Regexp
 	replacement string
+	keyLocator  base.LogFieldLocator
 }
 
 // NewTransform creates replaceTransform

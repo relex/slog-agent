@@ -17,17 +17,17 @@ import (
 // logging, metrics, error recovery, reconnecting, periodic ping, and pipelining by handling sending and receiving on
 // separate goroutines
 type ClientWorker struct {
+	metrics       clientMetrics
 	logger        logger.Logger
-	inputChannel  <-chan base.LogChunk
 	inputClosed   channels.Awaitable
 	onChunkAcked  func(chunk base.LogChunk)
 	onChunkLeft   func(chunk base.LogChunk)
 	onFinished    func()
 	stopped       *channels.SignalAwaitable
-	metrics       clientMetrics
+	inputChannel  <-chan base.LogChunk
 	openConn      EstablishConnectionFunc
-	maxDuration   time.Duration                 // max duration of session before reconnection
-	activeSession util.AtomicRef[clientSession] // holding place of the current clientSession
+	activeSession util.AtomicRef[clientSession]
+	maxDuration   time.Duration
 }
 
 // NewClientWorker creates ClientWorker

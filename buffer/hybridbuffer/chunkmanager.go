@@ -10,9 +10,9 @@ import (
 
 type chunkManager struct {
 	logger       logger.Logger
+	metrics      chunkManagerMetrics
 	operator     chunkOperator
 	sendAllAtEnd bool
-	metrics      chunkManagerMetrics
 }
 
 type chunkManagerMetrics struct {

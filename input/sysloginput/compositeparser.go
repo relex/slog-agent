@@ -9,8 +9,8 @@ import (
 
 type compositeParser struct {
 	underlyingParser     base.LogParser
-	extractionTransforms []base.LogTransformFunc
 	deallocator          *base.LogAllocator
+	extractionTransforms []base.LogTransformFunc
 }
 
 // newCompositeParser combines a parser and a set of extraction transforms that are executed immediately after parsing without additional goroutine

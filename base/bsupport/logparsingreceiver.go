@@ -21,12 +21,12 @@ type logParsingReceiver struct {
 
 type logParsingReceiverSink struct {
 	logger        logger.Logger
+	now           time.Time
 	parser        base.LogParser
 	outputSink    base.BufferReceiverSink
+	inputCounter  *base.LogInputCounter
 	bufferedLogs  []*base.LogRecord
 	bufferedBytes int
-	now           time.Time
-	inputCounter  *base.LogInputCounter
 }
 
 // NewLogParsingReceiver creates a MultiSinkMessageReceiver to parse incoming logs, buffer them and pass to a buffer receiver

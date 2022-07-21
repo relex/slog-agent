@@ -10,13 +10,12 @@ import (
 )
 
 type rootCommandState struct {
-	CPUProfile string `name:"cpuprofile" help:"Write CPU profile to file."`
-	MemProfile string `name:"memprofile" help:"Write memory profile to file."`
-	Trace      string `help:"Write trace to file."`
-
 	cpuProfileFile *os.File
 	memProfileFile *os.File
 	traceFile      *os.File
+	CPUProfile     string `name:"cpuprofile" help:"Write CPU profile to file."`
+	MemProfile     string `name:"memprofile" help:"Write memory profile to file."`
+	Trace          string `help:"Write trace to file."`
 }
 
 var rootCmd rootCommandState

@@ -20,12 +20,12 @@ import (
 // A per-connection version has been tried and abandoned because a client may create a new connection after the old one dies, and both need to share info here
 type byKeySetOrchestrator struct {
 	logger         logger.Logger
-	workerMap      *localcachedmap.GlobalCachedMap[chan<- []*base.LogRecord, *channelInputBuffer] // append-only global map of merged keys => worker channel
-	keyLocators    []base.LogFieldLocator
-	tagBuilder     *obase.TagBuilder // builder to construct tag from keys, used when protected by globalPipelineChannelMap's mutex
 	metricCreator  promreg.MetricCreator
+	workerMap      *localcachedmap.GlobalCachedMap[chan<- []*base.LogRecord, *channelInputBuffer]
+	tagBuilder     *obase.TagBuilder
+	startPipeline  obase.PipelineStarter
+	keyLocators    []base.LogFieldLocator
 	metricKeyNames []string
-	startPipeline  obase.PipelineStarter // start workers for new pipeline (one per key-set), invoked within globalPipelineChannelMap's mutex
 }
 
 // byKeySetOrchestratorSink is created for each of input sessions or incoming connections
@@ -33,9 +33,9 @@ type byKeySetOrchestrator struct {
 // It holds local buffer of pending logs to a set of global channels to backend workers, used by this input sink and flushes on demand
 type byKeySetOrchestratorSink struct {
 	logger          logger.Logger
-	workerMap       *localcachedmap.LocalCachedMap[chan<- []*base.LogRecord, *channelInputBuffer] // append-only locac cache of byKeySetOrchestrator.workerMap
-	keySetExtractor base.FieldSetExtractor                                                        // extractor to fetch keys from LogRecord(s)
+	workerMap       *localcachedmap.LocalCachedMap[chan<- []*base.LogRecord, *channelInputBuffer]
 	sendTimeout     *time.Timer
+	keySetExtractor base.FieldSetExtractor
 }
 
 // NewOrchestrator creates an Orchestrator to distribute logs to different pipelines by unique combinations of key labels (key set)

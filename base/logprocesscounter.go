@@ -31,9 +31,9 @@ type LogProcessCounter struct {
 }
 
 type logProcessCustomCounterVec struct {
-	index           int
 	countMetricVec  *promext.LazyRWCounterVec
 	lengthMetricVec *promext.LazyRWCounterVec
+	index           int
 }
 
 type logInputCounterPair struct {
