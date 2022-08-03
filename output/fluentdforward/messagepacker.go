@@ -8,9 +8,13 @@ import (
 	"github.com/relex/gotils/logger"
 	"github.com/relex/slog-agent/base"
 	"github.com/relex/slog-agent/defs"
+	"github.com/relex/slog-agent/output/shared"
 	"github.com/relex/slog-agent/util"
 	"github.com/vmihailenco/msgpack/v4"
 )
+
+// output-specific file extension for generated chunks
+const chunkIDSuffix = ".ff"
 
 // compressedMessage enables compression - needs to be supported by upstream (e.g. fluentd)
 // The ratio is very high (20-50x) and critical for disk space and network bandwidth
@@ -36,9 +40,10 @@ type messagePacker struct {
 	tag                  string
 	asArray              bool
 	compressed           bool
-	reusedGzipBuffer     *bytes.Buffer            // buffer for gzipWriter for log records
-	reusedMessageBuffer  *bytes.Buffer            // buffer for final message
-	reusedMessageEncoder *msgpack.Encoder         // encoder for final message
+	reusedGzipBuffer     *bytes.Buffer    // buffer for gzipWriter for log records
+	reusedMessageBuffer  *bytes.Buffer    // buffer for final message
+	reusedMessageEncoder *msgpack.Encoder // encoder for final message
+	chunkIDGenerator     *shared.ChunkIDGenerator
 	currentChunk         *forwardMessageOpenChunk // current chunk before being made into final message
 }
 
@@ -77,6 +82,7 @@ func NewMessagePacker(parentLogger logger.Logger, tag string, mode forwardprotoc
 		reusedGzipBuffer:     bytes.NewBuffer(make([]byte, 0, messageBufferCapacity)),
 		reusedMessageBuffer:  msgBuffer,
 		reusedMessageEncoder: msgpack.NewEncoder(msgBuffer),
+		chunkIDGenerator:     shared.NewChunkIDGenerator(chunkIDSuffix),
 		currentChunk:         nil,
 	}
 }
@@ -131,7 +137,7 @@ func (packer *messagePacker) ensureOpenChunk() {
 		return
 	}
 	packer.currentChunk = &forwardMessageOpenChunk{
-		id:             nextChunkID(),
+		id:             packer.chunkIDGenerator.Generate(),
 		gzipWriter:     packer.createGzipWriter(),
 		numRecords:     0,
 		numStreamBytes: 0,
