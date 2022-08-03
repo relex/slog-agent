@@ -2,8 +2,11 @@ package baseoutput
 
 import (
 	"fmt"
+	"os"
+	"os/signal"
 	"sort"
 	"sync/atomic"
+	"syscall"
 	"time"
 
 	"github.com/relex/gotils/channels"
@@ -22,11 +25,11 @@ type clientSession struct {
 	metrics      clientMetrics
 	conn         ClientConnection
 	abortConn    util.RunOnce
-	lastChunk    *base.LogChunk            // last chunk in processing (to be added to leftovers if not completed)
-	ackerChan    chan base.LogChunk        // channel to pass chunks for acknowledger (wait for ACK and delete), close to end acknowledger
-	ackerAbort   *channels.SignalAwaitable // signal to abort acknowledger immediately
-	ackerEnded   *channels.SignalAwaitable // signal that acknowledger has ended
-	unacked      atomic.Value              // *[]base.LogChunk, un-ACK'ed chunks set when acknowledger quits (to be resent in next session)
+	lastChunk    *base.LogChunk                  // last chunk in processing (to be added to leftovers if not completed)
+	ackerChan    chan base.LogChunk              // channel to pass chunks for acknowledger (wait for ACK and delete), close to end acknowledger
+	ackerAbort   *channels.SignalAwaitable       // signal to abort acknowledger immediately
+	ackerEnded   *channels.SignalAwaitable       // signal that acknowledger has ended
+	unacked      atomic.Pointer[[]base.LogChunk] // un-ACK'ed chunks set when acknowledger quits (to be resent in next session)
 }
 
 type (
@@ -55,7 +58,7 @@ func newClientSession(client *ClientWorker, conn ClosableClientConnection) *clie
 		ackerChan:    make(chan base.LogChunk, defs.ForwarderMaxPendingChunksForAck),
 		ackerAbort:   channels.NewSignalAwaitable(),
 		ackerEnded:   channels.NewSignalAwaitable(),
-		unacked:      atomic.Value{},
+		unacked:      atomic.Pointer[[]base.LogChunk]{},
 	}
 }
 
@@ -72,11 +75,11 @@ func (session *clientSession) Run(leftovers chan base.LogChunk, maxDuration time
 	return session.processInput(maxDuration)
 }
 
-// Abort interrupts the ongoing session by closing the connection forcefully
+// Abort interrupts the ongoing session by closing the connection forcefully.
 //
-// The Run function should exit after a short delay
+// The Run function should exit after a short delay.
 //
-// If the connection is already closed, Abort does nothing and beforeAbort wouldn't be called
+// If the connection is already closed, Abort does nothing and beforeAbort wouldn't be called.
 func (session *clientSession) Abort(beforeAbort func()) {
 	session.abortConn(beforeAbort)
 }
@@ -120,6 +123,9 @@ func (session *clientSession) resendLeftovers(leftovers chan base.LogChunk) (cha
 func (session *clientSession) processInput(maxDuration time.Duration) (chan base.LogChunk, reconnectPolicy) {
 	maxSessionDurationSignal := time.After(maxDuration)
 
+	reconnectChan := make(chan os.Signal, 10)
+	signal.Notify(reconnectChan, syscall.SIGUSR1)
+
 	session.logger.Infof("begin normal stage with queued=%d", len(session.inputChannel))
 	for {
 		var chunk base.LogChunk
@@ -137,6 +143,10 @@ func (session *clientSession) processInput(maxDuration time.Duration) (chan base
 
 		case <-maxSessionDurationSignal:
 			session.logger.Info("max session duration reached, stopping to reconnect")
+			return session.collectLeftovers(nil, waitPendingChunks), reconnect
+
+		case <-reconnectChan:
+			session.logger.Info("received a SIGUSR1, reconnecting")
 			return session.collectLeftovers(nil, waitPendingChunks), reconnect
 
 		case <-time.After(defs.ForwarderPingInterval): // send ping (keep-alive) if there is no new log
@@ -206,6 +216,11 @@ func (session *clientSession) collectLeftovers(maybePreviousLeftovers chan base.
 	case waitPendingChunks:
 		session.logger.Info("stopping acknowledger (soft)")
 		close(session.ackerChan)
+		// wait for the soft shutdown to complete in given time, otherwise send a hard shutdown request
+		if !session.ackerEnded.Wait(defs.ForwarderAckerStopTimeout) {
+			session.logger.Warnf("timeout waiting for acknowledger to soft stop. stack=%s", util.Stack())
+			session.ackerAbort.Signal()
+		}
 	case endImmediately:
 		// we shouldn't end acknowledger gracefully during shutdown/restart because at this stage inputs are already
 		// closed and all client applications are effectively paused by the inability to log anything. The shutdown has
@@ -217,17 +232,18 @@ func (session *clientSession) collectLeftovers(maybePreviousLeftovers chan base.
 		session.logger.Panic("invalid ending type: ", ending)
 	}
 
-	if !session.ackerEnded.Wait(defs.ForwarderAckerStopTimeout) {
-		session.logger.Errorf("BUG: timeout waiting for acknowledger to stop. stack=%s", util.Stack())
+	if !session.ackerEnded.Wait(defs.IntermediateChannelTimeout) {
+		session.logger.Errorf("BUG: timeout waiting for acknowledger to hard stop. stack=%s", util.Stack())
 	}
 	fromAckerChannel := collectChunksFromChannel(session.ackerChan)
 
 	// gather pendings chunks left in runAcknowledger's pendingChunksByID
 	var fromAckerPending []base.LogChunk
-	if pendingListPtr := session.unacked.Load().(*[]base.LogChunk); pendingListPtr != nil {
-		fromAckerPending = *pendingListPtr
+	pendingListPtr := session.unacked.Load()
+	if pendingListPtr == nil {
+		session.logger.Errorf("BUG: failed to get un-ACK'ed chunks from acknowledger. pendingListPtr=%v, stack=%s", pendingListPtr, util.Stack())
 	} else {
-		session.logger.Errorf("BUG: failed to get un-ACK'ed chunks from acknowledger. stack=%s", util.Stack())
+		fromAckerPending = *pendingListPtr
 	}
 
 	// merge
