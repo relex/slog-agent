@@ -6,9 +6,11 @@ import (
 	"github.com/relex/slog-agent/util"
 )
 
-type ioReader func(p []byte) (n int, err error)
-type recordConsumer func(s []byte)
-type headTester func(s []byte) bool
+type (
+	ioReader       func(p []byte) (n int, err error)
+	recordConsumer func(s []byte)
+	headTester     func(s []byte) bool
+)
 
 // multiLineReader keeps entire multi-line records on buffer for zero heap alloc and minimal moving
 // The reader is designed for malformed syslog, for example:
@@ -63,7 +65,7 @@ func (mlr *multiLineReader) Flush() {
 	if n == -1 {
 		return
 	}
-	record := buffer[:n]
+	record := buffer[:n] //nolint:ifshort // more readable this way
 	if len(record) > 0 && mlr.testRecordStart(record) {
 		mlr.consumeRecord(record)
 	}

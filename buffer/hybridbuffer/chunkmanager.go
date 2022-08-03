@@ -66,7 +66,7 @@ func (man *chunkManager) UnloadOrDropChunk(chunkRef *base.LogChunk) bool {
 	return true
 }
 
-func (man *chunkManager) OnChunkInput(chunk base.LogChunk, loaded bool) {
+func (man *chunkManager) OnChunkInput(loaded bool) {
 	man.metrics.pendingChunks.Inc()
 	if loaded {
 		man.metrics.inputChunksTotalTransient.Inc()

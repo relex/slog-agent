@@ -14,7 +14,8 @@ type RunOnce func(beforeRunning func())
 
 // NewRunOnce creates a function that would call the given "f" at most once
 func NewRunOnce(f func()) RunOnce {
-	var invoked int32 = 0
+	var invoked int32
+
 	return func(beforeRunning func()) {
 		if atomic.CompareAndSwapInt32(&invoked, 0, 1) {
 			if beforeRunning != nil {

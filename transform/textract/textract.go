@@ -29,7 +29,7 @@ type extractTransform struct {
 }
 
 // NewTransform creates extractTransform
-func (c *Config) NewTransform(schema base.LogSchema, parentLogger logger.Logger, customCounterRegistry base.LogCustomCounterRegistry) base.LogTransform {
+func (c *Config) NewTransform(schema base.LogSchema, _ logger.Logger, _ base.LogCustomCounterRegistry) base.LogTransform {
 	re := regexp.MustCompile(c.Pattern)
 	subexpSels := make([]base.LogFieldLocator, len(re.SubexpNames()))
 	for i, name := range re.SubexpNames() {

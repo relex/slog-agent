@@ -38,7 +38,7 @@ type UpstreamConfig struct {
 }
 
 // MatchChunkID checks whether given ID is valid for a fluentdforward chunk file
-func (cfg *Config) MatchChunkID(chunkID string) bool {
+func (cfg *Config) MatchChunkID(chunkID string) bool { //nolint:revive
 	return strings.HasSuffix(chunkID, chunkIDSuffix)
 }
 
@@ -78,7 +78,6 @@ func (cfg *Config) VerifyConfig(schema base.LogSchema) error {
 	case forwardprotocol.ModeForward:
 	case forwardprotocol.ModePackedForward:
 	case forwardprotocol.ModeCompressedPackedForward:
-		break
 	default:
 		return fmt.Errorf(".messageMode: '%s' is not a valid mode", cfg.MessageMode)
 	}

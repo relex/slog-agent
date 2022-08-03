@@ -29,8 +29,10 @@ type clientSession struct {
 	unacked      atomic.Value              // *[]base.LogChunk, un-ACK'ed chunks set when acknowledger quits (to be resent in next session)
 }
 
-type reconnectPolicy string
-type acknowledgerEnding string
+type (
+	reconnectPolicy    string
+	acknowledgerEnding string
+)
 
 const (
 	reconnectWithDelay reconnectPolicy    = "reconnectWithDelay"
@@ -166,7 +168,6 @@ func (session *clientSession) sendChunk(chunk base.LogChunk) (bool, reconnectPol
 	// pass forwarded chunk to acknowledger
 	select {
 	case session.ackerChan <- chunk:
-		break
 	case <-session.inputClosed.Channel():
 		session.logger.Infof("aborted before queueing chunk for ack due to stop request: %s", chunk.String())
 		return false, noReconnect

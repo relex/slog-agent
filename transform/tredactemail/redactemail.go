@@ -6,8 +6,10 @@ import (
 	"github.com/relex/slog-agent/util"
 )
 
-var validAddressChars = make([]bool, 256)
-var validWordChars = make([]bool, 256)
+var (
+	validAddressChars = make([]bool, 256)
+	validWordChars    = make([]bool, 256)
+)
 
 func init() {
 	for c := byte('A'); c <= byte('Z'); c++ {
@@ -48,9 +50,8 @@ func redactEmailFindFirst(src string) int {
 		nextAt := strings.IndexByte(src[sAt:], '@')
 		if nextAt == -1 {
 			break
-		} else {
-			sAt += nextAt
 		}
+		sAt += nextAt
 	}
 	return -1
 }
@@ -84,9 +85,8 @@ func redactEmail1(src string, start int) (string, int) {
 		nextAt := strings.IndexByte(src[sAt:], '@')
 		if nextAt == -1 {
 			break
-		} else {
-			sAt += nextAt
 		}
+		sAt += nextAt
 	}
 	dst = append(dst, src[sCopied:]...)
 	return util.StringFromBytes(dst), numRedacted

@@ -55,7 +55,7 @@ func (metrics *clientMetrics) OnOpening() {
 	metrics.openedSessionsTotal.Inc()
 }
 
-func (metrics *clientMetrics) OnForwarding(chunk base.LogChunk) {
+func (metrics *clientMetrics) OnForwarding(_ base.LogChunk) {
 	metrics.forwardAttemptsTotal.Inc()
 }
 
@@ -71,7 +71,7 @@ func (metrics *clientMetrics) OnAcknowledged(chunk base.LogChunk) {
 	metrics.queuedChunksPendingAck.Dec()
 }
 
-func (metrics *clientMetrics) OnLeftoverPopped(chunk base.LogChunk) {
+func (metrics *clientMetrics) OnLeftoverPopped(_ base.LogChunk) {
 	metrics.queuedChunksLeftover.Dec()
 }
 

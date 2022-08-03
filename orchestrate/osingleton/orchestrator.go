@@ -55,10 +55,8 @@ func (oc *singletonOrchestratorChild) Accept(buffer []*base.LogRecord) {
 	select {
 	case oc.inputChannel <- reusableBuffer:
 		// TODO: update metrics
-		break
 	case <-oc.sendTimeout.C:
 		oc.logger.Errorf("BUG: timeout flushing: %d records. stack=%s", len(reusableBuffer), util.Stack())
-		break
 	}
 }
 

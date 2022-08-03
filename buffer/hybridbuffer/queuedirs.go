@@ -31,18 +31,20 @@ func makeBufferQueueDir(parentLogger logger.Logger, rootPath string, bufferID st
 	} else {
 		path = rootPath
 	}
-	if derr := os.MkdirAll(path, 0755); derr != nil {
+	if derr := os.MkdirAll(path, 0o755); derr != nil {
 		parentLogger.Errorf("error creating queue dir path='%s': %s", path, derr.Error())
 	}
-	if err := os.WriteFile(filepath.Join(path, idFileName), []byte(bufferID), 0644); err != nil {
+
+	//nolint:gosec // need extra permissions here
+	if err := os.WriteFile(filepath.Join(path, idFileName), []byte(bufferID), 0o644); err != nil {
 		parentLogger.Errorf("error creating an id file on queue dir path='%s': %s", path, err)
 	}
 	return path
 }
 
 func listBufferQueueIDs(parentLogger logger.Logger, rootPath string, matchChunkID func(string) bool,
-	parentMetricCreator promreg.MetricCreator) []string {
-
+	parentMetricCreator promreg.MetricCreator,
+) []string {
 	metricCreator := makeBufferMetricCreator(parentMetricCreator)
 
 	parentLogger.Infof("scan root dir: %s", rootPath)

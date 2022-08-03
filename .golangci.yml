@@ -1,0 +1,250 @@
+# using a custom configuration with all non-essential linters disabled,
+# because the default cfg is too strict and requires too much refactoring
+
+run:
+  go: '1.18'
+  concurrency: 4
+  timeout: 2m
+  issues-exit-code: 1
+
+  # default is true. Enables skipping of directories:
+  #   vendor$, third_party$, testdata$, examples$, Godeps$, builtin$
+  skip-dirs-use-default: true
+  skip-dirs:
+    - "test"
+  skip-files: [".*_test.go$"]
+  tests: true # whether to include test files
+
+
+output:
+  format: tab
+  print-issued-lines: true
+  print-linter-name: true
+  unique-by-line: true
+  sort-results: true
+
+
+linters-settings:
+  cyclop:
+    max-complexity: 20 # Default: 10
+    package-average: 0.5 # Default: 0.5
+    skip-tests: true
+
+  decorder:
+    dec-order:
+      - type
+      - const
+      - var
+      - func
+    disable-dec-order-check: false
+    disable-init-func-first-check: false
+    disable-dec-num-check: true # true allows multiple var/type/etc declarations
+
+  errcheck:
+    check-type-assertions: true
+    check-blank: true
+
+  errchkjson:
+    check-error-free-encoding: true
+    report-no-exported: true
+
+  exhaustruct:
+    exclude:
+      - '.*Config$'
+      - '.*Settings$'
+      - '.*prometheus\..*'
+
+  funlen:
+    lines: 100
+    statements: 70
+
+  gocognit:
+    min-complexity: 30 # default: 30     
+
+  # might need more well defined config after we reenable it
+  gocritic:
+    enabled-tags:
+      - diagnostic
+      - style
+      - performance
+      - experimental
+      - opinionated
+
+  govet:
+    check-shadowing: true
+    enable-all: true
+    disable:
+      - fieldalignment
+        
+  lll:
+    line-length: 150 # default: 120 
+
+  nlreturn:
+    block-size: 3
+
+  nolintlint:
+    allow-unused: false
+    allow-leading-space: false
+    require-explanation: false
+    require-specific: false
+
+  revive:
+    enable-all-rules: true
+    ignore-generated-header: false
+    severity: error
+    rules:
+      # disabled rules which are mostly duplicated by other linters
+      - name: add-constant
+        disabled: true
+      - name: banned-characters
+        disabled: true
+      - name: cyclomatic
+        disabled: true
+      - name: cognitive-complexity
+        disabled: true
+      - name: confusing-results
+        disabled: true
+      - name: file-header
+        disabled: true
+      - name: flag-parameter
+        disabled: true
+      - name: function-length
+        disabled: true
+      - name: line-length-limit
+        disabled: true
+      - name: max-public-structs
+        disabled: true
+
+      # rules with arguments
+      - name: argument-limit
+        severity: warning
+        disabled: true
+        arguments: [4]
+      - name: function-result-limit
+        severity: warning
+        disabled: true
+        arguments: [3]
+
+
+linters:
+  # enable-all: true
+  # disable-all: true
+  enable:
+    # enabled by default, should not be overridden in custom configs
+    - deadcode          # finds unused code
+    - errcheck          # checks for unchecked errors
+    - gosimple          # tells where code can be simplified
+    - govet             # examines Go source code and reports suspicious constructs
+    - ineffassign       # detects ineffectual assignments
+    - staticcheck       # a huge linter finding many bugs
+    - structcheck       # finds unused struct fields
+    - typecheck         # parses and type-checks Go code
+    - unused            # warns on unused types/functions/etc
+    - varcheck          # finds unused global variables and constants
+
+
+    # essential linters that should not be disabled in custom configs
+      # configurable
+    - asasalint         # makes sure you don't pass `[]any` as `any`
+    - bidichk           # checks for invisible unicode characters
+    - dogsled           # finds assignments with too many blank identifiers, e.g. x, _, _ := f()
+    - dupl              # detects code duplication
+    - errchkjson        # checks types passed to json encoders
+    - exhaustive        # checks exhaustiveness of enum switch statements
+    - forbidigo         # forbids some function calls, configurable, by default forbids fmt.Print
+    - gci               # controls package import order
+    - gofumpt           # a stricter gofmt
+    - goimports         # checks imports order
+    - gosec             # checks for security issues
+    - ifshort           # detects if statements which could be shorter
+    - maintidx          # measures the maintainability index of each function
+    - makezero          # finds slice declarations with non-zero initial length
+    - misspell          # finds commonly misspelled English words in comments
+    - nakedret          # finds naked returns in long functions 
+    - nilnil            # checks that there is no simultaneous return of nil error and an invalid value
+    - nolintlint        # reports bad nolint directives
+    - nonamedreturns    # warns on named returns
+    - paralleltest      # detects missing usage of t.Parallel() method in tests
+    - prealloc          # finds slice declarations that could potentially be pre-allocated
+    - predeclared       # finds vars with disallowed names
+    - revive            # replaces golint, very configurable
+    - rowserrcheck      # checks whether Err of rows is checked successfully
+    - stylecheck        # another replacement for golint
+    - tenv              # detects using os.Setenv instead of t.Setenv since go 1.17
+    - thelper           # detects golang test helpers without t.Helper() call and checks their consistency
+    - unparam           # reports unused function parameters
+    - whitespace        # checks for unnecessary newlines at the start and end of code blocks
+
+      # non-configurable
+    - asciicheck        # checks that your code does not contain non-ASCII identifiers
+    - bodyclose         # checks whether HTTP response body is closed successfully
+    - containedctx      # detects structs with context.Context field
+    - contextcheck      # checks if you use a non-inherited context
+    - durationcheck     # makes sure you don't multiply two instances of time.Duration
+    - errname           # checks that sentinel errors are prefixed with the Err and error types are suffixed with the Error 
+    - execinquery       # checks where you could use db.Exec instead of db.Query
+    - exportloopref     # checks for pointers to enclosing loop variables
+    - goprintffuncname  # checks that printf-like functions are named with `f` at the end
+    - nilerr            # warns when you do `if err != nil { return nil }`
+    - noctx             # warns when you send an http request without context
+    - sqlclosecheck     # checks that sql.Rows and sql.Stmt are closed
+    - tparallel         # detects inappropriate usage of t.Parallel() method
+    - unconvert         # warns on unnecessary type conversions
+    - wastedassign      # finds unused (re)assignments
+
+
+    # these can be disabled in custom configs if there's a real need for that
+      # configurable
+    # - cyclop            # checks cyclomatic complexity
+    # - decorder          # checks the order and number of declaration
+    # - errorlint         # makes sure you wrap errors correctly
+    # - funlen            # enforces a limit on function length
+    # - gocognit          # enforces a limit on function complexity
+    # - goconst           # replace repeated strings with a constant
+    # - gomnd             # detects magic numbers
+    # - ireturn           # disallows returing interfaces ("accept interfaces, return concrete types")
+    # - lll               # warns on long lines
+    # - nestif            # warns on many nested ifs
+    # - nlreturn          # requires a newline before returns
+    # - promlinter        # check prometheus metrics naming via promlint
+    # - varnamelen        # reports variables with names too short for their scope
+    # - wrapcheck         # checks whether the errors are wrapped
+    # - wsl               # forces to use empty lines where appropriate
+
+      # non-configurable
+    # - gochecknoglobals  # tells you not to use globals
+    # - gochecknoinits    # tells you not to use init() functions
+    # - goerr113          # makes you use static errors, it's a good one, but very annoying
+    # - nosprintfhostport # warns when you build a url with sprintf
+    # - nosnakecase       # forbids snake case in variables; may false trigger on stuff like `unix.O_RDONLY`
+
+  disable:
+    # temporarily
+    - gocritic          # a huge and opinionated but useful linter; panics on generics, will enable it after it's fixed
+
+    # deprecated
+    - golint            # deprecated, replaced with revive
+    - interfacer        # deprecated
+    - maligned          # deprecated, replaced with govet 'fieldalignment'
+    - scopelint         # deprecated, replaced with exportloopref
+
+    # duplicates
+    - exhaustivestruct  # deprecated, we use a fork of it separate from golangcilint
+    - exhaustruct       # checks if all the fields of a struct were initialized; we use a fork of it separately
+    - forcetypeassert   # warns on unchecked type asserts; duplicates errcheck.check-type-assertions behaviour
+    - gocyclo           # same as cyclop and revive has cyclo check as well
+    - gofmt             # superseded by gofumpt
+
+    # not needed or annoying
+    - depguard          # creates a whitelist/blacklist of packages that can be imported; we don't have these lists (yet)
+    - godot             # checks that comments end with a period; annoying
+    - godox             # checks for TODO and similar stuff; annoying
+    - goheader          # we don't use license headers
+    - gomoddirectives   # don't really need to ban go.mod directives for now
+    - gomodguard        # like depguard, but more flexible; don't need it for now
+    - grouper           # analyzes import/type groups; not sure if we need it
+    - importas          # enforces import aliasing rules; requires configuration, not sure if needed
+    - tagliatelle       # enforce snake/kebab/etc rules on struct tags; needs config, not sure if needed
+    - testpackage       # makes you use a separate *_test package for tests
+
+

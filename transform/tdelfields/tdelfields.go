@@ -20,7 +20,7 @@ type delFieldsTransform struct {
 }
 
 // NewTransform creates delFieldsTransform
-func (c *Config) NewTransform(schema base.LogSchema, parentLogger logger.Logger, customCounterRegistry base.LogCustomCounterRegistry) base.LogTransform {
+func (c *Config) NewTransform(schema base.LogSchema, _ logger.Logger, _ base.LogCustomCounterRegistry) base.LogTransform {
 	locators := make([]base.LogFieldLocator, 0, len(c.Keys))
 	for _, key := range c.Keys {
 		locators = append(locators, schema.MustCreateFieldLocator(key))

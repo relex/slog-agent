@@ -42,16 +42,15 @@ type Config struct {
 // AnchorsConfig defines the anchors section in config file
 //
 // The section is meant to host user-defined YAML variables for other sections and doesn't need to be processed itself
-type AnchorsConfig struct {
-}
+type AnchorsConfig struct{}
 
 // MarshalYAML does nothing
-func (holder AnchorsConfig) MarshalYAML() (interface{}, error) {
+func (holder AnchorsConfig) MarshalYAML() (interface{}, error) { //nolint:revive
 	return []string(nil), nil
 }
 
 // UnmarshalYAML does nothing
-func (holder *AnchorsConfig) UnmarshalYAML(value *yaml.Node) error {
+func (holder *AnchorsConfig) UnmarshalYAML(value *yaml.Node) error { //nolint:revive
 	return nil
 }
 
@@ -71,26 +70,26 @@ func ParseConfigFile(filepath string) (Config, base.LogSchema, ConfigStats, erro
 	}
 
 	var schema base.LogSchema
-	if s, err := checkAndCreateSchema(conf); err == nil {
-		schema = s
-	} else {
+	s, err := checkAndCreateSchema(conf)
+	if err != nil {
 		return conf, base.LogSchema{}, stats, err
 	}
+	schema = s
 
 	statsBuilder := NewConfigStatsBuilder(&schema)
 	statsBuilder.BeginTrackingFixedFields()
 
-	if err := bsupport.VerifyInputConfigs(conf.Inputs, schema, "inputs"); err != nil {
+	if err = bsupport.VerifyInputConfigs(conf.Inputs, schema, "inputs"); err != nil {
 		return conf, schema, stats, err
 	}
 
 	var orcKeys []string
-	if keys, err := conf.Orchestration.Value.VerifyConfig(schema); err == nil {
-		orcKeys = keys
-		stats.OrchestrationKeys = keys
-	} else {
+	keys, err := conf.Orchestration.Value.VerifyConfig(schema)
+	if err != nil {
 		return conf, schema, stats, fmt.Errorf("orchestration: %w", err)
 	}
+	orcKeys = keys
+	stats.OrchestrationKeys = keys
 
 	statsBuilder.BeginTrackingFields()
 

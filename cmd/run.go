@@ -12,13 +12,14 @@ type runCommandState struct {
 	TestMode    bool   `help:"Use test mode config: fast retry and short timeout"`
 }
 
-var runCmd runCommandState = runCommandState{
+var runCmd = runCommandState{
 	Config:      "config.yml",
 	MetricsAddr: ":9335",
 	AllowReload: false,
 	TestMode:    false,
 }
 
+//nolint:revive
 func (cmd *runCommandState) run(args []string) {
 	if cmd.TestMode {
 		defs.EnableTestMode()

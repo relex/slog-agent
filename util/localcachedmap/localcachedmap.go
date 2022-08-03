@@ -30,17 +30,16 @@ type GlobalCachedMap[G any, L any] struct {
 
 // NewGlobalMap creates a globalMap
 func NewGlobalMap[G any, L any](
-	create GlobalObjectConstructor[G],
-	delete GlobalObjectDestructor[G],
-	wrap LocalWrapperConstructor[G, L],
+	createFunc GlobalObjectConstructor[G],
+	deleteFunc GlobalObjectDestructor[G],
+	wrapFunc LocalWrapperConstructor[G, L],
 ) *GlobalCachedMap[G, L] {
-
 	return &GlobalCachedMap[G, L]{
 		globalMap:     make(map[string]G, 2000),
 		globalMutex:   &sync.Mutex{},
-		createObject:  create,
-		deleteObject:  delete,
-		wrapObject:    wrap,
+		createObject:  createFunc,
+		deleteObject:  deleteFunc,
+		wrapObject:    wrapFunc,
 		objectCounter: &sync.WaitGroup{},
 	}
 }
@@ -90,6 +89,7 @@ type LocalCachedMap[G any, L any] struct {
 	keyBuffer []byte                 // preallocated buffer to merge keys
 }
 
+//nolint:revive
 // GetOrCreate gets or creates a global object and returns the local cache of it
 //
 // The given tempKeys is assumed to be transient and will be copied if it needs to be stored in the global map
@@ -116,6 +116,7 @@ func (lm *LocalCachedMap[G, L]) GetOrCreate(tempKeys []string, onCreating func(p
 	return newLocalCache
 }
 
+//nolint:revive
 // Walk iterates through each of (key, value) pair
 func (lm *LocalCachedMap[G, L]) Walk(action func(key string, localCache L)) {
 	for key, localCache := range lm.localMap {

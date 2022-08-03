@@ -12,19 +12,19 @@ type benchmarkCommandState struct {
 	Config string `help:"Configuration file path"`
 }
 
-var benchCmd benchmarkCommandState = benchmarkCommandState{
+var benchCmd = benchmarkCommandState{
 	Input:  "testdata/development/*.log",
 	Output: "null",
 	Config: "testdata/config_sample.yml",
 	Repeat: 100,
 }
 
-func (cmd *benchmarkCommandState) runBenchmarkPipelineCommand(args []string) {
+func (cmd *benchmarkCommandState) runBenchmarkPipelineCommand(_ []string) {
 	defs.EnableTestMode()
 	test.RunBenchmarkPipeline(cmd.Input, cmd.Output, cmd.Repeat, cmd.Config)
 }
 
-func (cmd *benchmarkCommandState) runBenchmarkAgentCommand(args []string) {
+func (cmd *benchmarkCommandState) runBenchmarkAgentCommand(_ []string) {
 	defs.EnableTestMode()
 	test.RunBenchmarkAgent(cmd.Input, cmd.Output, cmd.Repeat, cmd.Config)
 }
