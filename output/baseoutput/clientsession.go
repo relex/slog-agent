@@ -75,11 +75,11 @@ func (session *clientSession) Run(leftovers chan base.LogChunk, maxDuration time
 	return session.processInput(maxDuration)
 }
 
-// Abort interrupts the ongoing session by closing the connection forcefully
+// Abort interrupts the ongoing session by closing the connection forcefully.
 //
-// # The Run function should exit after a short delay
+// The Run function should exit after a short delay.
 //
-// If the connection is already closed, Abort does nothing and beforeAbort wouldn't be called
+// If the connection is already closed, Abort does nothing and beforeAbort wouldn't be called.
 func (session *clientSession) Abort(beforeAbort func()) {
 	session.abortConn(beforeAbort)
 }
