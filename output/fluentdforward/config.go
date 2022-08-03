@@ -37,9 +37,8 @@ type UpstreamConfig struct {
 	MaxDuration time.Duration `yaml:"maxDuration"`
 }
 
-//nolint:revive
 // MatchChunkID checks whether given ID is valid for a fluentdforward chunk file
-func (cfg *Config) MatchChunkID(chunkID string) bool {
+func (cfg *Config) MatchChunkID(chunkID string) bool { //nolint:revive
 	return strings.HasSuffix(chunkID, chunkIDSuffix)
 }
 
