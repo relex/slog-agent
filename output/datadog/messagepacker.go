@@ -7,10 +7,14 @@ import (
 	"github.com/relex/gotils/logger"
 	"github.com/relex/slog-agent/base"
 	"github.com/relex/slog-agent/defs"
+	"github.com/relex/slog-agent/output/shared"
 	"github.com/relex/slog-agent/util"
 )
 
-const gzipCompressionLevel = gzip.BestSpeed
+const (
+	gzipCompressionLevel = gzip.BestSpeed
+	chunkIDSuffix        = ".dd" // output-specific file extension for generated chunks
+)
 
 // outputChunkMaxDataBytes defines the max uncompressed data size of a LogChunk.
 //
@@ -25,6 +29,7 @@ type messagePacker struct {
 	currentChunk        *forwardMessageOpenChunk // current chunk before being made into final message
 	reusedGzipBuffer    *bytes.Buffer            // buffer for gzipWriter for log records
 	reusedMessageBuffer *bytes.Buffer            // buffer for final message
+	chunkIDGenerator    *shared.ChunkIDGenerator
 	useCompression      bool
 }
 
@@ -41,6 +46,7 @@ func NewMessagePacker(parentLogger logger.Logger) *messagePacker {
 		currentChunk:        nil,
 		reusedGzipBuffer:    bytes.NewBuffer(make([]byte, 0, 1*1024*1024)),
 		reusedMessageBuffer: bytes.NewBuffer(make([]byte, 0, 1*1024*1024)),
+		chunkIDGenerator:    shared.NewChunkIDGenerator(chunkIDSuffix),
 		useCompression:      true,
 	}
 }
@@ -96,7 +102,7 @@ func (packer *messagePacker) ensureOpenChunk() {
 		return
 	}
 	packer.currentChunk = &forwardMessageOpenChunk{
-		id:             nextChunkID(),
+		id:             packer.chunkIDGenerator.Generate(),
 		gzipWriter:     packer.createGzipWriter(),
 		numRecords:     0,
 		numStreamBytes: 0,
