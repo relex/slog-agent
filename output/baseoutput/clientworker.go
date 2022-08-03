@@ -1,6 +1,7 @@
 package baseoutput
 
 import (
+	"sync/atomic"
 	"time"
 
 	"github.com/relex/gotils/channels"
@@ -8,7 +9,6 @@ import (
 	"github.com/relex/gotils/promexporter/promreg"
 	"github.com/relex/slog-agent/base"
 	"github.com/relex/slog-agent/defs"
-	"github.com/relex/slog-agent/util"
 )
 
 // ClientWorker is a common client implementing ChunkConsumer
@@ -26,8 +26,8 @@ type ClientWorker struct {
 	stopped       *channels.SignalAwaitable
 	metrics       clientMetrics
 	openConn      EstablishConnectionFunc
+	activeSession atomic.Pointer[clientSession] // holding place of the current clientSession
 	maxDuration   time.Duration                 // max duration of session before reconnection
-	activeSession util.AtomicRef[clientSession] // holding place of the current clientSession
 }
 
 // NewClientWorker creates ClientWorker
@@ -45,7 +45,7 @@ func NewClientWorker(parentLogger logger.Logger, args base.ChunkConsumerArgs, me
 		metrics:       newClientMetrics(metricCreator),
 		openConn:      openConn,
 		maxDuration:   maxDuration,
-		activeSession: util.AtomicRef[clientSession]{},
+		activeSession: atomic.Pointer[clientSession]{},
 	}
 
 	// fast shutdown: force immediate ending of output when inputClosed is signaled
@@ -57,7 +57,7 @@ func NewClientWorker(parentLogger logger.Logger, args base.ChunkConsumerArgs, me
 	//
 	// TODO: make this an option or dependent on keys/tags
 	client.inputClosed.Next(func() {
-		sess := client.activeSession.Get()
+		sess := client.activeSession.Load()
 		if sess != nil {
 			sess.Abort(func() {
 				client.logger.Info("abort ongoing connection due to stop request")
@@ -149,13 +149,13 @@ func (client *ClientWorker) runSession(leftovers chan base.LogChunk) (chan base.
 	client.metrics.OnOpening()
 
 	sess := newClientSession(client, conn)
-	client.activeSession.Set(sess)
+	client.activeSession.Store(sess)
 
 	defer func() {
 		sess.Abort(func() {
 			client.logger.Info("close connection at the end of session")
 		})
-		client.activeSession.Set(nil)
+		client.activeSession.Store(nil)
 	}()
 
 	return sess.Run(leftovers, client.maxDuration)
