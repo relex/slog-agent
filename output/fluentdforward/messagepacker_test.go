@@ -9,7 +9,6 @@ import (
 	"github.com/relex/fluentlib/protocol/forwardprotocol"
 	"github.com/relex/gotils/logger"
 	"github.com/relex/slog-agent/base"
-	"github.com/relex/slog-agent/defs"
 	"github.com/stretchr/testify/assert"
 	"github.com/vmihailenco/msgpack/v4"
 )
@@ -48,8 +47,8 @@ func TestForwardMessageMakerJoining(t *testing.T) {
 	// generate stream parts, each should be 360 bytes
 	serializer, serr := NewEventSerializer(logger.Root(), testSchema, testSerializationConfig)
 	assert.Nil(t, serr)
-	oldChunkLimit := defs.OutputChunkMaxDataBytes
-	defs.OutputChunkMaxDataBytes = 3000
+	oldChunkLimit := outputChunkMaxDataBytes
+	outputChunkMaxDataBytes = 3000
 	chunkMaker := NewMessagePacker(logger.Root(), "hello", forwardprotocol.ModeCompressedPackedForward)
 	hasPrevChunk := true
 	for i, record := range inputRecords {
@@ -70,7 +69,7 @@ func TestForwardMessageMakerJoining(t *testing.T) {
 	}
 	lastChunk := chunkMaker.FlushBuffer()
 	assert.NotNil(t, lastChunk, "chunk[last]")
-	defs.OutputChunkMaxDataBytes = oldChunkLimit
+	outputChunkMaxDataBytes = oldChunkLimit
 }
 
 func generateMassTestLogRecords(count int) []*base.LogRecord {

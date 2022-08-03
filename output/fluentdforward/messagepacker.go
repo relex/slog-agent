@@ -25,6 +25,12 @@ const gzipCompressionLevel = gzip.BestSpeed
 // It only needs to be large enough to contain the largest compressed message
 const messageBufferCapacity = 1 * 1024 * 1024
 
+// outputChunkMaxDataBytes defines the max uncompressed data size of a LogChunk, not including necessary headers.
+// The value must be well below Fluentd's Fluent::Plugin::Buffer::DEFAULT_CHUNK_LIMIT_SIZE, as some buffers are implicitly inserted and non-configurable.
+//
+// https://github.com/fluent/fluentd/blob/master/lib/fluent/plugin/buffer.rb#L39
+var outputChunkMaxDataBytes = 7 * 1024 * 1024
+
 type messagePacker struct {
 	logger               logger.Logger
 	tag                  string
@@ -77,7 +83,7 @@ func NewMessagePacker(parentLogger logger.Logger, tag string, mode forwardprotoc
 
 func (packer *messagePacker) WriteStream(stream base.LogStream) *base.LogChunk {
 	var previousChunk *base.LogChunk
-	if packer.currentChunk != nil && packer.currentChunk.numStreamBytes+len(stream) > defs.OutputChunkMaxDataBytes {
+	if packer.currentChunk != nil && packer.currentChunk.numStreamBytes+len(stream) > outputChunkMaxDataBytes {
 		previousChunk = packer.FlushBuffer()
 	}
 	packer.ensureOpenChunk()

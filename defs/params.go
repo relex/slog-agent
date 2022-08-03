@@ -58,11 +58,6 @@ var (
 	// For example, to flush buffer streams into output chunks, or to update internal timer
 	IntermediateFlushInterval = 1 * time.Second
 
-	// OutputChunkMaxDataBytes defines the max uncompressed data size of a LogChunk, not including necessary headers
-	//
-	// The value must be lower than the maximum buffer length acceptable by upstream
-	OutputChunkMaxDataBytes = 7 * 1024 * 1024
-
 	// BufferMaxNumChunksInQueue is the max numbers of of loaded and unloaded chunks to be held in a queue,
 	// equal to the max numbers of queued files on disk, because at least all the filepaths need to be held in channel
 	//
