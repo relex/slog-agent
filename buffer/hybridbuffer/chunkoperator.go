@@ -50,7 +50,7 @@ func newChunkOperator(parentLogger logger.Logger, path string, matchID func(stri
 	return chunkOperator{
 		logger:     ologger,
 		maybeDir:   maybeDir,
-		matchID:    matchID,
+		matchID:    func(s string) bool { return matchID(s) && s != idFileName },
 		metrics:    metrics,
 		spaceLimit: spaceLimit,
 	}

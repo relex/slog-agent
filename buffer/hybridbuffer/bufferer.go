@@ -16,7 +16,6 @@ import (
 type bufferer struct {
 	logger       logger.Logger
 	queueDirPath string
-	matchChunkID func(string) bool
 	chunkMan     chunkManager
 	feeder       outputFeeder
 	inputChannel chan base.LogChunk        // internal; LogChunk.Data can be nil if unloaded / saved on disk
@@ -29,9 +28,10 @@ type bufferMetrics struct {
 	queuedChunksPersistent promext.RWGauge
 }
 
-// newBufferer creates a HybridBufferer
-// "sendAllAtEnd": sends everything at shutdown and waits for all chunks to be confirmed by ChunkConsumerArgs.OnChunkConsumed
-//                 true for testing only. Same functionality is activated if queue directory cannot be accessed.
+// newBufferer creates a HybridBufferer.
+//
+// sendAllAtEnd: sends everything at shutdown and waits for all chunks to be confirmed by ChunkConsumerArgs.OnChunkConsumed.
+// true for testing only. Same functionality is activated if queue directory cannot be accessed.
 func newBufferer(parentLogger logger.Logger, rootPath string, bufferID string, matchChunkID func(string) bool,
 	parentMetricCreator promreg.MetricCreator, storageSpaceLimit int64, sendAllAtEnd bool,
 ) base.ChunkBufferer {
@@ -63,7 +63,6 @@ func newBufferer(parentLogger logger.Logger, rootPath string, bufferID string, m
 	return &bufferer{
 		logger:       bufLogger,
 		queueDirPath: queueDirPath,
-		matchChunkID: matchChunkID,
 		chunkMan:     chunkMan,
 		feeder:       newOutputFeeder(bufLogger, chunkMan, inputChannel, inputClosed, metrics),
 		inputChannel: inputChannel,
