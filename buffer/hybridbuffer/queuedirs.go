@@ -12,8 +12,11 @@ import (
 	"golang.org/x/sys/unix"
 )
 
-const queueDirHashLength = 8
-const xattrBufferID = "user.hybridbufferID"
+const (
+	queueDirHashLength = 8
+	idFileName         = ".id"
+	xattrBufferID      = "user.hybridbufferID"
+)
 
 func makeBufferQueueDir(parentLogger logger.Logger, rootPath string, bufferID string) string {
 	var path string
@@ -28,18 +31,20 @@ func makeBufferQueueDir(parentLogger logger.Logger, rootPath string, bufferID st
 	} else {
 		path = rootPath
 	}
-	if derr := os.MkdirAll(path, 0755); derr != nil {
+	if derr := os.MkdirAll(path, 0o755); derr != nil {
 		parentLogger.Errorf("error creating queue dir path='%s': %s", path, derr.Error())
 	}
-	if xerr := xattr.Set(path, xattrBufferID, []byte(bufferID)); xerr != nil {
-		parentLogger.Errorf("error labelling id on queue dir path='%s': %s", path, xerr)
+
+	//nolint:gosec // need extra permissions here
+	if err := os.WriteFile(filepath.Join(path, idFileName), []byte(bufferID), 0o644); err != nil {
+		parentLogger.Errorf("error creating an id file on queue dir path='%s': %s", path, err)
 	}
 	return path
 }
 
 func listBufferQueueIDs(parentLogger logger.Logger, rootPath string, matchChunkID func(string) bool,
-	parentMetricCreator promreg.MetricCreator) []string {
-
+	parentMetricCreator promreg.MetricCreator,
+) []string {
 	metricCreator := makeBufferMetricCreator(parentMetricCreator)
 
 	parentLogger.Infof("scan root dir: %s", rootPath)
@@ -75,13 +80,16 @@ func listBufferQueueIDs(parentLogger logger.Logger, rootPath string, matchChunkI
 		}
 
 		// read ID from extended attribute
-		idBytes, xerr := xattr.Get(path, xattrBufferID)
-		if xerr != nil {
-			parentLogger.Warnf("ignore buffer dir without id, path='%s': %s", path, xerr.Error())
-			continue
+		idBytes, idErr := os.ReadFile(filepath.Join(path, idFileName))
+		if idErr != nil {
+			idBytes, idErr = xattr.Get(path, xattrBufferID)
+			if idErr != nil {
+				parentLogger.Warnf("ignore buffer dir without id, path='%s': %s", path, idErr.Error())
+			}
 		}
+
 		if len(idBytes) == 0 {
-			parentLogger.Warnf("ignore buffer dir with empty id, path='%s': %s", path, xerr.Error())
+			parentLogger.Warnf("ignore buffer dir with empty id, path='%s': %s", path, idErr.Error())
 			continue
 		}
 		id := util.StringFromBytes(idBytes)

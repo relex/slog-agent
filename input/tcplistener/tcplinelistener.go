@@ -12,8 +12,10 @@ import (
 	"github.com/relex/slog-agent/util"
 )
 
-const tcpReadBufferMax = 8 * 1024 * 1024 // Less than /proc/sys/net/ipv4/tcp_mem
-const tcpReadBufferMin = 65536
+const (
+	tcpReadBufferMax = 8 * 1024 * 1024 // Less than /proc/sys/net/ipv4/tcp_mem
+	tcpReadBufferMin = 65536
+)
 
 var tcpLastReadBufferSize = tcpReadBufferMax // shared for all connections. No need to sync access as it's just a cached number.
 
@@ -45,8 +47,8 @@ type tcpLineListener struct {
 //
 // Returns the listener, actual address including final port, and error if failed
 func NewTCPLineListener(parentLogger logger.Logger, address string, testRecord func(ln []byte) bool,
-	receiver base.MultiSinkMessageReceiver, stopRequest channels.Awaitable) (base.LogListener, string, error) {
-
+	receiver base.MultiSinkMessageReceiver, stopRequest channels.Awaitable,
+) (base.LogListener, string, error) {
 	// open TCP socket
 	socket, err := net.Listen("tcp", address)
 	if err != nil {
@@ -54,18 +56,18 @@ func NewTCPLineListener(parentLogger logger.Logger, address string, testRecord f
 	}
 	boundAddr := socket.Addr().String()
 
-	logger := parentLogger.WithFields(logger.Fields{
+	log := parentLogger.WithFields(logger.Fields{
 		defs.LabelComponent: "TCPLineListener",
 		defs.LabelAddress:   boundAddr,
 	})
-	logger.Info("start listening")
+	log.Info("start listening")
 
 	// init taskCounter with 1 for the listener; Can't wait for Start() because WaitGroupAwaitable below would quit immediately if it's zero.
 	taskCounter := &sync.WaitGroup{}
 	taskCounter.Add(1)
 
 	return &tcpLineListener{
-		logger:      logger,
+		logger:      log,
 		socket:      socket.(*net.TCPListener),
 		testRecord:  testRecord,
 		receiver:    receiver,
@@ -95,7 +97,9 @@ func (listener *tcpLineListener) run() {
 				listener.logger.Info("close listener on stop request")
 			}
 		}).WaitForever()
-		listener.socket.Close()
+		if err := listener.socket.Close(); err != nil {
+			listener.logger.Error("close listener error: ", err)
+		}
 	}()
 
 	// main loop
@@ -103,9 +107,8 @@ func (listener *tcpLineListener) run() {
 	for {
 		conn, err := listener.socket.AcceptTCP()
 		if err != nil {
-			if listener.stopRequest.Peek() && util.IsNetworkClosed(err) {
-				// closed on stop request
-			} else {
+			if !(listener.stopRequest.Peek() && util.IsNetworkClosed(err)) {
+				// not closed on stop request
 				listener.logger.Error("accept() error: ", err)
 				abortListener.Signal()
 			}
@@ -120,7 +123,9 @@ func (listener *tcpLineListener) run() {
 		})
 		if clientNumber >= base.MaxClientNumber {
 			connLogger.Error("rejected connection: too many clients")
-			conn.Close()
+			if err = conn.Close(); err != nil {
+				listener.logger.Error("connection close error: ", err)
+			}
 			continue
 		}
 
@@ -153,9 +158,9 @@ func (listener *tcpLineListener) runConnection(connLogger logger.Logger, conn *n
 	for {
 		err := mlineReader.Read()
 		if err == nil {
-			if prevDeadline == emptyTime {
+			if prevDeadline.Equal(emptyTime) {
 				prevDeadline = connReader.ReadDeadline()
-			} else if connReader.ReadDeadline() != prevDeadline {
+			} else if !connReader.ReadDeadline().Equal(prevDeadline) {
 				connLogger.Debug("flush input for deadline update")
 				mlineReader.Flush()
 				recvChan.Flush()
@@ -199,11 +204,14 @@ func (listener *tcpLineListener) launchConnectionCloser(connLogger logger.Logger
 				connLogger.Info("close connection on stop request")
 			}
 		}).WaitForever()
-		conn.Close()
+		if err := conn.Close(); err != nil {
+			connLogger.Error("conn close error: ", err)
+		}
 	}()
 	return abortConn
 }
 
+//nolint:revive
 func (listener *tcpLineListener) createConnectionReader(connLogger logger.Logger, conn *net.TCPConn) *util.NetConnWrapper {
 	if err := conn.SetKeepAlive(true); err != nil {
 		connLogger.Warnf("error enabling keep-alive: %s", err.Error())

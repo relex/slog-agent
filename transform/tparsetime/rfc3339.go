@@ -34,11 +34,10 @@ func parseRFC3339Timestamp(timeStr string, timezoneCache map[string]*time.Locati
 		frac = atof9(fracStr)
 	default:
 		f, err := strconv.ParseFloat(fracStr, 64)
-		if err == nil {
-			frac = f
-		} else {
+		if err != nil {
 			return time.Now(), fmt.Errorf("invalid fraction '%s': %w", fracStr, err)
 		}
+		frac = f
 	}
 	var location *time.Location
 	if len(tzStr) > 0 {
@@ -52,13 +51,12 @@ func parseRFC3339Timestamp(timeStr string, timezoneCache map[string]*time.Locati
 				layout = "Z0700"
 			}
 			z, err := time.Parse(layout, tzStr)
-			if err == nil {
-				tzName, tzOffset := z.Zone()
-				location = time.FixedZone(tzName, tzOffset)
-				timezoneCache[tzStr] = location
-			} else {
+			if err != nil {
 				return time.Now(), fmt.Errorf("invalid timezone '%s': %w", tzStr, err)
 			}
+			tzName, tzOffset := z.Zone()
+			location = time.FixedZone(tzName, tzOffset)
+			timezoneCache[tzStr] = location
 		}
 	} else {
 		location = time.Local
@@ -69,8 +67,9 @@ func parseRFC3339Timestamp(timeStr string, timezoneCache map[string]*time.Locati
 // splitFractionAndTimezone splits e.g. ".123+07:00" to .123 and +07:00
 func splitFractionAndTimezone(s string) (string, string) {
 	if len(s) > 1 && s[0] == '.' {
-		var i int
-		for i = 1; i < len(s) && s[i] >= '0' && s[i] <= '9'; i++ {
+		i := 1
+		for i < len(s) && s[i] >= '0' && s[i] <= '9' {
+			i++
 		}
 		return s[:i], s[i:]
 	}

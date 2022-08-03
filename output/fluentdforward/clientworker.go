@@ -51,11 +51,15 @@ func openForwardConnection(parentLogger logger.Logger, config UpstreamConfig) (b
 
 	success, reason, herr := forwardprotocol.DoClientHandshake(sock, config.Secret, defs.ForwarderHandshakeTimeout)
 	if herr != nil {
-		sock.Close()
+		if err := sock.Close(); err != nil {
+			connLogger.Error("error closing socket: ", err)
+		}
 		return nil, fmt.Errorf("failed to handshake: %w", herr)
 	}
 	if !success {
-		sock.Close()
+		if err := sock.Close(); err != nil {
+			connLogger.Error("error closing socket: ", err)
+		}
 		return nil, fmt.Errorf("failed to handshake: %s", reason)
 	}
 
@@ -75,7 +79,7 @@ func connect(connLogger logger.Logger, useTLS bool, address string) (net.Conn, e
 		dialer := &net.Dialer{}
 		dialer.Timeout = defs.ForwarderConnectionTimeout
 		dialer.Deadline = time.Now().Add(defs.ForwarderConnectionTimeout)
-		tlsConfig := &tls.Config{}
+		tlsConfig := &tls.Config{} //nolint:gosec // we don't veryfy certs anyway
 		tlsConfig.InsecureSkipVerify = true
 		sock, err = tls.DialWithDialer(dialer, "tcp", address, tlsConfig)
 	} else {
@@ -131,7 +135,9 @@ func (fconn *forwardConnection) ReadChunkAck(deadline time.Time) (string, error)
 }
 
 func (fconn *forwardConnection) Close() {
-	fconn.socket.Close()
+	if err := fconn.socket.Close(); err != nil {
+		fconn.logger.Error("error closing socket: ", err)
+	}
 }
 
 func buildInternalPingMessage() []byte {

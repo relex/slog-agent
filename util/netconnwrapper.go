@@ -35,7 +35,7 @@ func (cw *NetConnWrapper) ReadDeadline() time.Time {
 	return cw.readDeadline
 }
 
-func (cw *NetConnWrapper) Read(p []byte) (n int, err error) {
+func (cw *NetConnWrapper) Read(p []byte) (int, error) {
 	if cw.readTimeoutMin > 0 {
 		now := time.Now()
 		if cw.readDeadline.Sub(now) < cw.readTimeoutMin {

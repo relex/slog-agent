@@ -6,7 +6,15 @@ import (
 	"github.com/relex/slog-agent/base"
 	"github.com/relex/slog-agent/base/bconfig"
 	"github.com/relex/slog-agent/base/bsupport"
+	"github.com/relex/slog-agent/util"
 )
+
+type outputWorkerSettings struct {
+	bufferer   base.ChunkBufferer
+	serializer base.LogSerializer
+	chunkMaker base.LogChunkMaker
+	consumer   base.ChunkConsumer
+}
 
 // PipelineStarter represents a function to launch workers for a top-level pipeline under Orchestrator
 //
@@ -18,26 +26,46 @@ type PipelineStarter func(parentLogger logger.Logger, metricCreator promreg.Metr
 
 // PrepareSequentialPipeline makes a starter for pipelines including transformer, serializer and output forwarder
 func PrepareSequentialPipeline(args bconfig.PipelineArgs) PipelineStarter {
-
 	return func(parentLogger logger.Logger, metricCreator promreg.MetricCreator,
-		input <-chan []*base.LogRecord, bufferID string, outputTag string, onStopped func()) {
+		input <-chan []*base.LogRecord, bufferID string, outputTag string, onStopped func(),
+	) {
+		outputSettingsSlice := util.MapSlice(args.OutputBufferPairs, func(pair bconfig.OutputBufferConfig) outputWorkerSettings {
+			consumerLogger := parentLogger.WithField("output", pair.Name)
 
-		// bufferer in the middle of pipeline has to be started first and shut down last for persistance of pending outputs
-		outputBufferer := args.BufferConfig.NewBufferer(parentLogger, bufferID, args.OutputConfig.MatchChunkID,
-			metricCreator, args.SendAllAtEnd)
-		outputBufferer.Start()
+			settings := outputWorkerSettings{
+				bufferer: pair.BufferConfig.Value.NewBufferer(
+					consumerLogger,
+					bufferID,
+					pair.OutputConfig.Value.MatchChunkID,
+					metricCreator.AddOrGetPrefix("buffer_", []string{"output"}, []string{pair.Name}),
+					args.SendAllAtEnd),
+			}
 
-		// then start output forwarder which is at the end of pipeline.
-		// if there are queued logs from bufferer, the consumer would immediately start sending them.
-		if args.NewConsumerOverride != nil {
-			parentLogger.Info("launch override consumer")
-			outputConsumer := args.NewConsumerOverride(parentLogger, outputBufferer.RegisterNewConsumer())
-			outputConsumer.Start()
-		} else {
-			parentLogger.Info("launch consumer")
-			outputConsumer := args.OutputConfig.NewForwarder(parentLogger, outputBufferer.RegisterNewConsumer(), metricCreator)
-			outputConsumer.Start()
-		}
+			// bufferer in the middle of pipeline has to be started first and shut down last for persistence of pending outputs
+			settings.bufferer.Start()
+
+			// then start output forwarder which is at the end of pipeline.
+			// if there are queued logs from bufferer, the consumer would immediately start sending them.
+
+			if args.NewConsumerOverride != nil {
+				consumerLogger.Info("launch override consumer")
+				settings.consumer = args.NewConsumerOverride(consumerLogger, settings.bufferer.RegisterNewConsumer())
+				settings.consumer.Start()
+			} else {
+				consumerLogger.Info("launch consumer")
+				settings.consumer = pair.OutputConfig.Value.NewForwarder(
+					consumerLogger,
+					settings.bufferer.RegisterNewConsumer(),
+					metricCreator.AddOrGetPrefix("output_", []string{"output"}, []string{pair.Name}),
+				)
+				settings.consumer.Start()
+			}
+
+			settings.serializer = pair.OutputConfig.Value.NewSerializer(consumerLogger, args.Schema)
+			settings.chunkMaker = pair.OutputConfig.Value.NewChunkMaker(consumerLogger, outputTag)
+
+			return settings
+		})
 
 		// then prepare processing worker which is at the head of pipeline
 		procTracker := base.NewLogProcessCounter(metricCreator, args.Schema, args.MetricKeyLocators)
@@ -47,12 +75,18 @@ func PrepareSequentialPipeline(args bconfig.PipelineArgs) PipelineStarter {
 			args.Deallocator,
 			procTracker,
 			bsupport.NewTransformsFromConfig(args.TransformConfigs, args.Schema, parentLogger, procTracker),
-			args.OutputConfig.NewSerializer(parentLogger, args.Schema, args.Deallocator),
-			args.OutputConfig.NewChunkMaker(parentLogger, outputTag),
-			outputBufferer.Accept,
+			util.MapSlice(outputSettingsSlice, func(outputSettings outputWorkerSettings) bsupport.OutputInterface {
+				return bsupport.OutputInterface{
+					LogSerializer: outputSettings.serializer,
+					LogChunkMaker: outputSettings.chunkMaker,
+					AcceptChunk:   outputSettings.bufferer.Accept,
+				}
+			}),
 		)
 		procWorker.Stopped().Next(func() {
-			outputBufferer.Destroy()
+			util.EachInSlice(outputSettingsSlice, func(_ int, settings outputWorkerSettings) {
+				settings.bufferer.Destroy()
+			})
 			onStopped()
 		})
 

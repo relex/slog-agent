@@ -7,6 +7,7 @@
 // unescaping.
 //
 // The 'unescape' rewriter serves as the last rewriter in the chain, in place of 'copy'
+//nolint:revive
 package runescape
 
 import (
@@ -23,8 +24,7 @@ type Config struct {
 	bconfig.Header `yaml:",inline"`
 }
 
-type unescapeRewriter struct {
-}
+type unescapeRewriter struct{}
 
 var unescaper = bsupport.NewSyslogUnescaper()
 

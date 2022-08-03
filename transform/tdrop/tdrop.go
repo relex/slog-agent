@@ -28,7 +28,7 @@ type dropTransform struct {
 }
 
 // NewTransform creates dropTransform
-func (cfg *Config) NewTransform(schema base.LogSchema, parentLogger logger.Logger, customCounterRegistry base.LogCustomCounterRegistry) base.LogTransform {
+func (cfg *Config) NewTransform(schema base.LogSchema, _ logger.Logger, customCounterRegistry base.LogCustomCounterRegistry) base.LogTransform {
 	tf := &dropTransform{
 		matcher:       cfg.Match.NewMatcher(schema),
 		countDropped:  customCounterRegistry.RegisterCustomCounter(cfg.MetricLabel),

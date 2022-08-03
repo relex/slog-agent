@@ -59,23 +59,25 @@ transformations:
 `
 
 const sampleOutputConf = `
-buffer:
-  type: hybridBuffer
-  rootPath: %s
-  maxBufSize: 1GB
-output:
-  type: fluentdForward
-  serialization:
-    environmentFields: [host, app, source]
-    hiddenFields: []
-    rewriteFields:
-      log:
-        - type: unescape
-  messageMode: CompressedPackedForward
-  upstream:
-    address: %s
-    tls: false
-    maxDuration: 500ms
+outputBufferPairs:
+  - name: testPairName
+    buffer:
+        type: hybridBuffer
+        rootPath: %s
+        maxBufSize: 1GB
+    output:
+        type: fluentdForward
+        serialization:
+            environmentFields: [host, app, source]
+            hiddenFields: []
+            rewriteFields:
+                log:
+                    - type: unescape
+        messageMode: CompressedPackedForward
+        upstream:
+            address: %s
+            tls: false
+            maxDuration: 500ms
 `
 
 var sampleConf = assembleConfig(

@@ -28,7 +28,7 @@ type replaceTransform struct {
 }
 
 // NewTransform creates replaceTransform
-func (c *Config) NewTransform(schema base.LogSchema, parentLogger logger.Logger, customCounterRegistry base.LogCustomCounterRegistry) base.LogTransform {
+func (c *Config) NewTransform(schema base.LogSchema, _ logger.Logger, _ base.LogCustomCounterRegistry) base.LogTransform {
 	return &replaceTransform{
 		keyLocator:  schema.MustCreateFieldLocator(c.Key),
 		pattern:     regexp.MustCompile(c.Pattern),

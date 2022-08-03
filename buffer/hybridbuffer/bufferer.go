@@ -33,8 +33,8 @@ type bufferMetrics struct {
 // "sendAllAtEnd": sends everything at shutdown and waits for all chunks to be confirmed by ChunkConsumerArgs.OnChunkConsumed
 //                 true for testing only. Same functionality is activated if queue directory cannot be accessed.
 func newBufferer(parentLogger logger.Logger, rootPath string, bufferID string, matchChunkID func(string) bool,
-	parentMetricCreator promreg.MetricCreator, storageSpaceLimit int64, sendAllAtEnd bool) base.ChunkBufferer {
-
+	parentMetricCreator promreg.MetricCreator, storageSpaceLimit int64, sendAllAtEnd bool,
+) base.ChunkBufferer {
 	bufLogger := parentLogger.WithField(defs.LabelComponent, "HybridBufferer")
 	metricCreator := makeBufferMetricCreator(parentMetricCreator)
 	queueDirPath := makeBufferQueueDir(bufLogger, rootPath, bufferID)
@@ -92,17 +92,17 @@ func (buf *bufferer) RegisterNewConsumer() base.ChunkConsumerArgs {
 }
 
 // Accept accepts incoming chunks
-func (buf *bufferer) Accept(chunk base.LogChunk, timeout <-chan time.Time) {
+func (buf *bufferer) Accept(chunk base.LogChunk, _ <-chan time.Time) {
 	// divide by 2 because channel length is not updated in time
 	if buf.feeder.NumOutput() >= defs.BufferMaxNumChunksInMemory/2 {
 		buf.logger.Debugf("unload chunk for queuing: id=%s len=%d", chunk.ID, len(chunk.Data))
-		buf.chunkMan.OnChunkInput(chunk, false)
+		buf.chunkMan.OnChunkInput(false)
 		if !buf.chunkMan.UnloadOrDropChunk(&chunk) {
 			return
 		}
 	} else {
 		buf.logger.Debugf("pass chunk to queue: id=%s len=%d", chunk.ID, len(chunk.Data))
-		buf.chunkMan.OnChunkInput(chunk, true)
+		buf.chunkMan.OnChunkInput(true)
 	}
 
 	select {
@@ -112,7 +112,6 @@ func (buf *bufferer) Accept(chunk base.LogChunk, timeout <-chan time.Time) {
 		} else {
 			buf.metrics.queuedChunksPersistent.Inc()
 		}
-		break
 	default:
 		buf.chunkMan.OnChunkDropped(chunk)
 		if chunk.Data != nil {
@@ -120,7 +119,6 @@ func (buf *bufferer) Accept(chunk base.LogChunk, timeout <-chan time.Time) {
 		} else {
 			buf.logger.Errorf("queue overflow, drop unloaded chunk id=%s", chunk.ID)
 		}
-		break
 	}
 }
 

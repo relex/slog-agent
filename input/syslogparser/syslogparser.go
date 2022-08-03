@@ -40,8 +40,8 @@ type syslogParser struct {
 
 // MustNewParser creates a new syslogParser or panic
 func MustNewParser(parentLogger logger.Logger, allocator *base.LogAllocator, schema base.LogSchema,
-	levelMapping []string, inputCounter *base.LogInputCounter) base.LogParser {
-
+	levelMapping []string, inputCounter *base.LogInputCounter,
+) base.LogParser {
 	parser, err := NewParser(parentLogger, allocator, schema, levelMapping, inputCounter)
 	if err != nil {
 		parentLogger.Panic("failed to create SyslogParser: ", err)
@@ -52,8 +52,8 @@ func MustNewParser(parentLogger logger.Logger, allocator *base.LogAllocator, sch
 
 // NewParser creates a new syslogParser
 func NewParser(parentLogger logger.Logger, allocator *base.LogAllocator, schema base.LogSchema,
-	levelMapping []string, inputCounter *base.LogInputCounter) (base.LogParser, error) {
-
+	levelMapping []string, inputCounter *base.LogInputCounter,
+) (base.LogParser, error) {
 	if len(levelMapping) == 0 {
 		levelMapping = syslogprotocol.SeverityNames
 	} else if len(levelMapping) != 8 {
@@ -114,40 +114,38 @@ func (parser *syslogParser) Parse(input []byte, timestamp time.Time) *base.LogRe
 	}
 
 	// parse the pri field, e.g. "<163>"
-	if ok, val, next := nextFieldBySpace(remaining); ok {
-		if val[len(val)-2:] != ">1" {
-			parser.onMalformed(record, fmt.Sprintf("invalid syslog pri '%s'", val), input)
-			return nil
-		}
-		pri := val[1 : len(val)-2]
-		priVal, err := strconv.Atoi(pri)
-		if err != nil {
-			parser.onMalformed(record, fmt.Sprintf("invalid syslog pri value '%s'", pri), input)
-			return nil
-		}
-
-		// extract facility from pri
-		{
-			facility := priVal >> 3
-			if facility < 0 || facility >= len(syslogprotocol.FacilityNames) {
-				parser.onMalformed(record, fmt.Sprintf("invalid syslog facility %d", facility), input)
-				return nil
-			}
-			facilityName := syslogprotocol.FacilityNames[facility]
-			parser.fieldFacilityLocator.Set(fields, facilityName)
-		}
-
-		// extract severity (log level) from pri
-		{
-			severity := priVal & 0b111
-			severityName := parser.levelMapping[severity]
-			parser.fieldLevelLocator.Set(fields, severityName)
-		}
-		remaining = next
-	} else {
+	ok, val, next := nextFieldBySpace(remaining)
+	if !ok {
 		parser.onMalformed(record, "unfinished syslog", input)
 		return nil
 	}
+
+	if val[len(val)-2:] != ">1" {
+		parser.onMalformed(record, fmt.Sprintf("invalid syslog pri '%s'", val), input)
+		return nil
+	}
+	pri := val[1 : len(val)-2]
+	priVal, err := strconv.Atoi(pri)
+	if err != nil {
+		parser.onMalformed(record, fmt.Sprintf("invalid syslog pri value '%s'", pri), input)
+		return nil
+	}
+
+	// extract facility from pri
+	facility := priVal >> 3
+	if facility < 0 || facility >= len(syslogprotocol.FacilityNames) {
+		parser.onMalformed(record, fmt.Sprintf("invalid syslog facility %d", facility), input)
+		return nil
+	}
+	facilityName := syslogprotocol.FacilityNames[facility]
+	parser.fieldFacilityLocator.Set(fields, facilityName)
+
+	// extract severity (log level) from pri
+	severity := priVal & 0b111
+	severityName := parser.levelMapping[severity]
+	parser.fieldLevelLocator.Set(fields, severityName)
+
+	remaining = next
 
 	// rest of header fields delimited by whitespace
 	for _, locator := range parser.restFieldLocators {

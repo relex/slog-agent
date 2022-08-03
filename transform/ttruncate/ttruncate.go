@@ -24,7 +24,7 @@ type truncateTransform struct {
 }
 
 // NewTransform creates truncateTransform
-func (c *Config) NewTransform(schema base.LogSchema, parentLogger logger.Logger, customCounterRegistry base.LogCustomCounterRegistry) base.LogTransform {
+func (c *Config) NewTransform(schema base.LogSchema, _ logger.Logger, _ base.LogCustomCounterRegistry) base.LogTransform {
 	return &truncateTransform{
 		keyLocator: schema.MustCreateFieldLocator(c.Key),
 		maxLength:  c.MaxLength,

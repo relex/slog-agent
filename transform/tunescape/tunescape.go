@@ -27,7 +27,7 @@ type unescapeTransform struct {
 var unescaper = bsupport.NewSyslogUnescaper()
 
 // NewTransform creates unescapeTransform
-func (c *Config) NewTransform(schema base.LogSchema, parentLogger logger.Logger, customCounterRegistry base.LogCustomCounterRegistry) base.LogTransform {
+func (c *Config) NewTransform(schema base.LogSchema, _ logger.Logger, _ base.LogCustomCounterRegistry) base.LogTransform {
 	return &unescapeTransform{
 		keyLocator: schema.MustCreateFieldLocator(c.Key),
 	}

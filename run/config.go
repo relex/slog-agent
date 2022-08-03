@@ -30,29 +30,27 @@ func init() {
 
 // Config defines the root of slog-agent config file
 type Config struct {
-	Anchors         AnchorsConfig                      `yaml:"anchors"`
-	Schema          SchemaConfig                       `yaml:"schema"`
-	Inputs          []bconfig.LogInputConfigHolder     `yaml:"inputs"`
-	Orchestration   bconfig.OrchestratorConfigHolder   `yaml:"orchestration"`
-	MetricKeys      []string                           `yaml:"metricKeys"`
-	Transformations []bconfig.LogTransformConfigHolder `yaml:"transformations"`
-	Buffer          bconfig.ChunkBufferConfigHolder    `yaml:"buffer"`
-	Output          bconfig.LogOutputConfigHolder      `yaml:"output"`
+	Anchors            AnchorsConfig                      `yaml:"anchors"`
+	Schema             SchemaConfig                       `yaml:"schema"`
+	Inputs             []bconfig.LogInputConfigHolder     `yaml:"inputs"`
+	Orchestration      bconfig.OrchestratorConfigHolder   `yaml:"orchestration"`
+	MetricKeys         []string                           `yaml:"metricKeys"`
+	Transformations    []bconfig.LogTransformConfigHolder `yaml:"transformations"`
+	OutputBuffersPairs []bconfig.OutputBufferConfig       `yaml:"outputBufferPairs"`
 }
 
 // AnchorsConfig defines the anchors section in config file
 //
 // The section is meant to host user-defined YAML variables for other sections and doesn't need to be processed itself
-type AnchorsConfig struct {
-}
+type AnchorsConfig struct{}
 
 // MarshalYAML does nothing
-func (holder AnchorsConfig) MarshalYAML() (interface{}, error) {
+func (holder AnchorsConfig) MarshalYAML() (interface{}, error) { //nolint:revive
 	return []string(nil), nil
 }
 
 // UnmarshalYAML does nothing
-func (holder *AnchorsConfig) UnmarshalYAML(value *yaml.Node) error {
+func (holder *AnchorsConfig) UnmarshalYAML(value *yaml.Node) error { //nolint:revive
 	return nil
 }
 
@@ -72,26 +70,26 @@ func ParseConfigFile(filepath string) (Config, base.LogSchema, ConfigStats, erro
 	}
 
 	var schema base.LogSchema
-	if s, err := checkAndCreateSchema(conf); err == nil {
-		schema = s
-	} else {
+	s, err := checkAndCreateSchema(conf)
+	if err != nil {
 		return conf, base.LogSchema{}, stats, err
 	}
+	schema = s
 
 	statsBuilder := NewConfigStatsBuilder(&schema)
 	statsBuilder.BeginTrackingFixedFields()
 
-	if err := bsupport.VerifyInputConfigs(conf.Inputs, schema, "inputs"); err != nil {
+	if err = bsupport.VerifyInputConfigs(conf.Inputs, schema, "inputs"); err != nil {
 		return conf, schema, stats, err
 	}
 
 	var orcKeys []string
-	if keys, err := conf.Orchestration.Value.VerifyConfig(schema); err == nil {
-		orcKeys = keys
-		stats.OrchestrationKeys = keys
-	} else {
+	keys, err := conf.Orchestration.Value.VerifyConfig(schema)
+	if err != nil {
 		return conf, schema, stats, fmt.Errorf("orchestration: %w", err)
 	}
+	orcKeys = keys
+	stats.OrchestrationKeys = keys
 
 	statsBuilder.BeginTrackingFields()
 
@@ -103,12 +101,16 @@ func ParseConfigFile(filepath string) (Config, base.LogSchema, ConfigStats, erro
 		return conf, schema, stats, err
 	}
 
-	if err := conf.Buffer.Value.VerifyConfig(); err != nil {
-		return conf, schema, stats, fmt.Errorf("buffer: %w", err)
-	}
+	nameDuplicationCheckMap := make(map[string]struct{}, len(conf.OutputBuffersPairs))
+	for _, pair := range conf.OutputBuffersPairs {
+		if _, ok := nameDuplicationCheckMap[pair.Name]; ok {
+			return conf, schema, stats, fmt.Errorf("found duplicate outputBufferPair names in config: %s", pair.Name)
+		}
+		nameDuplicationCheckMap[pair.Name] = struct{}{}
 
-	if err := conf.Output.Value.VerifyConfig(schema); err != nil {
-		return conf, schema, stats, fmt.Errorf("output: %w", err)
+		if err := pair.VerifyConfig(schema); err != nil {
+			return conf, schema, stats, err
+		}
 	}
 
 	statsBuilder.Finish(&stats)

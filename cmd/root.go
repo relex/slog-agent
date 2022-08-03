@@ -62,6 +62,7 @@ func (cmd *rootCommandState) preRun() {
 	}
 }
 
+//nolint:revive
 func (cmd *rootCommandState) postRun() {
 	if cmd.cpuProfileFile != nil {
 		pprof.StopCPUProfile()

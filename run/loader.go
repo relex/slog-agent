@@ -16,7 +16,6 @@ import (
 //
 // TODO: remove interface and call Reloader direcrly after it's proved stable
 type loaderIface interface {
-
 	// StartOrchestrator launches an Orchestrator in background and returns it
 	StartOrchestrator(ologger logger.Logger) base.Orchestrator
 
@@ -50,8 +49,7 @@ type Loader struct {
 	metricPrefix string
 	logger       logger.Logger
 
-	PipelineArgs bconfig.PipelineArgs // parameters for to run a pipeline, may be modified in-place
-
+	PipelineArgs          bconfig.PipelineArgs // parameters for to run a pipeline, may be modified in-place
 	inputMetricFactory    *promreg.MetricFactory
 	pipelineMetricFactory *promreg.MetricFactory
 }
@@ -76,11 +74,10 @@ func NewLoaderFromConfigFile(filepath string, metricPrefix string) (*Loader, err
 
 		PipelineArgs: bconfig.PipelineArgs{
 			Schema:              schema,
-			Deallocator:         base.NewLogAllocator(schema),
+			Deallocator:         base.NewLogAllocator(schema, len(config.OutputBuffersPairs)),
 			MetricKeyLocators:   schema.MustCreateFieldLocators(config.MetricKeys), // should have been verified in config parsing
 			TransformConfigs:    config.Transformations,
-			BufferConfig:        config.Buffer.Value,
-			OutputConfig:        config.Output.Value,
+			OutputBufferPairs:   config.OutputBuffersPairs,
 			NewConsumerOverride: nil,
 			SendAllAtEnd:        false,
 		},

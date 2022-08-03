@@ -13,5 +13,5 @@ package hybridbuffer
 import "github.com/relex/gotils/promexporter/promreg"
 
 func makeBufferMetricCreator(parentMetricCreator promreg.MetricCreator) promreg.MetricCreator {
-	return parentMetricCreator.AddOrGetPrefix("buffer_", []string{"storage"}, []string{"hybridBuffer"})
+	return parentMetricCreator.AddOrGetPrefix("", []string{"storage"}, []string{"hybridBuffer"})
 }

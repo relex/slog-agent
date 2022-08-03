@@ -9,8 +9,8 @@ import (
 //
 // GO_INTERNAL
 type _waitGroup struct {
-	NoCopy struct{}
 	state1 [3]uint32
+	NoCopy struct{} //nolint:revive
 }
 
 // PeekWaitGroup returns the count from the internal counter of sync.WaitGroup by a non-atomic op
@@ -21,7 +21,7 @@ func PeekWaitGroup(waitGroup *sync.WaitGroup) int {
 }
 
 // state is a copy of sync.WaitGroup.state()
-func (wg *_waitGroup) state() (statep *uint64, semap *uint32) {
+func (wg *_waitGroup) state() (*uint64, *uint32) {
 	if uintptr(unsafe.Pointer(&wg.state1))%8 == 0 {
 		return (*uint64)(unsafe.Pointer(&wg.state1)), &wg.state1[2]
 	}

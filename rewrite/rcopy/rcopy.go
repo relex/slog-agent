@@ -1,6 +1,7 @@
 // Package rcopy provides 'copy' rewriter, which copies the original field value unmodified
 //
 // The 'copy' rewriter serves as the last rewriter in the chain, if no extra processing is needed
+//nolint:revive
 package rcopy
 
 import (
@@ -16,8 +17,7 @@ type Config struct {
 	bconfig.Header `yaml:",inline"`
 }
 
-type copyRewriter struct {
-}
+type copyRewriter struct{}
 
 // NewRewriter creates copyRewriter for test
 func NewRewriter() base.LogRewriter {

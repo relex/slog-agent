@@ -2,7 +2,6 @@ package fluentdforward
 
 import (
 	"fmt"
-	"io"
 	"net"
 	"strings"
 	"time"
@@ -38,19 +37,15 @@ type UpstreamConfig struct {
 	MaxDuration time.Duration `yaml:"maxDuration"`
 }
 
-// DumpRecordsAsJSON decodes and dumps log records in chunk as JSON format
-func (cfg *Config) DumpRecordsAsJSON(chunk base.LogChunk, separator []byte, indented bool, destination io.Writer) (base.LogChunkInfo, error) {
-	return decodeAndDumpRecordsAsJSON(chunk, separator, indented, destination)
-}
-
+//nolint:revive
 // MatchChunkID checks whether given ID is valid for a fluentdforward chunk file
 func (cfg *Config) MatchChunkID(chunkID string) bool {
 	return strings.HasSuffix(chunkID, chunkIDSuffix)
 }
 
 // NewSerializer creates LogSerializer
-func (cfg *Config) NewSerializer(parentLogger logger.Logger, schema base.LogSchema, deallocator *base.LogAllocator) base.LogSerializer {
-	return MustNewEventSerializer(parentLogger, schema, cfg.Serialization, deallocator)
+func (cfg *Config) NewSerializer(parentLogger logger.Logger, schema base.LogSchema) base.LogSerializer {
+	return MustNewEventSerializer(parentLogger, schema, cfg.Serialization)
 }
 
 // NewChunkMaker creates LogChunkMaker
@@ -84,7 +79,6 @@ func (cfg *Config) VerifyConfig(schema base.LogSchema) error {
 	case forwardprotocol.ModeForward:
 	case forwardprotocol.ModePackedForward:
 	case forwardprotocol.ModeCompressedPackedForward:
-		break
 	default:
 		return fmt.Errorf(".messageMode: '%s' is not a valid mode", cfg.MessageMode)
 	}

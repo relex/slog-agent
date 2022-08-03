@@ -24,9 +24,9 @@ type PipelineWorkerBase[T any] struct {
 }
 
 // NewPipelineWorkerBase creates a new PipelineWorkerBase for specified data type in channel
-func NewPipelineWorkerBase[T any](logger logger.Logger, inputChannel <-chan T) PipelineWorkerBase[T] {
+func NewPipelineWorkerBase[T any](log logger.Logger, inputChannel <-chan T) PipelineWorkerBase[T] {
 	return PipelineWorkerBase[T]{
-		_baseLogger:  logger,
+		_baseLogger:  log,
 		_baseInput:   inputChannel,
 		_baseStopped: channels.NewSignalAwaitable(),
 	}

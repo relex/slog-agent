@@ -41,10 +41,10 @@ func init() {
 }
 
 // NewInput creates a SyslogInput and starts the network listener
-func (cfg *Config) NewInput(parentLogger logger.Logger, allocator *base.LogAllocator, schema base.LogSchema,
+func (cfg *Config) NewInput(_ logger.Logger, allocator *base.LogAllocator, schema base.LogSchema,
 	logBufferReceiver base.MultiSinkBufferReceiver, metricCreator promreg.MetricCreator,
-	stopRequest channels.Awaitable) (base.LogInput, error) {
-
+	stopRequest channels.Awaitable,
+) (base.LogInput, error) {
 	if len(cfg.LevelMapping) == 0 {
 		return nil, fmt.Errorf(".levelMapping is empty")
 	}
@@ -81,8 +81,8 @@ func (cfg *Config) NewInput(parentLogger logger.Logger, allocator *base.LogAlloc
 
 // NewParser creates a parser for test pipeline
 func (cfg *Config) NewParser(parentLogger logger.Logger, allocator *base.LogAllocator, schema base.LogSchema,
-	inputCounter *base.LogInputCounter) (base.LogParser, error) {
-
+	inputCounter *base.LogInputCounter,
+) (base.LogParser, error) {
 	if len(cfg.LevelMapping) == 0 {
 		return nil, fmt.Errorf(".levelMapping is empty")
 	}
@@ -117,18 +117,14 @@ func (cfg *Config) VerifyConfig(schema base.LogSchema) error {
 	if err := func() error {
 		dummyMetricFactory := promreg.NewMetricFactory("verify_", nil, nil)
 		dummyInputCounter := base.NewLogInputCounter(dummyMetricFactory)
-		dummyLogAllocator := base.NewLogAllocator(schema)
+		dummyLogAllocator := base.NewLogAllocator(schema, 1)
 		_, err := syslogparser.NewParser(logger.Root(), dummyLogAllocator, schema, cfg.LevelMapping, dummyInputCounter)
 		return err
 	}(); err != nil {
 		return fmt.Errorf("incompatible with schema: %w", err)
 	}
 
-	if err := bsupport.VerifyTransformConfigs(cfg.Extractions, schema, ".extractions"); err != nil {
-		return err
-	}
-
-	return nil
+	return bsupport.VerifyTransformConfigs(cfg.Extractions, schema, ".extractions")
 }
 
 func (in *input) Address() string {
