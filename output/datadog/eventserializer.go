@@ -26,15 +26,10 @@ func (packer *eventSerializer) SerializeRecord(record *base.LogRecord) base.LogS
 	outputMap := make(map[string]*string, len(fieldNames)+4)
 
 	for i, fieldName := range fieldNames {
-		if len(record.Fields) < i {
+		if i > len(record.Fields) {
 			break
 		}
 		if fieldName != "" && record.Fields[i] != "" {
-			if fieldName == "vhost" {
-				fieldName = "hostname"
-			} else if fieldName == "log" {
-				fieldName = "message"
-			}
 			outputMap[fieldName] = &record.Fields[i]
 		}
 	}
