@@ -53,7 +53,7 @@ func NewMessagePacker(
 	parentLogger logger.Logger,
 	cfg *PackerConfig,
 	encoder messageEncoder,
-) base.LogChunkMaker {
+) *messagePacker {
 	return &messagePacker{
 		logger:            parentLogger.WithField(defs.LabelComponent, "FluentdForwardMessagePacker"),
 		useCompression:    cfg.UseCompression,
@@ -69,10 +69,10 @@ func NewMessagePacker(
 func (packer *messagePacker) WriteStream(stream base.LogStream) *base.LogChunk {
 	var previousChunk *base.LogChunk
 	if packer.currentChunk != nil {
-		if packer.currentChunk.NumRecords > 0 && packer.chunkMaxRecords >= packer.currentChunk.NumRecords {
+		if packer.currentChunk.NumRecords > 0 && packer.currentChunk.NumRecords >= packer.chunkMaxRecords {
 			// flush when the amount of log records reaches max permitted amount, if it is defined
 			previousChunk = packer.FlushBuffer()
-		} else if packer.currentChunk.NumStreamBytes+len(stream) >= packer.chunkMaxSizeBytes {
+		} else if packer.currentChunk.NumStreamBytes+len(stream) > packer.chunkMaxSizeBytes {
 			// otherwise flush when the total size reaches max permitted amount
 			previousChunk = packer.FlushBuffer()
 		}
