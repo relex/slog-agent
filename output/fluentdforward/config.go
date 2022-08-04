@@ -12,7 +12,25 @@ import (
 	"github.com/relex/slog-agent/base"
 	"github.com/relex/slog-agent/base/bconfig"
 	"github.com/relex/slog-agent/base/bsupport"
+	"github.com/relex/slog-agent/output/shared"
 )
+
+// output-specific file extension for generated chunks
+const chunkIDSuffix = ".ff"
+
+// msgBufCapacity is the initial capacity for buffers used for chunk and compression
+// It only needs to be large enough to contain the largest compressed message
+const msgBufCapacity = 1 * 1024 * 1024
+
+// chunkMaxSizeBytes defines the max uncompressed data size of a LogChunk, not including necessary headers.
+// The value must be well below Fluentd's Fluent::Plugin::Buffer::DEFAULT_CHUNK_LIMIT_SIZE, as some buffers are implicitly inserted and non-configurable.
+//
+// https://github.com/fluent/fluentd/blob/master/lib/fluent/plugin/buffer.rb#L39
+var chunkMaxSizeBytes = 7 * 1024 * 1024
+
+// chunkMaxRecords is the max amount of log entries a chunk can hold before flushing.
+// Can be 0 in case there's no limit.
+var chunkMaxRecords = 0
 
 // Config defines configuration for fluentd-forward output
 type Config struct {
@@ -49,7 +67,20 @@ func (cfg *Config) NewSerializer(parentLogger logger.Logger, schema base.LogSche
 
 // NewChunkMaker creates LogChunkMaker
 func (cfg *Config) NewChunkMaker(parentLogger logger.Logger, tag string) base.LogChunkMaker {
-	return NewMessagePacker(parentLogger, tag, cfg.MessageMode)
+	enc, err := newEncoder(tag, cfg.MessageMode, msgBufCapacity)
+	if err != nil {
+		parentLogger.Panic(err)
+	}
+
+	packerCfg := &shared.PackerConfig{
+		MsgBufCapacity:    msgBufCapacity,
+		ChunkMaxSizeBytes: chunkMaxSizeBytes,
+		ChunkMaxRecords:   chunkMaxRecords,
+		ChunkIDSuffix:     chunkIDSuffix,
+		UseCompression:    cfg.MessageMode == forwardprotocol.ModeCompressedPackedForward,
+	}
+
+	return shared.NewMessagePacker(parentLogger, packerCfg, enc)
 }
 
 // NewForwarder creates the forwarding client

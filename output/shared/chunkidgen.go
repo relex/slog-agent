@@ -6,15 +6,15 @@ import (
 	"time"
 )
 
-type ChunkIDGenerator struct {
+type chunkIDGenerator struct {
 	sync.Mutex
 	epochNano int64
 	sequence  int32
 	suffix    string
 }
 
-func NewChunkIDGenerator(suffix string) *ChunkIDGenerator {
-	return &ChunkIDGenerator{
+func newChunkIDGenerator(suffix string) *chunkIDGenerator {
+	return &chunkIDGenerator{
 		Mutex:     sync.Mutex{},
 		epochNano: 0,
 		sequence:  0,
@@ -22,9 +22,9 @@ func NewChunkIDGenerator(suffix string) *ChunkIDGenerator {
 	}
 }
 
-// Generate returns the next chunk ID, which consists of a nanosecond timestamp and a sequence number
+// generate returns the next chunk ID, which consists of a nanosecond timestamp and a sequence number
 // The sequence number is incremented by one every time until the time is changed
-func (generator *ChunkIDGenerator) Generate() string {
+func (generator *chunkIDGenerator) generate() string {
 	generator.Lock()
 	nextTimestamp := time.Now().UnixNano()
 	if nextTimestamp > generator.epochNano {
