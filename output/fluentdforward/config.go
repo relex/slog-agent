@@ -19,7 +19,7 @@ import (
 const chunkIDSuffix = ".ff"
 
 // msgBufCapacity is the initial capacity for buffers used for chunk and compression
-// It only needs to be large enough to contain the largest compressed message
+// It only needs to be large enough to contain the largest uncompressed message
 const msgBufCapacity = 1 * 1024 * 1024
 
 // chunkMaxSizeBytes defines the max uncompressed data size of a LogChunk, not including necessary headers.
@@ -67,20 +67,23 @@ func (cfg *Config) NewSerializer(parentLogger logger.Logger, schema base.LogSche
 
 // NewChunkMaker creates LogChunkMaker
 func (cfg *Config) NewChunkMaker(parentLogger logger.Logger, tag string) base.LogChunkMaker {
-	enc, err := newEncoder(tag, cfg.MessageMode, msgBufCapacity)
-	if err != nil {
-		parentLogger.Panic(err)
+	var asArray bool
+	var initCompessor shared.InitCompessorFunc
+
+	switch cfg.MessageMode {
+	case forwardprotocol.ModeForward:
+		asArray = true
+	case forwardprotocol.ModePackedForward:
+	case forwardprotocol.ModeCompressedPackedForward:
+		initCompessor = shared.InitGZIPCompessor
+	default:
+		parentLogger.Fatalf("unsupported message mode: %s", cfg.MessageMode)
 	}
 
-	packerCfg := &shared.PackerConfig{
-		MsgBufCapacity:    msgBufCapacity,
-		ChunkMaxSizeBytes: chunkMaxSizeBytes,
-		ChunkMaxRecords:   chunkMaxRecords,
-		ChunkIDSuffix:     chunkIDSuffix,
-		UseCompression:    cfg.MessageMode == forwardprotocol.ModeCompressedPackedForward,
-	}
+	encoder := newEncoder(tag, asArray, msgBufCapacity)
+	basicChunkFactory := shared.NewChunkFactory(parentLogger, chunkIDSuffix, msgBufCapacity, initCompessor, encoder)
 
-	return shared.NewMessagePacker(parentLogger, packerCfg, enc)
+	return shared.NewMessagePacker(parentLogger, chunkMaxSizeBytes, chunkMaxRecords, basicChunkFactory)
 }
 
 // NewForwarder creates the forwarding client
