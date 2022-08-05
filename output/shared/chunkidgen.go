@@ -24,7 +24,7 @@ func newChunkIDGenerator(suffix string) *chunkIDGenerator {
 
 // generate returns the next chunk ID, which consists of a nanosecond timestamp and a sequence number
 // The sequence number is incremented by one every time until the time is changed
-func (generator *chunkIDGenerator) generate() string {
+func (generator *chunkIDGenerator) Generate() string {
 	generator.Lock()
 	nextTimestamp := time.Now().UnixNano()
 	if nextTimestamp > generator.epochNano {
