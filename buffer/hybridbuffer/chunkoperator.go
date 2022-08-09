@@ -108,6 +108,9 @@ func (op *chunkOperator) ScanExistingChunks() []base.LogChunk {
 
 	chunkList := make([]base.LogChunk, 0, len(fnames))
 	for _, fn := range fnames {
+		if fn == idFileName {
+			continue
+		}
 		if !op.matchID(fn) {
 			op.logger.Warnf("skip unmatched chunk file id=%s", fn)
 			continue
