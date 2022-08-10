@@ -74,10 +74,11 @@ Requires [gotils](https://github.com/relex/gotils) which provides build tools
 make
 make test
 ```
+## Operation manual
 
-## Configuration Reload and Migration
+#### Configuration
 
-Currently it is not possible to recover previously queued logs if `orchestration/keys` have been changed
+See [sample configurations](testdata/config_sample.yml).
 
 Experimental configuration reloading is supported by starting with `--allow_reload` and sending `SIGHUP`; See
 [testdata/config_sample.yml] for details on which sections may be reconfigured. In general everything after inputs
@@ -88,6 +89,14 @@ Note after successful reloading, some of previous logs may be sent to upstream a
 in time.
 
 The metric family `slogagent_reloads_total` counts sucesses and failures of reconfigurations.
+
+Currently it is not possible to recover previously queued logs if `orchestration/keys` have been changed.
+
+#### Runtime diagnosis
+
+- `SIGHUP` aborts and recreates all pipelines with new config loaded from the same file. Incoming connections are unaffected.
+- `SIGUSR1` recreates all outgoing connections or sessions gracefully.
+- http://localhost:METRICS_PORT/ provides Golang's builtin debug functions in addition to metrics, such as stackdump and profiling.
 
 ## Development
 
