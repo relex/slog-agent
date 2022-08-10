@@ -1,6 +1,7 @@
 package datadog
 
 import (
+	"errors"
 	"strings"
 	"time"
 
@@ -42,7 +43,6 @@ type SerializationConfig struct {
 
 type UpstreamConfig struct {
 	Address     string        `yaml:"address"`
-	APIKey      string        `yaml:"apiKey"`
 	HTTPTimeout time.Duration `yaml:"httpTimeout"`
 }
 
@@ -57,7 +57,7 @@ func (cfg *Config) NewSerializer(parentLogger logger.Logger, schema base.LogSche
 
 //nolint:revive
 func (cfg *Config) NewChunkMaker(parentLogger logger.Logger, tag string) base.LogChunkMaker {
-	chunkFactory := shared.NewChunkFactory(parentLogger, chunkIDSuffix, msgBufCapacity, shared.InitGZIPCompessor, newEncoder())
+	chunkFactory := shared.NewChunkFactory(parentLogger, chunkIDSuffix, msgBufCapacity, shared.InitGZIPCompessor, nil)
 	return shared.NewMessagePacker(parentLogger, chunkMaxSizeBytes, chunkMaxRecords, chunkFactory)
 }
 
@@ -66,4 +66,14 @@ func (cfg *Config) NewForwarder(parentLogger logger.Logger, args base.ChunkConsu
 }
 
 //nolint:revive
-func (cfg *Config) VerifyConfig(schema base.LogSchema) error { return nil }
+func (cfg *Config) VerifyConfig(schema base.LogSchema) error {
+	if len(cfg.Upstream.Address) == 0 {
+		return errors.New("expected a valid datadog api address")
+	}
+
+	if cfg.Upstream.HTTPTimeout == 0 {
+		return errors.New("expected a valid datadog api timeout")
+	}
+
+	return nil
+}
