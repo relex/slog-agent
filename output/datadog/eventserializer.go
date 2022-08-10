@@ -41,7 +41,7 @@ func (packer *eventSerializer) SerializeRecord(record *base.LogRecord) base.LogS
 	timestamp := record.Timestamp.String()
 	outputMap["timestamp"] = &timestamp
 
-	// TODO: use a faster marshaller
+	// TODO: might consider using a faster marshaller such as go-json
 	data, _ := json.Marshal(outputMap) //nolint:errcheck // errors can't pop up here
 	return data
 }
