@@ -258,7 +258,7 @@ outputBufferPairs:
 
         upstream:                                       # Forward destination, see https://docs.fluentd.org/input/forward for explanations
           address: https://http-intake.logs.datadoghq.eu/api/v2/logs
-          maxDuration: 30m
+          httpTimeout: 30s
 
 
 ########################################################################################################################
