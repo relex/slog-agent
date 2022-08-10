@@ -27,9 +27,9 @@ type BasicChunk struct {
 	id           string
 	numRecords   int
 	numBytes     int
-	compressor   io.WriteCloser // could be a gzip.Writer or a simple buffer
+	compressor   io.WriteCloser // could be something like a gzip.Writer or nil to disable compression
 	reusedBuffer *bytes.Buffer  // an actual buffer that compressor writes to
-	encoder      chunkEncoder
+	encoder      chunkEncoder   // a function to finalize/encode the entire chunk after it's been assembled
 }
 
 func NewChunkFactory(log logger.Logger, idSuffix string, msgBufCapacity int, initCompessor InitCompessorFunc, encoder chunkEncoder) *BasicChunkFactory {
