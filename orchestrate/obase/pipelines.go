@@ -10,10 +10,11 @@ import (
 )
 
 type outputWorkerSettings struct {
-	bufferer   base.ChunkBufferer
-	serializer base.LogSerializer
-	chunkMaker base.LogChunkMaker
-	consumer   base.ChunkConsumer
+	bufferer        base.ChunkBufferer
+	serializer      base.LogSerializer
+	chunkMaker      base.LogChunkMaker
+	consumer        base.ChunkConsumer
+	transformations []base.LogTransformFunc
 }
 
 // PipelineStarter represents a function to launch workers for a top-level pipeline under Orchestrator
@@ -29,6 +30,7 @@ func PrepareSequentialPipeline(args bconfig.PipelineArgs) PipelineStarter {
 	return func(parentLogger logger.Logger, metricCreator promreg.MetricCreator,
 		input <-chan []*base.LogRecord, bufferID string, outputTag string, onStopped func(),
 	) {
+		procTracker := base.NewLogProcessCounter(metricCreator, args.Schema, args.MetricKeyLocators)
 		outputSettingsSlice := util.MapSlice(args.OutputBufferPairs, func(pair bconfig.OutputBufferConfig) outputWorkerSettings {
 			consumerLogger := parentLogger.WithField("output", pair.Name)
 
@@ -63,12 +65,12 @@ func PrepareSequentialPipeline(args bconfig.PipelineArgs) PipelineStarter {
 
 			settings.serializer = pair.OutputConfig.Value.NewSerializer(consumerLogger, args.Schema)
 			settings.chunkMaker = pair.OutputConfig.Value.NewChunkMaker(consumerLogger, outputTag)
+			settings.transformations = bsupport.NewTransformsFromConfig(pair.LogTransformConfig, args.Schema, consumerLogger, procTracker)
 
 			return settings
 		})
 
 		// then prepare processing worker which is at the head of pipeline
-		procTracker := base.NewLogProcessCounter(metricCreator, args.Schema, args.MetricKeyLocators)
 		procWorker := bsupport.NewLogProcessingWorker(
 			parentLogger,
 			input,
@@ -77,9 +79,10 @@ func PrepareSequentialPipeline(args bconfig.PipelineArgs) PipelineStarter {
 			bsupport.NewTransformsFromConfig(args.TransformConfigs, args.Schema, parentLogger, procTracker),
 			util.MapSlice(outputSettingsSlice, func(outputSettings outputWorkerSettings) bsupport.OutputInterface {
 				return bsupport.OutputInterface{
-					LogSerializer: outputSettings.serializer,
-					LogChunkMaker: outputSettings.chunkMaker,
-					AcceptChunk:   outputSettings.bufferer.Accept,
+					LogSerializer:    outputSettings.serializer,
+					LogChunkMaker:    outputSettings.chunkMaker,
+					AcceptChunk:      outputSettings.bufferer.Accept,
+					OutputTransforms: outputSettings.transformations,
 				}
 			}),
 		)

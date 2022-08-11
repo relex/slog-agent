@@ -22,7 +22,8 @@ type LogProcessingWorker struct {
 type OutputInterface struct {
 	base.LogSerializer
 	base.LogChunkMaker
-	AcceptChunk base.LogChunkAccepter
+	AcceptChunk      base.LogChunkAccepter
+	OutputTransforms []base.LogTransformFunc
 }
 
 // NewLogProcessingWorker creates LogProcessingWorker
@@ -59,6 +60,11 @@ func (worker *LogProcessingWorker) onInput(buffer []*base.LogRecord, timeout <-c
 		icounter.CountRecordPass(record)
 
 		for _, output := range worker.outputList {
+			if RunTransforms(record, output.OutputTransforms) == base.DROP {
+				icounter.CountRecordDrop(record)
+				worker.deallocator.Release(record)
+				continue
+			}
 			stream := output.SerializeRecord(record)
 			worker.deallocator.Release(record)
 			worker.procCounter.CountStream(stream)
