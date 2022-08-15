@@ -22,6 +22,7 @@ type LogProcessingWorker struct {
 type OutputInterface struct {
 	base.LogSerializer
 	base.LogChunkMaker
+	Name        string
 	AcceptChunk base.LogChunkAccepter
 }
 
@@ -58,13 +59,13 @@ func (worker *LogProcessingWorker) onInput(buffer []*base.LogRecord, timeout <-c
 		}
 		icounter.CountRecordPass(record)
 
-		for _, output := range worker.outputList {
+		for i, output := range worker.outputList {
 			stream := output.SerializeRecord(record)
 			worker.deallocator.Release(record)
-			worker.procCounter.CountStream(stream)
+			worker.procCounter.CountStream(i, stream)
 			maybeChunk := output.WriteStream(stream)
 			if maybeChunk != nil {
-				worker.procCounter.CountChunk(maybeChunk)
+				worker.procCounter.CountChunk(i, maybeChunk)
 				output.AcceptChunk(*maybeChunk, timeout)
 			}
 		}
@@ -86,10 +87,10 @@ func (worker *LogProcessingWorker) onStop(timeout <-chan time.Time) {
 }
 
 func (worker *LogProcessingWorker) flushChunk(timeout <-chan time.Time) {
-	for _, output := range worker.outputList {
+	for i, output := range worker.outputList {
 		maybeChunk := output.FlushBuffer()
 		if maybeChunk != nil {
-			worker.procCounter.CountChunk(maybeChunk)
+			worker.procCounter.CountChunk(i, maybeChunk)
 			output.AcceptChunk(*maybeChunk, timeout)
 		}
 	}

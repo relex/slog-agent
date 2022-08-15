@@ -10,8 +10,10 @@ import (
 	"github.com/relex/slog-agent/run"
 )
 
-type logProcessor func(s []byte) *base.LogChunk
-type logProcessCloser func() *base.LogChunk
+type (
+	logProcessor     func(s []byte) *base.LogChunk
+	logProcessCloser func() *base.LogChunk
+)
 
 func preparePipeline(configFile string, tagOverride string, metricCreator promreg.MetricCreator) (logProcessor, logProcessCloser) {
 	conf, schema, stats, err := run.ParseConfigFile(configFile)
@@ -35,7 +37,12 @@ func preparePipeline(configFile string, tagOverride string, metricCreator promre
 		logger.Panic("failed to create parser: ", perr)
 	}
 
-	procCounter := base.NewLogProcessCounter(metricCreator.AddOrGetPrefix("process_", nil, nil), schema, schema.MustCreateFieldLocators(conf.MetricKeys))
+	procCounter := base.NewLogProcessCounter(
+		metricCreator.AddOrGetPrefix("process_", nil, nil),
+		schema,
+		schema.MustCreateFieldLocators(conf.MetricKeys),
+		[]string{conf.OutputBuffersPairs[0].Name},
+	)
 	transforms := bsupport.NewTransformsFromConfig(conf.Transformations, schema, logger.Root(), procCounter)
 	serializer := conf.OutputBuffersPairs[0].OutputConfig.Value.NewSerializer(logger.Root(), schema)
 	chunkMaker := conf.OutputBuffersPairs[0].OutputConfig.Value.NewChunkMaker(logger.Root(), tagOverride)
@@ -57,10 +64,10 @@ func preparePipeline(configFile string, tagOverride string, metricCreator promre
 		}
 		icounter.CountRecordPass(record)
 		stream := serializer.SerializeRecord(record)
-		procCounter.CountStream(stream)
+		procCounter.CountStream(0, stream)
 		maybeChunk := chunkMaker.WriteStream(stream)
 		if maybeChunk != nil {
-			procCounter.CountChunk(maybeChunk)
+			procCounter.CountChunk(0, maybeChunk)
 		}
 		return maybeChunk
 	}
@@ -68,7 +75,7 @@ func preparePipeline(configFile string, tagOverride string, metricCreator promre
 	endProcess := func() *base.LogChunk {
 		maybeChunk := chunkMaker.FlushBuffer()
 		if maybeChunk != nil {
-			procCounter.CountChunk(maybeChunk)
+			procCounter.CountChunk(0, maybeChunk)
 		}
 		inputCounter.UpdateMetrics()
 		procCounter.UpdateMetrics()
