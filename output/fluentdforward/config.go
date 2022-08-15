@@ -75,7 +75,7 @@ func (cfg *Config) NewChunkMaker(parentLogger logger.Logger, tag string) base.Lo
 		asArray = true
 	case forwardprotocol.ModePackedForward:
 	case forwardprotocol.ModeCompressedPackedForward:
-		initCompessor = shared.InitGZIPCompessor
+		initCompessor = shared.InitGzipCompessor
 	default:
 		parentLogger.Fatalf("unsupported message mode: %s", cfg.MessageMode)
 	}

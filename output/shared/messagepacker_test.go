@@ -46,7 +46,7 @@ func TestMessagePacker_Succeeds_OnUnencodedUncompressedInput(t *testing.T) {
 func TestMessagePacker_Succeeds_OnEncodedGzippedInput(t *testing.T) {
 	log := logger.Root()
 	enc := &mockJSONEncoder{msgKey: "testMsg"}
-	factory := NewChunkFactory(log, chunkIDSuffix, msgBufCapacity, InitGZIPCompessor, enc)
+	factory := NewChunkFactory(log, chunkIDSuffix, msgBufCapacity, InitGzipCompessor, enc)
 	packer := NewMessagePacker(log, chunkMaxSizeBytes, chunkMaxRecords, factory)
 
 	payload := "testPayload"
