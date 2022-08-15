@@ -45,7 +45,7 @@ func NewClientWorker(parentLogger logger.Logger, args base.ChunkConsumerArgs, me
 		func() (baseoutput.ClosableClientConnection, error) {
 			return worker, nil
 		},
-		time.Hour*24*365, // no reconnects are required for an http connection
+		0, // no reconnects are required for an http connection
 	)
 }
 

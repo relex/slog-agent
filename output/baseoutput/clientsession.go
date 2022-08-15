@@ -121,7 +121,12 @@ func (session *clientSession) resendLeftovers(leftovers chan base.LogChunk) (cha
 }
 
 func (session *clientSession) processInput(maxDuration time.Duration) (chan base.LogChunk, reconnectPolicy) {
-	maxSessionDurationSignal := time.After(maxDuration)
+	var maxSessionDurationSignal <-chan time.Time
+
+	// don't reconnect on duration <= 0, nil channel will block forever
+	if maxDuration > 0 {
+		maxSessionDurationSignal = time.After(maxDuration)
+	}
 
 	reconnectChan := make(chan os.Signal, 10)
 	signal.Notify(reconnectChan, syscall.SIGUSR1)
