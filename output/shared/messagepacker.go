@@ -37,9 +37,7 @@ func (packer *messagePacker) WriteStream(stream base.LogStream) *base.LogChunk {
 			// otherwise flush when the total size reaches max permitted amount
 			previousChunk = packer.FlushBuffer()
 		}
-	}
-
-	if packer.currentChunk == nil {
+	} else {
 		packer.currentChunk = packer.chunkFactory.NewChunk()
 	}
 
