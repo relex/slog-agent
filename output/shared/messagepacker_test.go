@@ -16,7 +16,7 @@ import (
 const (
 	chunkMaxSizeBytes = 1000
 	chunkMaxRecords   = 1000
-	msgBufCapacity    = 1000
+	bufCapacity       = 1000
 	chunkIDSuffix     = ".test"
 )
 
@@ -28,7 +28,7 @@ func (enc *mockJSONEncoder) EncodeChunk(chunk *BasicChunk) ([]byte, error) {
 
 func TestMessagePacker_Succeeds_OnUnencodedUncompressedInput(t *testing.T) {
 	log := logger.Root()
-	factory := NewChunkFactory(log, chunkIDSuffix, msgBufCapacity, nil, nil)
+	factory := NewChunkFactory(log, chunkIDSuffix, bufCapacity, nil, nil)
 	packer := NewMessagePacker(log, chunkMaxSizeBytes, chunkMaxRecords, factory)
 
 	payload := "testPayload"
@@ -46,7 +46,7 @@ func TestMessagePacker_Succeeds_OnUnencodedUncompressedInput(t *testing.T) {
 func TestMessagePacker_Succeeds_OnEncodedGzippedInput(t *testing.T) {
 	log := logger.Root()
 	enc := &mockJSONEncoder{msgKey: "testMsg"}
-	factory := NewChunkFactory(log, chunkIDSuffix, msgBufCapacity, InitGzipCompessor, enc)
+	factory := NewChunkFactory(log, chunkIDSuffix, bufCapacity, InitGzipCompessor, enc)
 	packer := NewMessagePacker(log, chunkMaxSizeBytes, chunkMaxRecords, factory)
 
 	payload := "testPayload"
@@ -75,7 +75,7 @@ func TestMessagePacker_Flushes_OnMaxRecordsReached(t *testing.T) {
 	localChunkMaxRecords := 5
 
 	log := logger.Root()
-	factory := NewChunkFactory(log, chunkIDSuffix, msgBufCapacity, nil, nil)
+	factory := NewChunkFactory(log, chunkIDSuffix, bufCapacity, nil, nil)
 	packer := NewMessagePacker(log, chunkMaxSizeBytes, localChunkMaxRecords, factory)
 
 	payload := "testPayload"
@@ -94,7 +94,7 @@ func TestMessagePacker_Flushes_OnMaxRecordsReached(t *testing.T) {
 
 func TestMessagePacker_Flushes_OnMaxBytesReached(t *testing.T) {
 	log := logger.Root()
-	factory := NewChunkFactory(log, chunkIDSuffix, msgBufCapacity, nil, nil)
+	factory := NewChunkFactory(log, chunkIDSuffix, bufCapacity, nil, nil)
 	packer := NewMessagePacker(log, chunkMaxSizeBytes, chunkMaxRecords, factory)
 
 	payload := "10bytes..."
@@ -116,7 +116,7 @@ func TestMessagePacker_Flushes_OnMaxBytesReached(t *testing.T) {
 
 func TestMessagePacker_FlushNoPanic_OnNilCurrentChunk(t *testing.T) {
 	log := logger.Root()
-	factory := NewChunkFactory(log, chunkIDSuffix, msgBufCapacity, nil, nil)
+	factory := NewChunkFactory(log, chunkIDSuffix, bufCapacity, nil, nil)
 	packer := NewMessagePacker(log, chunkMaxSizeBytes, chunkMaxRecords, factory)
 
 	assert.Nil(t, packer.FlushBuffer())

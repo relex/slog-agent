@@ -32,10 +32,10 @@ type BasicChunk struct {
 	encoder      chunkEncoder   // a function to finalize/encode the entire chunk after it's been assembled
 }
 
-func NewChunkFactory(log logger.Logger, idSuffix string, msgBufCapacity int, initCompessor InitCompessorFunc, encoder chunkEncoder) *BasicChunkFactory {
+func NewChunkFactory(log logger.Logger, idSuffix string, bufCapacity int, initCompessor InitCompessorFunc, encoder chunkEncoder) *BasicChunkFactory {
 	return &BasicChunkFactory{
 		log:               log,
-		reusedChunkBuffer: bytes.NewBuffer(make([]byte, 0, msgBufCapacity)),
+		reusedChunkBuffer: bytes.NewBuffer(make([]byte, 0, bufCapacity)),
 		initCompessor:     initCompessor,
 		idGenerator:       newChunkIDGenerator(idSuffix),
 		chunkEncoder:      encoder,
@@ -60,7 +60,7 @@ func (factory *BasicChunkFactory) NewChunk() *BasicChunk {
 }
 
 // Write appends new log to log chunk
-func (chunk *BasicChunk) Write(data []byte) error {
+func (chunk *BasicChunk) Write(data base.LogStream) error {
 	var err error
 
 	if chunk.compressor != nil {
@@ -105,7 +105,7 @@ func (chunk *BasicChunk) FinalizeChunk() (*base.LogChunk, error) {
 	}, nil
 }
 
-func (chunk *BasicChunk) Bytes() []byte {
+func (chunk *BasicChunk) Bytes() base.LogStream {
 	return chunk.reusedBuffer.Bytes()
 }
 

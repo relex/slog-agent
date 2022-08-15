@@ -24,9 +24,9 @@ const (
 	// Can be 0 in case there's no limit.
 	chunkMaxRecords = 1000
 
-	// messageBufferCapacity is the initial capacity for buffers used for chunk and compression.
+	// bufCapacity is the initial capacity for buffers used for chunk and compression.
 	// It only needs to be large enough to contain the largest compressed message.
-	msgBufCapacity = 1 * 1024 * 1024
+	bufCapacity = 1 * 1024 * 1024
 )
 
 type Config struct {
@@ -57,7 +57,7 @@ func (cfg *Config) NewSerializer(parentLogger logger.Logger, schema base.LogSche
 
 //nolint:revive
 func (cfg *Config) NewChunkMaker(parentLogger logger.Logger, tag string) base.LogChunkMaker {
-	chunkFactory := shared.NewChunkFactory(parentLogger, chunkIDSuffix, msgBufCapacity, shared.InitGzipCompessor, nil)
+	chunkFactory := shared.NewChunkFactory(parentLogger, chunkIDSuffix, bufCapacity, shared.InitGzipCompessor, nil)
 	return shared.NewMessagePacker(parentLogger, chunkMaxSizeBytes, chunkMaxRecords, chunkFactory)
 }
 
