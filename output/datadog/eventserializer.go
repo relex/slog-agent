@@ -2,6 +2,7 @@ package datadog
 
 import (
 	"encoding/json"
+	"strconv"
 
 	"github.com/relex/gotils/logger"
 	"github.com/relex/slog-agent/base"
@@ -38,7 +39,7 @@ func (packer *eventSerializer) SerializeRecord(record *base.LogRecord) base.LogS
 	outputMap["ddtags"] = packer.config.Tags
 	outputMap["service"] = packer.config.Service
 
-	timestamp := record.Timestamp.String()
+	timestamp := strconv.FormatInt(record.Timestamp.UnixMilli(), 10)
 	outputMap["timestamp"] = &timestamp
 
 	// TODO: might consider using a faster marshaller such as go-json
