@@ -2,6 +2,7 @@ package datadog
 
 import (
 	"encoding/json"
+	"strconv"
 	"testing"
 
 	"github.com/relex/gotils/logger"
@@ -35,7 +36,7 @@ func verifyLogStream(t *testing.T, stream base.LogStream, record *base.LogRecord
 	assert.Equal(t, streamData["ddsource"], *testCfg.Source)
 	assert.Equal(t, streamData["ddtags"], *testCfg.Tags)
 	assert.Equal(t, streamData["service"], *testCfg.Service)
-	assert.Equal(t, streamData["timestamp"], record.Timestamp.String())
+	assert.Equal(t, streamData["timestamp"], strconv.FormatInt(record.Timestamp.UnixMilli(), 10))
 
 	schemaFields := shared.TestSchema.GetFieldNames()
 	assert.Equal(t, len(record.Fields), len(schemaFields))
