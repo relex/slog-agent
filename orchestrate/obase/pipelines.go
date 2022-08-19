@@ -10,10 +10,10 @@ import (
 )
 
 type outputWorkerSettings struct {
-	Bufferer   base.ChunkBufferer
-	Serializer base.LogSerializer
-	ChunkMaker base.LogChunkMaker
-	Consumer   base.ChunkConsumer
+	bufferer   base.ChunkBufferer
+	serializer base.LogSerializer
+	chunkMaker base.LogChunkMaker
+	consumer   base.ChunkConsumer
 }
 
 // PipelineStarter represents a function to launch workers for a top-level pipeline under Orchestrator
@@ -58,10 +58,10 @@ func PrepareSequentialPipeline(args bconfig.PipelineArgs) PipelineStarter {
 			consumer.Start()
 
 			return outputWorkerSettings{
-				Bufferer:   bufferer,
-				Serializer: pair.OutputConfig.Value.NewSerializer(outputLogger, args.Schema),
-				ChunkMaker: pair.OutputConfig.Value.NewChunkMaker(outputLogger, outputTag),
-				Consumer:   consumer,
+				bufferer:   bufferer,
+				serializer: pair.OutputConfig.Value.NewSerializer(outputLogger, args.Schema),
+				chunkMaker: pair.OutputConfig.Value.NewChunkMaker(outputLogger, outputTag),
+				consumer:   consumer,
 			}
 		})
 
@@ -75,15 +75,15 @@ func PrepareSequentialPipeline(args bconfig.PipelineArgs) PipelineStarter {
 			bsupport.NewTransformsFromConfig(args.TransformConfigs, args.Schema, parentLogger, procTracker),
 			util.MapSlice(outputSettingsSlice, func(outputSettings outputWorkerSettings) bsupport.OutputInterface {
 				return bsupport.OutputInterface{
-					LogSerializer: outputSettings.Serializer,
-					LogChunkMaker: outputSettings.ChunkMaker,
-					AcceptChunk:   outputSettings.Bufferer.Accept,
+					LogSerializer: outputSettings.serializer,
+					LogChunkMaker: outputSettings.chunkMaker,
+					AcceptChunk:   outputSettings.bufferer.Accept,
 				}
 			}),
 		)
 		procWorker.Stopped().Next(func() {
 			util.EachInSlice(outputSettingsSlice, func(_ int, settings outputWorkerSettings) {
-				settings.Bufferer.Destroy()
+				settings.bufferer.Destroy()
 			})
 			onStopped()
 		})
