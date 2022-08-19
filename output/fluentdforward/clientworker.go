@@ -14,6 +14,7 @@ import (
 	"github.com/relex/slog-agent/base"
 	"github.com/relex/slog-agent/defs"
 	"github.com/relex/slog-agent/output/baseoutput"
+	"github.com/relex/slog-agent/util"
 	"github.com/vmihailenco/msgpack/v4"
 )
 
@@ -43,24 +44,24 @@ func NewClientWorker(parentLogger logger.Logger, args base.ChunkConsumerArgs, co
 func openForwardConnection(parentLogger logger.Logger, config UpstreamConfig) (baseoutput.ClosableClientConnection, error) {
 	connLogger := parentLogger.WithField(defs.LabelServer, config.Address)
 
-	sock, sockErr := connect(connLogger, config.TLS, config.Address)
-	if sockErr != nil {
-		return nil, fmt.Errorf("failed to connect: %w", sockErr)
+	sock, connErr := connect(connLogger, config.TLS, config.Address)
+	if connErr != nil {
+		return nil, fmt.Errorf("failed to connect: %w", connErr)
 	}
 	connLogger.Info("connected to ", sock.RemoteAddr())
 
 	success, reason, herr := forwardprotocol.DoClientHandshake(sock, config.Secret, defs.ForwarderHandshakeTimeout)
 	if herr != nil {
-		if err := sock.Close(); err != nil {
-			connLogger.Error("error closing socket: ", err)
+		if err := sock.Close(); err != nil && !util.IsNetworkClosed(err) {
+			connLogger.Warn("error closing connection: ", err)
 		}
-		return nil, fmt.Errorf("failed to handshake: %w", herr)
+		return nil, fmt.Errorf("failed to handshake due to error: %w", herr)
 	}
 	if !success {
-		if err := sock.Close(); err != nil {
-			connLogger.Error("error closing socket: ", err)
+		if err := sock.Close(); err != nil && !util.IsNetworkClosed(err) {
+			connLogger.Warn("error closing connection: ", err)
 		}
-		return nil, fmt.Errorf("failed to handshake: %s", reason)
+		return nil, fmt.Errorf("failed to handshake due to authentication: %s", reason)
 	}
 
 	return &forwardConnection{
@@ -135,8 +136,8 @@ func (fconn *forwardConnection) ReadChunkAck(deadline time.Time) (string, error)
 }
 
 func (fconn *forwardConnection) Close() {
-	if err := fconn.socket.Close(); err != nil {
-		fconn.logger.Error("error closing socket: ", err)
+	if err := fconn.socket.Close(); err != nil && !util.IsNetworkClosed(err) {
+		fconn.logger.Warn("error closing connection: ", err)
 	}
 }
 

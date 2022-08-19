@@ -47,6 +47,6 @@ func Run(configFile string, metricAddress string, allowReload bool) {
 	rlogger.Info("clean exit")
 
 	if err := msrv.Shutdown(context.Background()); err != nil {
-		rlogger.Errorf("failed to shut down metrics listener: %v", err)
+		rlogger.Warnf("failed to shut down metrics listener: %v", err)
 	}
 }

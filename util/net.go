@@ -5,6 +5,7 @@ import (
 	"io"
 	"net"
 	"strings"
+	"syscall"
 
 	"github.com/relex/gotils/logger"
 )
@@ -40,6 +41,9 @@ func GetFDFromTCPConn(conn *net.TCPConn) (uintptr, error) {
 // IsNetworkClosed checks if the given error tells closing of network connection
 func IsNetworkClosed(err error) bool {
 	if errors.Is(err, io.EOF) {
+		return true
+	}
+	if errors.Is(err, syscall.ECONNRESET) {
 		return true
 	}
 	var opErr *net.OpError

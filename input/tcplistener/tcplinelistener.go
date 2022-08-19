@@ -98,42 +98,42 @@ func (listener *tcpLineListener) run() {
 			}
 		}).WaitForever()
 		if err := listener.socket.Close(); err != nil {
-			listener.logger.Error("close listener error: ", err)
+			listener.logger.Warn("error closing listener: ", err)
 		}
 	}()
 
 	// main loop
-	listener.logger.Info("start accept loop")
+	listener.logger.Info("start accept() loop")
 	for {
-		conn, err := listener.socket.AcceptTCP()
-		if err != nil {
-			if !(listener.stopRequest.Peek() && util.IsNetworkClosed(err)) {
+		newConn, acceptErr := listener.socket.AcceptTCP()
+		if acceptErr != nil {
+			if !(listener.stopRequest.Peek() && util.IsNetworkClosed(acceptErr)) {
 				// not closed on stop request
-				listener.logger.Error("accept() error: ", err)
+				listener.logger.Warn("failed to accept() connection while listener is alive: ", acceptErr)
 				abortListener.Signal()
 			}
 			break
 		}
 
-		clientNumber := base.ClientNumber(util.GetFDFromTCPConnOrPanic(conn))
-		connLogger := listener.logger.WithFields(logger.Fields{
+		newClientNumber := base.ClientNumber(util.GetFDFromTCPConnOrPanic(newConn))
+		newConnLogger := listener.logger.WithFields(logger.Fields{
 			defs.LabelPart:         "connection",
-			defs.LabelClient:       conn.RemoteAddr().String(),
-			defs.LabelClientNumber: clientNumber,
+			defs.LabelClient:       newConn.RemoteAddr().String(),
+			defs.LabelClientNumber: newClientNumber,
 		})
-		if clientNumber >= base.MaxClientNumber {
-			connLogger.Error("rejected connection: too many clients")
-			if err = conn.Close(); err != nil {
-				listener.logger.Error("connection close error: ", err)
+		if newClientNumber >= base.MaxClientNumber {
+			newConnLogger.Error("rejected new connection: too many clients")
+			if err := newConn.Close(); err != nil { // we don't expect the client to close here
+				listener.logger.Warn("error closing connection: ", err)
 			}
 			continue
 		}
 
-		connLogger.Info("accepted connection")
+		newConnLogger.Info("accepted connection")
 		listener.taskCounter.Add(1)
-		go listener.runConnection(connLogger, conn, clientNumber)
+		go listener.runConnection(newConnLogger, newConn, newClientNumber)
 	}
-	listener.logger.Info("end accept loop")
+	listener.logger.Info("end accept() loop")
 
 	// mark the listener itself as done, note there could still be established connections
 	listener.taskCounter.Done()
@@ -156,8 +156,8 @@ func (listener *tcpLineListener) runConnection(connLogger logger.Logger, conn *n
 	emptyTime := time.Time{}
 	prevDeadline := time.Time{}
 	for {
-		err := mlineReader.Read()
-		if err == nil {
+		readErr := mlineReader.Read()
+		if readErr == nil {
 			if prevDeadline.Equal(emptyTime) {
 				prevDeadline = connReader.ReadDeadline()
 			} else if !connReader.ReadDeadline().Equal(prevDeadline) {
@@ -168,21 +168,24 @@ func (listener *tcpLineListener) runConnection(connLogger logger.Logger, conn *n
 			}
 			continue
 		}
-		if util.IsNetworkTimeout(err) {
-			connLogger.Debug("flush input for timeout")
-			// TODO: close lingering connection
+
+		// check if the short timeout (not real timeout) is reached and then flush buffer
+		if util.IsNetworkTimeout(readErr) {
+			connLogger.Debug("flush input")
+			// TODO: close lingering connections if they don't send anything for hours or days
 			mlineReader.Flush()
 			recvChan.Flush()
 			continue
 		}
+		
 		// error handling
 		mlineReader.FlushAll()
-		if util.IsNetworkClosed(err) && listener.stopRequest.Peek() {
+		if util.IsNetworkClosed(readErr) && listener.stopRequest.Peek() {
 			// already closed by connAborter
 			connLogger.Info("closed by stop request (delayed)")
 		} else {
-			if !util.IsNetworkClosed(err) {
-				connLogger.Warn("read() error: ", err)
+			if !util.IsNetworkClosed(readErr) {
+				connLogger.Warn("read() error: ", readErr)
 			}
 			connAborter.Signal()
 		}
@@ -204,8 +207,8 @@ func (listener *tcpLineListener) launchConnectionCloser(connLogger logger.Logger
 				connLogger.Info("close connection on stop request")
 			}
 		}).WaitForever()
-		if err := conn.Close(); err != nil {
-			connLogger.Error("conn close error: ", err)
+		if err := conn.Close(); err != nil && !util.IsNetworkClosed(err) {
+			connLogger.Warn("error closing connection: ", err)
 		}
 	}()
 	return abortConn
