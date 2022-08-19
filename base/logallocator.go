@@ -1,7 +1,6 @@
 package base
 
 import (
-	"sync"
 	"time"
 
 	"github.com/relex/gotils/logger"
@@ -12,20 +11,18 @@ import (
 // LogAllocator allocates empty log records and backing buffers
 // Local-cache with buffers of recycled logs has been tried and made minimal improvement
 type LogAllocator struct {
-	recordPool      *sync.Pool         // pool of *LogRecord
-	backbufPools    util.BytesPoolBy2n // pools of the backing buffers of LogRecord(s), i.e. pools of raw input copies
-	initialRefCount int                // equal to the total amount of outputs
+	recordPool      *util.Pool[*LogRecord] // pool of free *LogRecord
+	backbufPools    util.BytesPoolBy2n     // pools of the backing buffers of LogRecord(s), i.e. pools of raw input copies
+	initialRefCount int                    // equal to the total amount of outputs
 }
 
 // NewLogAllocator creates LogAllocator linked to the given schema
 func NewLogAllocator(schema LogSchema, outputCount int) *LogAllocator {
 	maxFields := schema.GetMaxFields()
-	recordPool := &sync.Pool{}
-	recordPool.New = func() interface{} {
-		return newLogRecord(maxFields)
-	}
 	return &LogAllocator{
-		recordPool:      recordPool,
+		recordPool: util.NewPool(func() *LogRecord {
+			return newLogRecord(maxFields)
+		}),
 		backbufPools:    util.NewBytesPoolBy2n(),
 		initialRefCount: outputCount,
 	}
@@ -44,7 +41,7 @@ func newLogRecord(maxFields int) *LogRecord {
 
 // NewRecord creates new record of empty values
 func (alloc *LogAllocator) NewRecord(input []byte) (*LogRecord, string) {
-	record := alloc.recordPool.Get().(*LogRecord)
+	record := alloc.recordPool.Get()
 	record._refCount += alloc.initialRefCount
 	if len(input) > defs.InputLogMinMessageBytesToPool {
 		backbuf := alloc.backbufPools.Get(len(input))
