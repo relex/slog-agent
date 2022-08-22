@@ -105,6 +105,7 @@ func (man *chunkManager) ShouldWaitPendingChunks() bool {
 }
 
 func (man *chunkManager) WaitPendingChunks() bool {
+	// sendAllAtEnd should only be true in test or recovery mode (TBD)
 	if man.sendAllAtEnd {
 		man.logger.Infof("waiting for pending chunks: count=%d", man.metrics.pendingChunks.Get())
 		if !man.metrics.pendingChunks.WaitForZero(defs.BufferShutDownTimeout) {
@@ -117,8 +118,6 @@ func (man *chunkManager) WaitPendingChunks() bool {
 
 func (man *chunkManager) Close() {
 	totalNum := man.operator.CountExistingChunks()
-	if totalNum > 0 {
-		man.logger.Warnf("remained chunks on disk: num=%d", totalNum)
-	}
+	man.logger.Infof("remained chunks on disk: num=%d", totalNum)
 	man.operator.Close()
 }

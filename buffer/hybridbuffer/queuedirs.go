@@ -23,7 +23,7 @@ func makeBufferQueueDir(parentLogger logger.Logger, rootPath string, bufferID st
 	if bufferID != "" {
 		dirname := sanitizeDirName(bufferID)
 		if dirname != bufferID {
-			parentLogger.Warnf("unclean buffer ID as dirname: '%s'", bufferID)
+			parentLogger.Infof("unclean buffer ID as dirname: '%s'", bufferID)
 		}
 		// if buffer ID is not the same after sanitization, it would still get unique dir due to hash
 		hash := util.MD5ToHexdigest(bufferID)
@@ -37,7 +37,7 @@ func makeBufferQueueDir(parentLogger logger.Logger, rootPath string, bufferID st
 
 	//nolint:gosec // need extra permissions here
 	if err := os.WriteFile(filepath.Join(path, idFileName), []byte(bufferID), 0o644); err != nil {
-		parentLogger.Errorf("error creating an id file on queue dir path='%s': %s", path, err)
+		parentLogger.Errorf("error creating .id file on queue dir path='%s': %s", path, err)
 	}
 	return path
 }
@@ -84,12 +84,12 @@ func listBufferQueueIDs(parentLogger logger.Logger, rootPath string, matchChunkI
 		if idErr != nil {
 			idBytes, idErr = xattr.Get(path, xattrBufferID)
 			if idErr != nil {
-				parentLogger.Warnf("ignore buffer dir without id, path='%s': %s", path, idErr.Error())
+				parentLogger.Warnf("ignore buffer dir without .id, path='%s': %s", path, idErr.Error())
 			}
 		}
 
 		if len(idBytes) == 0 {
-			parentLogger.Warnf("ignore buffer dir with empty id, path='%s': %s", path, idErr.Error())
+			parentLogger.Warnf("ignore buffer dir with empty .id, path='%s': %s", path, idErr.Error())
 			continue
 		}
 		id := util.StringFromBytes(idBytes)

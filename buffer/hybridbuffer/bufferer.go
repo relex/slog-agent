@@ -115,9 +115,9 @@ func (buf *bufferer) Accept(chunk base.LogChunk, _ <-chan time.Time) {
 	default:
 		buf.chunkMan.OnChunkDropped(chunk)
 		if chunk.Data != nil {
-			buf.logger.Errorf("queue overflow, drop loaded chunk: id=%s len=%d", chunk.ID, len(chunk.Data))
+			buf.logger.Warnf("queue overflow, drop loaded chunk: id=%s len=%d", chunk.ID, len(chunk.Data))
 		} else {
-			buf.logger.Errorf("queue overflow, drop unloaded chunk id=%s", chunk.ID)
+			buf.logger.Warnf("queue overflow, drop unloaded chunk id=%s", chunk.ID)
 		}
 	}
 }
@@ -154,7 +154,7 @@ RECOVERY_LOOP:
 			buf.metrics.queuedChunksPersistent.Inc()
 			numChunks++
 		default:
-			buf.logger.Errorf("too many chunk files, skip id=%s", chunk.ID)
+			buf.logger.Warnf("too many chunk files, skip id=%s", chunk.ID)
 			break RECOVERY_LOOP
 		}
 	}

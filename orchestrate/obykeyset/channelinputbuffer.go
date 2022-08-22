@@ -43,7 +43,7 @@ func (cache *channelInputBuffer) Append(record *base.LogRecord) bool { // xx:inl
 }
 
 // Flush flushes all pending logs to the channel
-func (cache *channelInputBuffer) Flush(now time.Time, sendTimeout *time.Timer, log logger.Logger, loggingKey interface{}) {
+func (cache *channelInputBuffer) Flush(now time.Time, sendTimeout *time.Timer, parentLogger logger.Logger, loggingKey interface{}) {
 	pendingLogs := cache.PendingLogs
 	reusableLogBuffer := bsupport.CopyLogBuffer(pendingLogs)
 	cache.PendingLogs = pendingLogs[:0]
@@ -54,6 +54,6 @@ func (cache *channelInputBuffer) Flush(now time.Time, sendTimeout *time.Timer, l
 	case cache.Channel <- reusableLogBuffer:
 		// TODO: update metrics
 	case <-sendTimeout.C:
-		log.Errorf("BUG: timeout flushing: %d records for %s. stack=%s", len(reusableLogBuffer), loggingKey, util.Stack())
+		parentLogger.Errorf("BUG: timeout flushing: %d records for %s. stack=%s", len(reusableLogBuffer), loggingKey, util.Stack())
 	}
 }

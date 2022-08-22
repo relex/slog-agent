@@ -30,41 +30,39 @@ func PrepareSequentialPipeline(args bconfig.PipelineArgs) PipelineStarter {
 		input <-chan []*base.LogRecord, bufferID string, outputTag string, onStopped func(),
 	) {
 		outputSettingsSlice := util.MapSlice(args.OutputBufferPairs, func(pair bconfig.OutputBufferConfig) outputWorkerSettings {
-			consumerLogger := parentLogger.WithField("output", pair.Name)
-
-			settings := outputWorkerSettings{
-				bufferer: pair.BufferConfig.Value.NewBufferer(
-					consumerLogger,
-					bufferID,
-					pair.OutputConfig.Value.MatchChunkID,
-					metricCreator.AddOrGetPrefix("buffer_", []string{"output"}, []string{pair.Name}),
-					args.SendAllAtEnd),
-			}
+			outputLogger := parentLogger.WithField("output", pair.Name)
 
 			// bufferer in the middle of pipeline has to be started first and shut down last for persistence of pending outputs
-			settings.bufferer.Start()
+			bufferer := pair.BufferConfig.Value.NewBufferer(
+				outputLogger,
+				bufferID,
+				pair.OutputConfig.Value.MatchChunkID,
+				metricCreator.AddOrGetPrefix("buffer_", []string{"output"}, []string{pair.Name}),
+				args.SendAllAtEnd)
+			bufferer.Start()
 
 			// then start output forwarder which is at the end of pipeline.
 			// if there are queued logs from bufferer, the consumer would immediately start sending them.
-
+			var consumer base.ChunkConsumer
 			if args.NewConsumerOverride != nil {
-				consumerLogger.Info("launch override consumer")
-				settings.consumer = args.NewConsumerOverride(consumerLogger, settings.bufferer.RegisterNewConsumer())
-				settings.consumer.Start()
+				outputLogger.Info("launch override consumer")
+				consumer = args.NewConsumerOverride(outputLogger, bufferer.RegisterNewConsumer())
 			} else {
-				consumerLogger.Info("launch consumer")
-				settings.consumer = pair.OutputConfig.Value.NewForwarder(
-					consumerLogger,
-					settings.bufferer.RegisterNewConsumer(),
+				outputLogger.Info("launch consumer")
+				consumer = pair.OutputConfig.Value.NewForwarder(
+					outputLogger,
+					bufferer.RegisterNewConsumer(),
 					metricCreator.AddOrGetPrefix("output_", []string{"output"}, []string{pair.Name}),
 				)
-				settings.consumer.Start()
 			}
+			consumer.Start()
 
-			settings.serializer = pair.OutputConfig.Value.NewSerializer(consumerLogger, args.Schema)
-			settings.chunkMaker = pair.OutputConfig.Value.NewChunkMaker(consumerLogger, outputTag)
-
-			return settings
+			return outputWorkerSettings{
+				bufferer:   bufferer,
+				serializer: pair.OutputConfig.Value.NewSerializer(outputLogger, args.Schema),
+				chunkMaker: pair.OutputConfig.Value.NewChunkMaker(outputLogger, outputTag),
+				consumer:   consumer,
+			}
 		})
 
 		// then prepare processing worker which is at the head of pipeline

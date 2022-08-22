@@ -13,9 +13,9 @@ type ConfigStats struct {
 }
 
 // Log logs important information or warnings if there is any
-func (stats ConfigStats) Log(log logger.Logger) {
+func (stats ConfigStats) Log(parentLogger logger.Logger) {
 	if len(stats.UnusedFields) > 0 {
-		log.Warn("unused fields in config: ", stats.UnusedFields)
+		parentLogger.Warn("unused fields in config: ", stats.UnusedFields)
 	}
 }
 

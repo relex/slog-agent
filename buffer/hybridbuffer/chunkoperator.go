@@ -233,6 +233,6 @@ func (op *chunkOperator) Close() {
 
 	if err := op.maybeDir.Close(); err != nil {
 		op.metrics.ioErrorsTotal.Inc()
-		op.logger.Warnf("error closing dir: %s", err.Error())
+		op.logger.Errorf("error closing dir: %s", err.Error())
 	}
 }
