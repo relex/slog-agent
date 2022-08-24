@@ -18,7 +18,7 @@ type chunkEncoder interface {
 type BasicChunkFactory struct {
 	log               logger.Logger
 	reusedChunkBuffer *bytes.Buffer // since chunks are created consecutively, it's possible for them to share the data buffer
-	initCompessor     InitCompessorFunc
+	initCompressor    InitCompessorFunc
 	idGenerator       *chunkIDGenerator
 	chunkEncoder      chunkEncoder
 }
@@ -32,11 +32,11 @@ type BasicChunk struct {
 	encoder      chunkEncoder   // a function to finalize/encode the entire chunk after it's been assembled
 }
 
-func NewChunkFactory(log logger.Logger, idSuffix string, bufCapacity int, initCompessor InitCompessorFunc, encoder chunkEncoder) *BasicChunkFactory {
+func NewChunkFactory(log logger.Logger, idSuffix string, bufCapacity int, initCompressor InitCompessorFunc, encoder chunkEncoder) *BasicChunkFactory {
 	return &BasicChunkFactory{
 		log:               log,
 		reusedChunkBuffer: bytes.NewBuffer(make([]byte, 0, bufCapacity)),
-		initCompessor:     initCompessor,
+		initCompressor:    initCompressor,
 		idGenerator:       newChunkIDGenerator(idSuffix),
 		chunkEncoder:      encoder,
 	}
@@ -52,8 +52,8 @@ func (factory *BasicChunkFactory) NewChunk() *BasicChunk {
 		encoder:      factory.chunkEncoder,
 	}
 
-	if factory.initCompessor != nil {
-		chunk.compressor = factory.initCompessor(factory.log, factory.reusedChunkBuffer)
+	if factory.initCompressor != nil {
+		chunk.compressor = factory.initCompressor(factory.log, factory.reusedChunkBuffer)
 	}
 
 	return chunk
