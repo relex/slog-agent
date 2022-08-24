@@ -26,7 +26,7 @@ func newEncoder(tag string, asArray bool, msgpackBufferSize int) *chunkEncoder {
 	}
 }
 
-func (enc *chunkEncoder) EncodeChunk(chunk *shared.BasicChunk) ([]byte, error) {
+func (enc *chunkEncoder) EncodeChunk(data []byte, params *shared.EncodeChunkParams) ([]byte, error) {
 	defer enc.msgpackEncoderBuffer.Reset()
 
 	// root array
@@ -42,23 +42,23 @@ func (enc *chunkEncoder) EncodeChunk(chunk *shared.BasicChunk) ([]byte, error) {
 	// root[1]: stream of log events
 	if enc.asArray {
 		// "Forward" mode: numRecords == the numbers of msgpack objects
-		if err := enc.msgpackEncoder.EncodeArrayLen(chunk.GetNumRecords()); err != nil {
+		if err := enc.msgpackEncoder.EncodeArrayLen(params.NumRecords); err != nil {
 			return nil, err
 		}
-		if _, err := enc.msgpackEncoderBuffer.Write(chunk.Bytes()); err != nil {
+		if _, err := enc.msgpackEncoderBuffer.Write(data); err != nil {
 			return nil, err
 		}
-	} else if err := enc.msgpackEncoder.EncodeBytes(chunk.Bytes()); err != nil { // "PackedForward" or "CompressedPackedForward" mode
+	} else if err := enc.msgpackEncoder.EncodeBytes(data); err != nil { // "PackedForward" or "CompressedPackedForward" mode
 		return nil, err
 	}
 
 	// root[2]: option
 	option := forwardprotocol.TransportOption{
-		Size:       chunk.GetNumRecords(),
-		Chunk:      chunk.GetID(),
+		Size:       params.NumRecords,
+		Chunk:      params.ID,
 		Compressed: "",
 	}
-	if chunk.IsCompressed() {
+	if params.IsCompressed {
 		option.Compressed = forwardprotocol.CompressionFormat
 	}
 

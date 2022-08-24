@@ -22,8 +22,8 @@ const (
 
 type mockJSONEncoder struct{ msgKey string }
 
-func (enc *mockJSONEncoder) EncodeChunk(chunk *BasicChunk) ([]byte, error) {
-	return json.Marshal(map[string][]byte{enc.msgKey: chunk.Bytes()})
+func (enc *mockJSONEncoder) EncodeChunk(data []byte, params *EncodeChunkParams) ([]byte, error) {
+	return json.Marshal(map[string][]byte{enc.msgKey: data})
 }
 
 func TestMessagePacker_Succeeds_OnUnencodedUncompressedInput(t *testing.T) {

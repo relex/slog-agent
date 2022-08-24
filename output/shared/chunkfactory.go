@@ -12,10 +12,17 @@ import (
 type InitCompessorFunc func(log logger.Logger, w io.Writer) io.WriteCloser
 
 type chunkEncoder interface {
-	EncodeChunk(chunk *BasicChunk) ([]byte, error)
+	EncodeChunk(data []byte, params *EncodeChunkParams) ([]byte, error)
 }
 
-type BasicChunkFactory struct {
+type EncodeChunkParams struct {
+	ID           string
+	NumRecords   int
+	NumBytes     int
+	IsCompressed bool
+}
+
+type IntermediateChunkFactory struct {
 	log               logger.Logger
 	reusedChunkBuffer *bytes.Buffer // since chunks are created consecutively, it's possible for them to share the data buffer
 	initCompressor    InitCompessorFunc
@@ -23,7 +30,7 @@ type BasicChunkFactory struct {
 	chunkEncoder      chunkEncoder
 }
 
-type BasicChunk struct {
+type IntermediateChunk struct {
 	id           string
 	numRecords   int
 	numBytes     int
@@ -32,8 +39,8 @@ type BasicChunk struct {
 	encoder      chunkEncoder   // a function to finalize/encode the entire chunk after it's been assembled
 }
 
-func NewChunkFactory(log logger.Logger, idSuffix string, bufCapacity int, initCompressor InitCompessorFunc, encoder chunkEncoder) *BasicChunkFactory {
-	return &BasicChunkFactory{
+func NewChunkFactory(log logger.Logger, idSuffix string, bufCapacity int, initCompressor InitCompessorFunc, encoder chunkEncoder) *IntermediateChunkFactory {
+	return &IntermediateChunkFactory{
 		log:               log,
 		reusedChunkBuffer: bytes.NewBuffer(make([]byte, 0, bufCapacity)),
 		initCompressor:    initCompressor,
@@ -42,8 +49,8 @@ func NewChunkFactory(log logger.Logger, idSuffix string, bufCapacity int, initCo
 	}
 }
 
-func (factory *BasicChunkFactory) NewChunk() *BasicChunk {
-	chunk := &BasicChunk{
+func (factory *IntermediateChunkFactory) NewChunk() *IntermediateChunk {
+	chunk := &IntermediateChunk{
 		id:           factory.idGenerator.Generate(),
 		numRecords:   0,
 		numBytes:     0,
@@ -60,7 +67,7 @@ func (factory *BasicChunkFactory) NewChunk() *BasicChunk {
 }
 
 // Write appends new log to log chunk
-func (chunk *BasicChunk) Write(data base.LogStream) error {
+func (chunk *IntermediateChunk) Write(data base.LogStream) error {
 	var err error
 
 	if chunk.compressor != nil {
@@ -77,7 +84,7 @@ func (chunk *BasicChunk) Write(data base.LogStream) error {
 	return err
 }
 
-func (chunk *BasicChunk) FinalizeChunk() (*base.LogChunk, error) {
+func (chunk *IntermediateChunk) FinalizeChunk() (*base.LogChunk, error) {
 	if chunk.compressor != nil {
 		if err := chunk.compressor.Close(); err != nil {
 			return nil, err
@@ -89,38 +96,24 @@ func (chunk *BasicChunk) FinalizeChunk() (*base.LogChunk, error) {
 	var chunkData []byte
 
 	if chunk.encoder != nil {
-		encodedChunk, err := chunk.encoder.EncodeChunk(chunk)
+		encodeParams := &EncodeChunkParams{
+			ID:           chunk.id,
+			NumRecords:   chunk.numRecords,
+			NumBytes:     chunk.numBytes,
+			IsCompressed: chunk.compressor != nil,
+		}
+		encodedChunk, err := chunk.encoder.EncodeChunk(chunk.reusedBuffer.Bytes(), encodeParams)
 		if err != nil {
 			return nil, err
 		}
 		chunkData = encodedChunk
 	} else {
-		chunkData = util.CopySlice(chunk.Bytes())
+		chunkData = util.CopySlice(chunk.reusedBuffer.Bytes())
 	}
 
 	return &base.LogChunk{
-		ID:    chunk.GetID(),
+		ID:    chunk.id,
 		Data:  chunkData,
 		Saved: false,
 	}, nil
-}
-
-func (chunk *BasicChunk) Bytes() base.LogStream {
-	return chunk.reusedBuffer.Bytes()
-}
-
-func (chunk *BasicChunk) GetID() string {
-	return chunk.id
-}
-
-func (chunk *BasicChunk) GetNumRecords() int {
-	return chunk.numRecords
-}
-
-func (chunk *BasicChunk) GetNumBytes() int {
-	return chunk.numBytes
-}
-
-func (chunk *BasicChunk) IsCompressed() bool {
-	return chunk.compressor != nil
 }
