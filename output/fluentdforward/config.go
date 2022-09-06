@@ -12,7 +12,25 @@ import (
 	"github.com/relex/slog-agent/base"
 	"github.com/relex/slog-agent/base/bconfig"
 	"github.com/relex/slog-agent/base/bsupport"
+	"github.com/relex/slog-agent/output/shared"
 )
+
+// output-specific file extension for generated chunks
+const chunkIDSuffix = ".ff"
+
+// msgBufCapacity is the initial capacity for buffers used for chunk and compression
+// It only needs to be large enough to contain the largest uncompressed message
+const msgBufCapacity = 1 * 1024 * 1024
+
+// chunkMaxSizeBytes defines the max uncompressed data size of a LogChunk, not including necessary headers.
+// The value must be well below Fluentd's Fluent::Plugin::Buffer::DEFAULT_CHUNK_LIMIT_SIZE, as some buffers are implicitly inserted and non-configurable.
+//
+// https://github.com/fluent/fluentd/blob/master/lib/fluent/plugin/buffer.rb#L39
+var chunkMaxSizeBytes = 7 * 1024 * 1024
+
+// chunkMaxRecords is the max amount of log entries a chunk can hold before flushing.
+// Can be 0 in case there's no limit.
+var chunkMaxRecords = 0
 
 // Config defines configuration for fluentd-forward output
 type Config struct {
@@ -49,7 +67,23 @@ func (cfg *Config) NewSerializer(parentLogger logger.Logger, schema base.LogSche
 
 // NewChunkMaker creates LogChunkMaker
 func (cfg *Config) NewChunkMaker(parentLogger logger.Logger, tag string) base.LogChunkMaker {
-	return NewMessagePacker(parentLogger, tag, cfg.MessageMode)
+	var asArray bool
+	var initCompessor shared.InitCompessorFunc
+
+	switch cfg.MessageMode {
+	case forwardprotocol.ModeForward:
+		asArray = true
+	case forwardprotocol.ModePackedForward:
+	case forwardprotocol.ModeCompressedPackedForward:
+		initCompessor = shared.InitGzipCompessor
+	default:
+		parentLogger.Fatalf("unsupported message mode: %s", cfg.MessageMode)
+	}
+
+	encoder := newEncoder(tag, asArray, msgBufCapacity)
+	basicChunkFactory := shared.NewChunkFactory(parentLogger, chunkIDSuffix, msgBufCapacity, initCompessor, encoder)
+
+	return shared.NewMessagePacker(parentLogger, chunkMaxSizeBytes, chunkMaxRecords, basicChunkFactory)
 }
 
 // NewForwarder creates the forwarding client

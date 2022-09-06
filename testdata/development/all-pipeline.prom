@@ -1,7 +1,7 @@
 testpipeline_input_passed_record_bytes_total 135311
 testpipeline_input_passed_records_total 24
-testpipeline_process_chunk_bytes_total 16943
-testpipeline_process_chunks_total 3
+testpipeline_process_chunk_bytes_total{output="logPipeline"} 17036
+testpipeline_process_chunks_total{output="logPipeline"} 3
 testpipeline_process_dropped_record_bytes_total{key_host="basic-2",key_source="auth.log",key_vhost="bar.com"} 329
 testpipeline_process_dropped_record_bytes_total{key_host="errors",key_source="main.log",key_vhost="bar.com"} 17736
 testpipeline_process_dropped_records_total{key_host="basic-2",key_source="auth.log",key_vhost="bar.com"} 3
@@ -34,4 +34,4 @@ testpipeline_process_passed_records_total{key_host="basic-2",key_source="main.lo
 testpipeline_process_passed_records_total{key_host="basic-2",key_source="user.log",key_vhost="foo.com"} 3
 testpipeline_process_passed_records_total{key_host="errors",key_source="cron.log",key_vhost="bar.com"} 2
 testpipeline_process_passed_records_total{key_host="errors",key_source="main.log",key_vhost="bar.com"} 5
-testpipeline_process_serialized_bytes_total 110789
+testpipeline_process_serialized_bytes_total{output="logPipeline"} 110789

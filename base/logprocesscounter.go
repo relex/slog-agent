@@ -24,9 +24,9 @@ type LogProcessCounter struct {
 	customCounterVecMap    map[string]logProcessCustomCounterVec // map of custom label => counter-vector[label], with unfilled metric key labels
 	inputCounterPairByKeys map[string]logInputCounterPair        // map of merged metric key => (input counter, custom counters)
 	currentCustomCounters  []*logCustomCounter                   // currently selected counter array of specific key-set
-	serializedLengthTotal  valueCounterProvider
-	chunksCountTotal       valueCounterProvider
-	chunksLengthTotal      valueCounterProvider
+	serializedLengthTotal  []valueCounterProvider                // an array of per-output metrics counters, accessed by output index
+	chunksCountTotal       []valueCounterProvider
+	chunksLengthTotal      []valueCounterProvider
 	mergeKeyBuffer         []byte // reused buffer to build merged metric key from record
 }
 
@@ -42,29 +42,38 @@ type logInputCounterPair struct {
 }
 
 // NewLogProcessCounter creates a LogProcessCounter
-func NewLogProcessCounter(factory promreg.MetricCreator, schema LogSchema, keyLocators []LogFieldLocator) *LogProcessCounter {
+func NewLogProcessCounter(factory promreg.MetricCreator, schema LogSchema, keyLocators []LogFieldLocator, outputNames []string) *LogProcessCounter {
 	metricKeyNames := make([]string, len(keyLocators))
 	for i, loc := range keyLocators {
 		metricKeyNames[i] = "key_" + loc.Name(schema)
 	}
-	return &LogProcessCounter{
+	counter := &LogProcessCounter{
 		factory:                factory,
 		metricKeyExtractor:     *NewFieldSetExtractor(keyLocators),
 		metricKeyNames:         metricKeyNames,
 		customCounterVecMap:    make(map[string]logProcessCustomCounterVec, 100),
 		inputCounterPairByKeys: make(map[string]logInputCounterPair, 2000),
 		currentCustomCounters:  nil,
-		serializedLengthTotal: valueCounterProvider{
-			factory.AddOrGetCounter("serialized_bytes_total", "Total lengths in bytes of serialized log records", nil, nil), 0,
-		},
-		chunksCountTotal: valueCounterProvider{
-			factory.AddOrGetCounter("chunks_total", "Numbers of created chunks", nil, nil), 0,
-		},
-		chunksLengthTotal: valueCounterProvider{
-			factory.AddOrGetCounter("chunk_bytes_total", "Total length in bytes of created chunks", nil, nil), 0,
-		},
-		mergeKeyBuffer: make([]byte, 0, 200),
+		mergeKeyBuffer:         make([]byte, 0, 200),
 	}
+
+	counter.serializedLengthTotal = make([]valueCounterProvider, len(outputNames))
+	counter.chunksCountTotal = make([]valueCounterProvider, len(outputNames))
+	counter.chunksLengthTotal = make([]valueCounterProvider, len(outputNames))
+
+	for i, output := range outputNames {
+		counter.serializedLengthTotal[i] = valueCounterProvider{
+			factory.AddOrGetCounter("serialized_bytes_total", "Total lengths in bytes of serialized log records", []string{"output"}, []string{output}), 0,
+		}
+		counter.chunksCountTotal[i] = valueCounterProvider{
+			factory.AddOrGetCounter("chunks_total", "Numbers of created chunks", []string{"output"}, []string{output}), 0,
+		}
+		counter.chunksLengthTotal[i] = valueCounterProvider{
+			factory.AddOrGetCounter("chunk_bytes_total", "Total length in bytes of created chunks", []string{"output"}, []string{output}), 0,
+		}
+	}
+
+	return counter
 }
 
 // RegisterCustomCounter registers a custom counter by label and count/length pointers
@@ -128,14 +137,14 @@ func (pcounter *LogProcessCounter) SelectInputCounter(record *LogRecord) *LogInp
 }
 
 // CountStream updates counters for stream serialization
-func (pcounter *LogProcessCounter) CountStream(stream LogStream) { // xx:inline
-	pcounter.serializedLengthTotal.unwrittenValue += uint64(len(stream))
+func (pcounter *LogProcessCounter) CountStream(outputIndex int, stream LogStream) { // xx:inline
+	pcounter.serializedLengthTotal[outputIndex].unwrittenValue += uint64(len(stream))
 }
 
 // CountChunk updates counters for chunk generation
-func (pcounter *LogProcessCounter) CountChunk(chunk *LogChunk) { // xx:inline
-	pcounter.chunksCountTotal.unwrittenValue++
-	pcounter.chunksLengthTotal.unwrittenValue += uint64(len(chunk.Data))
+func (pcounter *LogProcessCounter) CountChunk(outputIndex int, chunk *LogChunk) { // xx:inline
+	pcounter.chunksCountTotal[outputIndex].unwrittenValue++
+	pcounter.chunksLengthTotal[outputIndex].unwrittenValue += uint64(len(chunk.Data))
 }
 
 // UpdateMetrics writes unwritten values in the counter to underlying Prometheus counters
@@ -147,7 +156,10 @@ func (pcounter *LogProcessCounter) UpdateMetrics() {
 		}
 	}
 
-	pcounter.serializedLengthTotal.UpdateMetric()
-	pcounter.chunksCountTotal.UpdateMetric()
-	pcounter.chunksLengthTotal.UpdateMetric()
+	// all these slices should have the same length, so we can iterate over them in one loop
+	for i := range pcounter.serializedLengthTotal {
+		pcounter.serializedLengthTotal[i].UpdateMetric()
+		pcounter.chunksCountTotal[i].UpdateMetric()
+		pcounter.chunksLengthTotal[i].UpdateMetric()
+	}
 }

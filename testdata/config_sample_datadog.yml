@@ -1,0 +1,276 @@
+########################################################################################################################
+# Anchors is an ignored section. Define variables here to be referenced
+#
+anchors:
+  - &deleteBuiltinFields
+    type: delFields                               # delFields: Clear specified fields (set to empty string)
+    keys: [facility, pid, extradata]
+
+
+########################################################################################################################
+# Schema: Declare all fields
+#
+# Basic rules:
+#   - Fields are of string type
+#   - Fields must be declared in schema/fields even if they only exist temporarily during transformations
+#   - A field is empty by default. There is no difference between empty string or null/undefined
+#   - A field of empty value is always skipped from final output
+#   - New fields may be appended for config reload (SIGHUP), but never removed
+#
+# Required fields for syslog input:
+#   - facility: syslog facility name, e.g. local4, kern, ..
+#   - level: depends on input/../levelMapping
+#   - time: raw timestamp string
+#   - host: hostname
+#   - app: app-id in RFC5424
+#   - pid: proc-id in RFC5424
+#   - source: msgid in RFC5424
+#   - extradata: raw metadata value in RFC5424, unparsed
+#   - log: message in RFC5424
+#
+# The reason for declaration is because a log record of fields is internally a Go array/slice
+# If runtime reconfiguration is to be supported in future, it will require new fields to be appended at the end
+#
+# maxFields sets the max count of fields, which may be changed during config reloading but the max must stay constant
+schema:
+  fields: [facility, level, time, host, app, pid, source, extradata, log, class, task, vhost, pnum]
+  maxFields: 30
+
+
+########################################################################################################################
+# Reload restrictions on SIGHUP, as opposed to full restart in which the previous config is ignored completely:
+#
+# - No change in inputs including extractions
+# - No change in orchestration type and keys (metric keys may be changed)
+# - The maximum number of allowed fields for reload is defined by schema/maxFields, which cannot be changed itself
+# - Any fields touched by input, extractions or orchestration keys MUST not be moved or renamed.
+# - Any failure would result in an error logged while slog-agent continues to run with previous config
+
+
+########################################################################################################################
+# Inputs: list of inputs
+#
+inputs:
+  - type: syslog                                  # syslog: RFC 5424 Protocol, TCP only
+                                                  # multiline is supported, for example:
+                                                  #   <163>1 2019-10-15T15:50:46.866915+03:00 local my-app 123 fn - First line
+                                                  #   second line
+                                                  #   ...
+                                                  #
+    address: localhost:5140                       # address: 0.0.0.0:514 or 0.0.0.0:0 (port 0 to be assigned by OS. Real number is logged)
+    levelMapping: [off, fatal, crit, error, warn, notice, info, debug]
+
+    #
+    # Extractions: List of transforms to compute fields required for orchestration and metrics
+    #
+    # Leave as few steps as possible, as they're performed on input goroutines
+    # Any transform can be used here
+    #
+    extractions:
+
+      - type: extractHead                         # extractHead: Extract and cut class from the start of "log" to a new field "class"
+        key: log                                  #   e.g. log=[MyClass1 ] - Initialized
+        pattern: '\[*\] - '                       # pattern: note brackets and asterisks need to be escaped
+        maxLen: 100
+        destKey: class                            # result in e.g. log=Initialized class=MyClass1 (always trimmed)
+
+      - type: extractTail                         # extractTail: Extract and cut UUID from the end of "source" to a new field "task"
+        key:  source                              #   e.g. source=task.log:123e4567-e89b-12d3-a456-426614174000
+        pattern: :[0-9a-f-]                       # pattern: optional prefix + { [] or * to match target } + optional suffix
+        maxLen: 41                                # maxLen: max search length in bytes
+        destKey: task                             # result in e.g. source=task.log task=123e4567-e89b-12d3-a456-426614174000
+
+      - type: extractTail
+        key:  app
+        pattern: /*
+        maxLen: 100
+        destKey: vhost
+
+      - type: addFields                           # addFields: Add or update one or more fields
+        fields:
+          pnum: ${task[-1:]}                      # value may reference other variables by $var or ${var} 
+                                                  #       may also use substring (no overflow),
+                                                  #       e.g. ${task[-3:-1]} result in "78" for task=56789
+
+      - type: if                                  # Conditional block (optional execution - there is no "else")
+        match:                                    # match: AND of all
+          class: !!str-any                        #   field1: !!operator1 value1
+          task: !!str-any                         #   field2: !!operator2 value2
+                                                  # see "Match Operators" below for details
+        then:
+          - type: addFields                       # addFields: Add or update one or more fields
+            fields:
+              task: $task:$class                  # e.g. task=123e4567-e89b-12d3-a456-426614174000:MyClass1
+
+      - type: delFields                           # delFields: Clear specified fields (set to empty string)
+        keys: [facility, pid, extradata]
+
+########################################################################################################################
+# Orchestration creates log-processing pipeline(s) for key fields and distribute input logs among them
+#
+orchestration:
+  type: byKeySet                        # "byKeySet": one queue and one set of pipelines for each of key field set.
+                                        # "singleton": single pipeline, no redistribution. static tag only (no field expansion)
+
+  keys: [app, level, pnum]              # keys:  e.g. [app, level] => "sshd,info", "sshd,warn", ..
+                                        #   keys are also used as dir names for on-disk queues and any change would break autorecovery on next restart.
+                                        #
+                                        # Choose keys carefully as idle pipelines and queues are never destroyed without restart
+                                        #
+                                        # Logs routed to the same pipeline (of the same keyset) are guaranteed to be outputted in the original order
+                                        #
+                                        # The ordering guarantee doesn't mean all logs would be ordered by timestamps - it still depends on the source
+
+  tag: development.$app                 # tag: required by Fluentd in upstream. Key fields may be referenced here.
+
+metricKeys: [host, vhost, source]       # metricKeys define additional fields as metric labels (Prometheus metrics), in addition to key fields above
+                                        # They're applied to all processing-level metrics, e.g.
+                                        #   - slogagent_process_passed_records_total{key_app="sshd", key_level="error", key_vhost="foo.com", ..} 100
+                                        #   - slogagent_process_passed_record_bytes_total{key_...} ...
+
+
+########################################################################################################################
+# Transformations run on each of log-processing pipelines
+#
+transformations:
+
+  - type: switch                                  # switch: Switch-Case branches, no fallthrough
+    cases:                                        #   continue processing if not matched in any cases
+      - match:
+          app: appServ
+        then:
+
+          - type: drop                            # drop: Drop logs on conditions (AND only)
+            match:
+              source: auth.log
+              level: !!str-not fatal
+            percentage: 100
+            metricLabel: app-auth                 # metricLabel: a metric label value to track dropped logs, e.g.
+                                                  #   slogagent_process_labelled_record_bytes_total{key_app="appServ",key_vhost="foo.com",label="app-auth"} 175
+
+          - type: drop                            # drop can also be used with a percentage
+            match:
+              host: errors
+              source: main.log
+              level: !!str warn
+            percentage: 33                        # percentage: ratio of logs to exclude, 0-100
+            metricLabel: downsampled              # percentage < 100 would create an additional label with "!" in front, e.g.
+                                                  #   label="!downsampled" to count matched but retained logs
+
+          - type: switch                          
+            cases:                                
+              - match:
+                  source: access.log
+                then:
+                  - type: if
+                    match:
+                      log: !!glob P[OU][ST]** params=**
+                    then:
+                      - type: truncate            # truncate: Truncate oversized fields
+                        key: log                  # key: field to check & truncate
+                        maxLen: 180               # maxLen: max length to preserve (before appending suffix)
+                        suffix: ' ... (cut)'      # suffix: appended to the end. REQUIRED
+              - match:
+                  task: !!len-lt 1
+                then:
+                  - type: redactEmail             # redactEmail: search and redact emails in-place
+                    key: log                      # key: field to check and redact
+                    metricLabel: redacted         # metricLabel: a metric label value to track changed logs (not numbers of emails redacted)
+
+      - match:
+          app: abandoned
+        then:
+          #
+          # Examples of generic/abandoned transforms which should be avoided in production mode
+          #
+          - type: addFields                       # addFields: could cause high CPU & mem when field values are huge
+            fields:                               # 
+              log: task=$task $log                #   ex: 60K error dumps in "log" field, all of them rewritten / recreated
+                                                  #
+                                                  # May be replaced by serialization rewrites (see "inline" rewrite below)
+
+          - type: unescape                        # unescape: Unescape special chars in syslog messages: high CPU & mem when logs are huge
+            key: log                              # Not part of RFC 5424; including chars: "\b", "\f", "\n", "\r", "\t" (as in Java)
+                                                  # Skipped if a log is marked by input as unescaped (e.g. multiline message via Syslog)
+                                                  #
+                                                  # Can be replaced by serialization rewrites with side-effects
+
+          - type: replace                         # replace: Regex search & replace: extreme CPU & mem usage, avoid completely
+            key: log
+            pattern: !!regex ^(P(OS|U)T ".*".*params=.{145}).{15,}$ # No generic replacement. Write new transforms if needed (e.g. redactEmail)
+            replacement: $1 ... (cut)
+
+      #
+      # Match Operators (Examples)
+      #
+      - match:
+          facility: !!str-eq kern                 # !!str-eq or !!str is the default, "equals to"
+          level: !!str-not notice                 # !!str-not means "not equals to"
+          time: !!str-start 2020/                 # !!str-start matches the beginning of value
+          host: !!str-end .com                    # !!str-end matches the end of value
+          app: !!str-contain server               # !!str-contain tests whether value contains something
+          vhost: !!glob api.*.{com,.co.uk}        # !!glob uses https://github.com/gobwas/glob pattern, note there are ** and *
+          log: !!regex ^(P(OS|U)T)\s              # !!regex uses Go's regular expression
+          pid: !!len-gt 5                         # !!len-gt checks the length is greater than N
+          source: !!len-lt 2                      # !!len-lt checks the length is smaller than N
+          task: !!str-any                         # !!str-any is the same as !!len-gt 0
+        then:
+          - type: addFields
+            fields:
+              host: ${host[:-4]}
+
+  #
+  # When arranging transformations, the key for performance is to drop as early as possible and to modify as little as possible.
+  #
+  # For example, if there are millions of debug logs/s and all of them are going to be dropped after updating metrics,
+  # there is no point to parse timestamps first - which is an expensive operation itself (compared to other steps)
+  #
+  - type: block
+    steps:
+
+      - type: parseTime                           # parseTime: Parse timestamp; Only RFC 3339 is supported now
+        key: time                                 #   e.g. 2019-08-15T15:50:46.866915+03:00 or 2020-09-17T16:51:47.867Z
+        errorLabel: timeError                     # update "slogagent_process_labelled_*" metrics with label=timeError on failures
+
+      - type: delFields
+        keys:
+          - time
+
+
+outputBufferPairs: 
+  - name: logPipeline
+    buffer:
+      type: hybridBuffer                              # hybridBuffer is the only buffer type for now
+                                                      # All chunks are kept in per-pipeline go-channel of fixed size
+                                                      # When the count reaches 500, newly processed chunks have their main bodies moved to individual files
+                                                      # ... and only loaded back when ready to be forwarded to upstream
+                                                      #
+      rootPath: /tmp/slog-buffer                      # rootPath: storage root. There may be subdirs for each pipeline, depending on the orchestration type
+      maxBufSize: 1GB                                 # maxBufSize: limit per queue (per pipeline)
+    output:
+        type: datadog                            # fluentdForward: Forward Protocol v1
+                                                  # with a specific "environment" field, e.g.
+                                                  #  {log: "User A logged in", "environment": {"app": "sshd", "host": "google.com"}}
+        serialization:
+          source: testSource
+          tags: testTags
+          service: testService
+
+        upstream:                                       # Forward destination, see https://docs.fluentd.org/input/forward for explanations
+          address: https://http-intake.logs.datadoghq.eu/api/v2/logs
+          httpTimeout: 30s
+
+
+########################################################################################################################
+# Buffer offers storage / queues to store processed log chunks outside of memory when needed
+#
+# Buffering is applied on output chunks, AFTER logs are processed into the final output form (as defined in output section)
+# The data persisted is determined solely by the output, while the buffer has no idea what's inside.
+#
+
+
+########################################################################################################################
+# Output defines how logs are serialized, packed (compression) and forwarded to upstream
+#
+# Serialization and compression are done on the log-processing pipelines before buffering.
+# The serialization stage also allows certain in-place transformations ("rewrites") without introducing additional heap allocations and memory copying
