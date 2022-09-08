@@ -5,6 +5,7 @@ go 1.19
 require (
 	github.com/c2h5oh/datasize v0.0.0-20220606134207-859f65c6625b
 	github.com/gobwas/glob v0.2.3
+	github.com/klauspost/compress v1.15.9
 	github.com/pkg/xattr v0.4.7
 	github.com/prometheus/client_golang v1.12.2
 	github.com/prometheus/client_model v0.2.0

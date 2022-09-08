@@ -1,9 +1,9 @@
 package shared
 
 import (
-	"compress/gzip"
 	"io"
 
+	"github.com/klauspost/compress/gzip"
 	"github.com/relex/gotils/logger"
 )
 
