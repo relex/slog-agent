@@ -14,6 +14,10 @@ schema:
     - task
     - vhost
     - pnum
+    - ddsource
+    - ddtags
+    - hostname
+    - service
   maxFields: 30
 inputs:
   - type: syslog
@@ -143,12 +147,17 @@ transformations:
       - type: delFields
         keys:
           - time
+  - type: addFields
+    fields:
+      ddsource: csharp
+      hostname: $host
+      service: $vhost
 outputBufferPairs:
-  - name: logPipeline
+  - name: customFluentd
     buffer:
       type: hybridBuffer
-      rootPath: /tmp/slog-buffer
-      maxBufSize: 1GB
+      rootPath: /tmp/slog-buffer-fluentd
+      maxBufSize: 10GB
     output:
       type: fluentdForward
       serialization:
@@ -161,6 +170,10 @@ outputBufferPairs:
           - task
           - class
           - pnum
+          - ddsource
+          - ddtags
+          - hostname
+          - service
         rewriteFields:
           log:
             - type: inline
@@ -172,3 +185,22 @@ outputBufferPairs:
         tls: true
         secret: guess
         maxDuration: 30m0s
+  - name: datadogAPI
+    buffer:
+      type: hybridBuffer
+      rootPath: /tmp/slog-buffer-datadog
+      maxBufSize: 5GB
+    output:
+      type: datadog
+      serialization:
+        hiddenFields:
+          - host
+          - vhost
+          - app
+          - source
+          - task
+          - class
+          - pnum
+      upstream:
+        address: https://http-intake.logs.datadoghq.eu/api/v2/logs
+        httpTimeout: 30s

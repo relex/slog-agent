@@ -12,7 +12,7 @@ require (
 	github.com/puzpuzpuz/xsync v1.3.0
 	github.com/relex/fluentlib v0.0.0-20220117103042-9564c29074ee
 	github.com/relex/gotils v0.0.0-20220519125023-a93a23c3409f
-	github.com/stretchr/testify v1.7.2
+	github.com/stretchr/testify v1.8.1
 	github.com/vmihailenco/msgpack/v4 v4.3.12
 	golang.org/x/exp v0.0.0-20220706164943-b4a6d9510983
 	golang.org/x/sys v0.0.0-20220708085239-5a0f0661e09d
@@ -36,6 +36,7 @@ require (
 	github.com/pmezard/go-difflib v1.0.0 // indirect
 	github.com/prometheus/common v0.35.0 // indirect
 	github.com/prometheus/procfs v0.7.3 // indirect
+	github.com/samber/lo v1.35.0 // indirect
 	github.com/sirupsen/logrus v1.8.1 // indirect
 	github.com/spf13/afero v1.8.2 // indirect
 	github.com/spf13/cast v1.5.0 // indirect

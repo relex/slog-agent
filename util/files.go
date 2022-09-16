@@ -1,7 +1,6 @@
 package util
 
 import (
-	"io/ioutil"
 	"os"
 	"path/filepath"
 
@@ -21,7 +20,7 @@ func ListFiles(directoryOrFilePattern string) ([]string, error) {
 			return nil, serr
 		}
 		if stat.IsDir() {
-			fileList, rerr := ioutil.ReadDir(input)
+			fileList, rerr := os.ReadDir(input)
 			if rerr != nil {
 				return nil, rerr
 			}

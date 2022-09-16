@@ -10,7 +10,7 @@ import (
 	"github.com/relex/slog-agent/base/bconfig"
 	"github.com/relex/slog-agent/base/bmatch"
 	"github.com/relex/slog-agent/base/bsupport"
-	"github.com/relex/slog-agent/util"
+	"github.com/samber/lo"
 )
 
 // Config for switchTransform
@@ -40,7 +40,7 @@ type switchCaseResult bool
 // NewTransform creates switchTransform
 func (c *Config) NewTransform(schema base.LogSchema, parentLogger logger.Logger, customCounterRegistry base.LogCustomCounterRegistry) base.LogTransform {
 	return &switchTransform{
-		cases: util.MapSlice(c.Cases, func(caseConfig CaseConfig) switchCase {
+		cases: lo.Map(c.Cases, func(caseConfig CaseConfig, _ int) switchCase {
 			return caseConfig.newCase(schema, parentLogger, customCounterRegistry)
 		}),
 	}

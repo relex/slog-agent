@@ -24,7 +24,7 @@ type agent struct {
 // 1. output chunks may be intercepted before real/network forwarder. If intercepted, the bufferer flushes everything before shutdown instead of saving them for recovery.
 //
 // 2. orchestration keys and tags from config may be overridden
-func startAgent(loader *run.Loader, newChunkSaver base.ChunkConsumerConstructor, keysOverride []string, tagOverride string) *agent {
+func startAgent(loader *run.Loader, outputOverrideCreator base.ChunkConsumerOverrideCreator, keysOverride []string, tagOverride string) *agent {
 	if len(loader.Inputs) != 1 {
 		logger.Warnf("only the first input is used for testing - there are %d", len(loader.Inputs))
 	}
@@ -60,8 +60,8 @@ func startAgent(loader *run.Loader, newChunkSaver base.ChunkConsumerConstructor,
 	}
 
 	// flush everything at the end if the output is not a real forwarder client
-	if newChunkSaver != nil {
-		loader.PipelineArgs.NewConsumerOverride = newChunkSaver
+	if outputOverrideCreator != nil {
+		loader.PipelineArgs.NewConsumerOverride = outputOverrideCreator
 		loader.PipelineArgs.SendAllAtEnd = true
 	}
 
@@ -76,7 +76,7 @@ func startAgent(loader *run.Loader, newChunkSaver base.ChunkConsumerConstructor,
 			time.Sleep(1 * time.Second) // give orchestrator time to process flushed logs at the end of tcp listener
 			orchestrator.Shutdown()
 		},
-		runRecovery: newChunkSaver == nil,
+		runRecovery: outputOverrideCreator == nil,
 	}
 }
 

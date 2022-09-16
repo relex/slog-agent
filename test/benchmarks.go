@@ -9,8 +9,9 @@ import (
 	"github.com/relex/gotils/logger"
 	"github.com/relex/gotils/promexporter/promext"
 	"github.com/relex/gotils/promexporter/promreg"
+	"github.com/relex/slog-agent/base"
 	"github.com/relex/slog-agent/run"
-	"github.com/relex/slog-agent/util"
+	"github.com/samber/lo"
 )
 
 type benchmarkMetric struct {
@@ -19,26 +20,26 @@ type benchmarkMetric struct {
 }
 
 // RunBenchmarkPipeline benchmarks a workerless pipeline
-func RunBenchmarkPipeline(inputPath string, outputPath string, repeat int, configFile string) {
+func RunBenchmarkPipeline(inputPath string, outputPathPattern string, repeat int, configFile string) {
 	mfactory := promreg.NewMetricFactory("benchpipeline_", nil, nil)
-	process, endProcess := preparePipeline(configFile, testOutputTag, mfactory)
-	writeChunk, closeOutput := openLogChunkConsumingFunc(outputPath)
+	pipeline := preparePipeline(configFile, testOutputTag, mfactory, func(outputName string) chunkSaver {
+		return newChunkSaver(outputName, outputPathPattern)
+	})
 
 	inputRecords := loadInputRecords(inputPath)
-	inputLength := util.SumSlice(inputRecords, func(record []byte) int { return len(record) + 1 /* +1 for newline char */ })
+	inputLength := lo.SumBy(inputRecords, func(record []byte) int { return len(record) + 1 /* +1 for newline char */ })
 
 	totalInputCount := len(inputRecords) * repeat
 	totalInputLength := int64(inputLength) * int64(repeat)
 	costTracker := StartCostTracking()
-	runPipeline(process, endProcess, inputRecords, repeat, writeChunk)
-	closeOutput()
+	pipeline.Run(inputRecords, repeat)
 
 	reportBenchmarkResult("BenchmarkPipeline", totalInputCount, totalInputLength, costTracker.Report(), mfactory)
 	logger.Info(promext.DumpMetrics("", true, false, mfactory))
 }
 
 // RunBenchmarkAgent benchmarks a fully configured agent outputting to file or null
-func RunBenchmarkAgent(inputPath string, outputPath string, repeat int, configFile string) {
+func RunBenchmarkAgent(inputPath string, outputPathPattern string, repeat int, configFile string) {
 	// launch agent
 	loader, confErr := run.NewLoaderFromConfigFile(configFile, "testagent_")
 	if confErr != nil {
@@ -46,13 +47,12 @@ func RunBenchmarkAgent(inputPath string, outputPath string, repeat int, configFi
 	}
 	loader.ConfigStats.Log(logger.Root())
 
-	chunkSavers := openLogChunkSavers(outputPath)
-	agentInstance := startAgent(loader, chunkSavers, nil, "")
+	agentInstance := startAgent(loader, createBenchmarkAgentOutputOverride(outputPathPattern), nil, "")
 
 	// feed input
 	inputData, numRecords := loadInput(inputPath)
 	costTracker := StartCostTracking()
-	runBenchmarkInputSender(agentInstance.Address(), inputData, repeat)
+	feedInputToBenchmarkAgent(agentInstance.Address(), inputData, repeat)
 	time.Sleep(1 * time.Second)
 
 	logger.Info("stopping...")
@@ -62,7 +62,16 @@ func RunBenchmarkAgent(inputPath string, outputPath string, repeat int, configFi
 	logger.Info(promext.DumpMetricsFrom("", true, true, agentInstance.GetMetricQuerier()))
 }
 
-func runBenchmarkInputSender(agentAddress string, inputData []byte, repeat int) {
+func createBenchmarkAgentOutputOverride(outputPathPattern string) base.ChunkConsumerOverrideCreator {
+	if outputPathPattern == "" {
+		return nil
+	}
+	return func(parentLogger logger.Logger, name string, decoder base.ChunkDecoder, args base.ChunkConsumerArgs) base.ChunkConsumer {
+		return newChunkSavingWorker(parentLogger, decoder, args, newChunkSaver(name, outputPathPattern))
+	}
+}
+
+func feedInputToBenchmarkAgent(agentAddress string, inputData []byte, repeat int) {
 	const minFrameSize = 1 * 1024 * 1024
 	const maxFrameSize = 1 * 1024 * 1024
 

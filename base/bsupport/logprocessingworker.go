@@ -29,7 +29,7 @@ type OutputInterface struct {
 // NewLogProcessingWorker creates LogProcessingWorker
 func NewLogProcessingWorker(parentLogger logger.Logger,
 	input <-chan []*base.LogRecord, deallocator *base.LogAllocator, procCounter *base.LogProcessCounter,
-	transforms []base.LogTransformFunc, components []OutputInterface,
+	transforms []base.LogTransformFunc, outputInterfaces []OutputInterface,
 ) *LogProcessingWorker {
 	worker := &LogProcessingWorker{
 		PipelineWorkerBase: NewPipelineWorkerBase(
@@ -39,7 +39,7 @@ func NewLogProcessingWorker(parentLogger logger.Logger,
 		deallocator:   deallocator,
 		procCounter:   procCounter,
 		transformList: transforms,
-		outputList:    components,
+		outputList:    outputInterfaces,
 		lastChunkTime: time.Now(),
 	}
 	worker.InitInternal(worker.onInput, worker.onTick, worker.onStop)
@@ -60,7 +60,15 @@ func (worker *LogProcessingWorker) onInput(buffer []*base.LogRecord, timeout <-c
 		icounter.CountRecordPass(record)
 
 		for i, output := range worker.outputList {
+			// TODO:
+			//if RunTransforms(record, output.transformList) == base.DROP {
+			//	icounter.CountOutputFilter(i, record)
+			//	worker.deallocator.Release(record)
+			//	continue
+			//}
 			stream := output.SerializeRecord(record)
+			// TODO: decide whether to release once at the end or release here after per-output transform is implemented
+			// It will depend on whether records are duplicated for additional outputs, or the same record with all transforms run in place.
 			worker.deallocator.Release(record)
 			worker.procCounter.CountStream(i, stream)
 			maybeChunk := output.WriteStream(stream)

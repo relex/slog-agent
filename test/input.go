@@ -2,7 +2,7 @@ package test
 
 import (
 	"bytes"
-	"io/ioutil"
+	"os"
 	"strings"
 
 	"github.com/relex/gotils/logger"
@@ -42,7 +42,7 @@ func loadInput(inputPath string) ([]byte, int) {
 	data := make([]byte, 0)
 	numLines := 0
 	for _, path := range pathList {
-		content, err := ioutil.ReadFile(path)
+		content, err := os.ReadFile(path)
 		if err != nil {
 			logger.Fatalf("error reading %s: %v", path, err)
 		}

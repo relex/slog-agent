@@ -3,7 +3,7 @@ package textractspecial
 import (
 	"testing"
 
-	"github.com/relex/slog-agent/util"
+	"github.com/samber/lo"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -114,7 +114,7 @@ func TestExtractLabelAtStartWithRightBoundary(t *testing.T) {
 	}
 	{
 		tbl := make([]bool, 256)
-		util.EachInSlice(tbl, func(index int, item bool) { tbl[index] = true })
+		lo.ForEach(tbl, func(item bool, index int) { tbl[index] = true })
 		tbl['='] = false
 
 		comp, log := extractLabelAtStart(msg, "", ", ", 50, tbl)
@@ -169,7 +169,7 @@ func TestExtractLabelAtEndWithRightBoundary(t *testing.T) {
 	}
 	{
 		tbl := make([]bool, 256)
-		util.EachInSlice(tbl, func(index int, item bool) { tbl[index] = true })
+		lo.ForEach(tbl, func(item bool, index int) { tbl[index] = true })
 		tbl['='] = false
 
 		comp, log := extractLabelAtEnd(msg, "", ", ", 50, tbl)

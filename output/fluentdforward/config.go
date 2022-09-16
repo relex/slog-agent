@@ -2,6 +2,7 @@ package fluentdforward
 
 import (
 	"fmt"
+	"io"
 	"net"
 	"strings"
 	"time"
@@ -55,13 +56,17 @@ type UpstreamConfig struct {
 	MaxDuration time.Duration `yaml:"maxDuration"`
 }
 
+func (cfg *Config) DecodeChunkToJSON(chunk base.LogChunk, separator []byte, indented bool, writer io.Writer) (base.LogChunkInfo, error) {
+	return convertMsgpackToJSON(chunk, separator, indented, writer)
+}
+
 // MatchChunkID checks whether given ID is valid for a fluentdforward chunk file
 func (cfg *Config) MatchChunkID(chunkID string) bool { //nolint:revive
 	return strings.HasSuffix(chunkID, chunkIDSuffix)
 }
 
 // NewSerializer creates LogSerializer
-func (cfg *Config) NewSerializer(parentLogger logger.Logger, schema base.LogSchema) base.LogSerializer {
+func (cfg *Config) NewSerializer(parentLogger logger.Logger, schema base.LogSchema, tag string) base.LogSerializer {
 	return MustNewEventSerializer(parentLogger, schema, cfg.Serialization)
 }
 

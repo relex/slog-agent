@@ -6,7 +6,7 @@ import (
 	"github.com/relex/slog-agent/base"
 	"github.com/relex/slog-agent/base/bconfig"
 	"github.com/relex/slog-agent/base/bsupport"
-	"github.com/relex/slog-agent/util"
+	"github.com/samber/lo"
 )
 
 type outputWorkerSettings struct {
@@ -30,7 +30,7 @@ func PrepareSequentialPipeline(args bconfig.PipelineArgs) PipelineStarter {
 	return func(parentLogger logger.Logger, metricCreator promreg.MetricCreator,
 		input <-chan []*base.LogRecord, bufferID string, outputTag string, onStopped func(),
 	) {
-		outputSettingsSlice := util.MapSlice(args.OutputBufferPairs, func(pair bconfig.OutputBufferConfig) outputWorkerSettings {
+		outputSettingsSlice := lo.Map(args.OutputBufferPairs, func(pair bconfig.OutputBufferConfig, _ int) outputWorkerSettings {
 			outputLogger := parentLogger.WithField("output", pair.Name)
 
 			bufferer := pair.BufferConfig.Value.NewBufferer(
@@ -48,7 +48,7 @@ func PrepareSequentialPipeline(args bconfig.PipelineArgs) PipelineStarter {
 			var consumer base.ChunkConsumer
 			if args.NewConsumerOverride != nil {
 				outputLogger.Info("launch override consumer")
-				consumer = args.NewConsumerOverride(outputLogger, bufferer.RegisterNewConsumer())
+				consumer = args.NewConsumerOverride(outputLogger, pair.Name, pair.OutputConfig.Value, bufferer.RegisterNewConsumer())
 			} else {
 				outputLogger.Info("launch consumer")
 				consumer = pair.OutputConfig.Value.NewForwarder(
@@ -62,7 +62,7 @@ func PrepareSequentialPipeline(args bconfig.PipelineArgs) PipelineStarter {
 			return outputWorkerSettings{
 				name:       pair.Name,
 				bufferer:   bufferer,
-				serializer: pair.OutputConfig.Value.NewSerializer(outputLogger, args.Schema),
+				serializer: pair.OutputConfig.Value.NewSerializer(outputLogger, args.Schema, outputTag),
 				chunkMaker: pair.OutputConfig.Value.NewChunkMaker(outputLogger, outputTag),
 				consumer:   consumer,
 			}
@@ -71,7 +71,8 @@ func PrepareSequentialPipeline(args bconfig.PipelineArgs) PipelineStarter {
 		// then prepare processing worker which is at the head of pipeline
 		// output names slice order should match the outputs order in bsupport.NewLogProcessingWorker
 		procTracker := base.NewLogProcessCounter(metricCreator, args.Schema, args.MetricKeyLocators,
-			util.MapSlice(outputSettingsSlice, func(outputSettings outputWorkerSettings) string { return outputSettings.name }))
+			lo.Map(outputSettingsSlice, func(outputSettings outputWorkerSettings, _ int) string { return outputSettings.name }),
+		)
 
 		procWorker := bsupport.NewLogProcessingWorker(
 			parentLogger,
@@ -79,7 +80,7 @@ func PrepareSequentialPipeline(args bconfig.PipelineArgs) PipelineStarter {
 			args.Deallocator,
 			procTracker,
 			bsupport.NewTransformsFromConfig(args.TransformConfigs, args.Schema, parentLogger, procTracker),
-			util.MapSlice(outputSettingsSlice, func(outputSettings outputWorkerSettings) bsupport.OutputInterface {
+			lo.Map(outputSettingsSlice, func(outputSettings outputWorkerSettings, _ int) bsupport.OutputInterface {
 				return bsupport.OutputInterface{
 					LogSerializer: outputSettings.serializer,
 					LogChunkMaker: outputSettings.chunkMaker,
@@ -89,7 +90,7 @@ func PrepareSequentialPipeline(args bconfig.PipelineArgs) PipelineStarter {
 			}),
 		)
 		procWorker.Stopped().Next(func() {
-			util.EachInSlice(outputSettingsSlice, func(_ int, settings outputWorkerSettings) {
+			lo.ForEach(outputSettingsSlice, func(settings outputWorkerSettings, _ int) {
 				settings.bufferer.Destroy()
 			})
 			onStopped()

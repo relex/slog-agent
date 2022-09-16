@@ -6,9 +6,9 @@ import (
 	"regexp"
 	"runtime"
 	"testing"
-)
 
-var inputExtPattern = regexp.MustCompile(`-input\.log$`)
+	"github.com/samber/lo"
+)
 
 var absoluteDirPath string
 
@@ -25,8 +25,10 @@ func GetConfigDumpPath() string {
 	return filepath.Join(absoluteDirPath, "config_sample_dump.yml")
 }
 
-func ListInputFiles(t *testing.T, pattern string) []string {
-	fullPattern := filepath.Join(absoluteDirPath, "development", pattern+"-input.log")
+var inputExtPattern = regexp.MustCompile(`-input\.log$`)
+
+func ListInputFiles(t *testing.T) []string {
+	fullPattern := filepath.Join(absoluteDirPath, "development", "*-input.log")
 
 	inFiles, globErr := filepath.Glob(fullPattern)
 	if globErr != nil {
@@ -46,10 +48,28 @@ func GetInputTitle(t *testing.T, fn string) string {
 	return filepath.Base(title)
 }
 
-func GetOutputFilename(t *testing.T, fn string) string {
-	outFn := inputExtPattern.ReplaceAllString(fn, "-output.json")
+func GetOutputFilenamePattern(t *testing.T, fn string) string {
+	outFn := inputExtPattern.ReplaceAllString(fn, "-output-$$OUTPUT.json")
 	if outFn == fn {
 		t.Fatalf("invalid input filename %s", fn)
 	}
 	return outFn
+}
+
+var outputPathPattern = regexp.MustCompile(`^.*/[^/]+-output-(.+)\.json$`)
+
+func ListOutputNamesAndFiles(t *testing.T, inputTitle string) map[string]string {
+	fullPattern := filepath.Join(absoluteDirPath, "development", inputTitle+"-output-*.json")
+
+	outFiles, globErr := filepath.Glob(fullPattern)
+	if globErr != nil {
+		t.Fatalf("failed to scan expected output files at path %s: %v", fullPattern, globErr)
+	}
+	if len(outFiles) == 0 {
+		t.Fatalf("failed to find expected output files at path %s: no match", fullPattern)
+	}
+
+	return lo.KeyBy(outFiles, func(path string) string {
+		return outputPathPattern.ReplaceAllString(path, "$1")
+	})
 }

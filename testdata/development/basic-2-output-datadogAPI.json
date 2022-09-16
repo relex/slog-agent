@@ -1,0 +1,101 @@
+[
+{
+  "ddsource": "csharp",
+  "ddtags": "basic-2",
+  "hostname": "basic-2",
+  "level": "info",
+  "log": "Page loaded: {\"queryDuration\":5.1, \"pageId\":81306300647, \"renderCpuTime\":0.01}",
+  "service": "foo.com",
+  "timestamp": "1660550130112"
+},
+{
+  "ddsource": "csharp",
+  "ddtags": "basic-2",
+  "hostname": "basic-2",
+  "level": "info",
+  "log": "Read report v1:\\n    queryDuration: 0.199\\n    renderCpuTime: 0.14\\n    userName: REDACTED\\n    reportName: Test Report B\\n    reportId: 78130040643\\n    reportFolder: Demo\\n    reportFolderId: 5030\\n    reportModifiedNotSaved: true",
+  "service": "foo.com",
+  "timestamp": "1660550130112"
+},
+{
+  "ddsource": "csharp",
+  "ddtags": "basic-2",
+  "hostname": "basic-2",
+  "level": "info",
+  "log": "View loaded:\n    queryDuration: 0.2\n    renderCpuTime: 0.144\n    userName: demoUser\n    reportName: Test Report A\n    reportId: 13306440807\n    reportFolder: Demo\n    reportFolderId: 5030\n    reportModifiedNotSaved: true",
+  "service": "foo.com",
+  "timestamp": "1660550130112"
+},
+{
+  "ddsource": "csharp",
+  "ddtags": "basic-2",
+  "hostname": "basic-2",
+  "level": "warn",
+  "log": "POST \"/data/query\", status=200, remote_ip=0.0.0.1, user_id=123, duration=1.339, view=0.001, params={\"glossary\":{\"title\":\"example glossary\",\"GlossDiv\":{\"title\":\"S\",\"GlossList\":{\"Glo ... (cut)",
+  "service": "bar.com",
+  "timestamp": "1660555028001"
+},
+{
+  "ddsource": "csharp",
+  "ddtags": "basic-2",
+  "hostname": "basic-2",
+  "level": "warn",
+  "log": "PUT \"/notes/1\", status=200, remote_ip=1.2.3.4, user_id=123, duration=0.862, view=0.261, params=[{\"_id\":\"60b0ae514e4f7e517acca584\",\"index\":0,\"guid\":\"b9a2719a-d32a-48a8-9026-d0116556 ... (cut)",
+  "service": "bar.com",
+  "timestamp": "1660556874003"
+},
+{
+  "ddsource": "csharp",
+  "ddtags": "basic-2",
+  "hostname": "basic-2",
+  "level": "fatal",
+  "log": "Error connecting to auth provider at 2022-08-02T13:36:04.116+02:00.",
+  "service": "bar.com",
+  "timestamp": "1660563364127"
+},
+{
+  "ddsource": "csharp",
+  "ddtags": "basic-2",
+  "hostname": "basic-2",
+  "level": "info",
+  "log": "Commit changes, key: report_4942993256, user: foo.bar@notwhere.com",
+  "service": "bar.com",
+  "timestamp": "1660563364127"
+},
+{
+  "ddsource": "csharp",
+  "ddtags": "basic-2",
+  "hostname": "basic-2",
+  "level": "error",
+  "log": "Unable to open /var/backup/appServ/bar: permission denied",
+  "service": "bar.com",
+  "timestamp": "1660599064191"
+},
+{
+  "ddsource": "csharp",
+  "ddtags": "basic-2",
+  "hostname": "basic-2",
+  "level": "info",
+  "log": "Created factory for type: EMAIL_TEST, factory: org.something.else.hidden.services.AsyncCallbackService@3b42121d, pool: java.util.concurrent.ThreadPoolExecutor@7a2ab862[Running, pool size = 0, active threads = 0, queued tasks = 0, completed tasks = 0]",
+  "service": "bar.com",
+  "timestamp": "1660571039947"
+},
+{
+  "ddsource": "csharp",
+  "ddtags": "basic-2",
+  "hostname": "basic-2",
+  "level": "error",
+  "log": "fail to create: Exception in thread \"main\" java.lang.RuntimeException: A test exception\n  at com.stackify.stacktrace.StackTraceExample.methodB(StackTraceExample.java:13)\n  at com.stackify.stacktrace.StackTraceExample.methodA(StackTraceExample.java:9)\n  at com.stackify.stacktrace.StackTraceExample.main(StackTraceExample.java:5)",
+  "service": "bar.com",
+  "timestamp": "1660571039962"
+},
+{
+  "ddsource": "csharp",
+  "ddtags": "basic-2",
+  "hostname": "basic-2",
+  "level": "warn",
+  "log": "Error generating contact: Root Exception stack trace:\njava.lang.IllegalArgumentException: Position exceeds a limit: 372\u003e77\n\tat org.glassfish.grizzly.memory.BuffersBuffer.setPosLim(BuffersBuffer.java:1732)\n\tat org.glassfish.grizzly.memory.BuffersBuffer.toStringContent(BuffersBuffer.java:1358)\n\tat org.glassfish.grizzly.http.util.BufferChunk.toString(BufferChunk.java:502)\n\tat org.glassfish.grizzly.http.util.DataChunk.toString(DataChunk.java:309)\n\tat com.ning.http.client.providers.grizzly.GrizzlyResponseHeaders.getHeaders(GrizzlyResponseHeaders.java:59)\n\tat com.ning.http.client.ResponseBase.hasResponseHeaders(ResponseBase.java:115)\n\tat org.mule.module.http.internal.request.grizzly.GrizzlyHttpClient.createMuleResponse(GrizzlyHttpClient.java:366)\n\tat org.mule.module.http.internal.request.grizzly.GrizzlyHttpClient.send(GrizzlyHttpClient.java:288)\n\tat com.mulesoft.mule.http.request.grizzly.EEGrizzlyHttpClient.send(EEGrizzlyHttpClient.java:105)\n\tat org.mule.module.http.internal.request.DefaultHttpRequester.innerProcess(DefaultHttpRequester.java:370)",
+  "service": "bar.com",
+  "timestamp": "1660569033147"
+}
+]

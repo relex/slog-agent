@@ -2,7 +2,6 @@ package hybridbuffer
 
 import (
 	"fmt"
-	"io/ioutil"
 	"os"
 	"regexp"
 	"testing"
@@ -21,7 +20,7 @@ func testMatchChunkID(chunkID string) bool {
 }
 
 func TestBufferer(t *testing.T) {
-	root, terr := ioutil.TempDir("", "example")
+	root, terr := os.MkdirTemp("", "example")
 	if terr != nil {
 		t.Fatal(terr)
 	}
@@ -106,7 +105,7 @@ func TestBufferer(t *testing.T) {
 }
 
 func TestBuffererShutdown(t *testing.T) {
-	root, terr := ioutil.TempDir("", "example")
+	root, terr := os.MkdirTemp("", "example")
 	if terr != nil {
 		t.Fatal(terr)
 	}
@@ -151,7 +150,7 @@ testbuf_shutdown_buffer_persistent_chunks{storage="hybridBuffer"} 50
 }
 
 func TestBuffererSendAllAtEnd(t *testing.T) {
-	root, terr := ioutil.TempDir("", "example")
+	root, terr := os.MkdirTemp("", "example")
 	if terr != nil {
 		t.Fatal(terr)
 	}
@@ -192,7 +191,7 @@ func TestBuffererSendAllAtEnd(t *testing.T) {
 	go func() {
 		buf.Destroy()
 		t.Run("check shutdown", func(tt *testing.T) {
-			files, err := ioutil.ReadDir(dir)
+			files, err := os.ReadDir(dir)
 			assert.Nil(t, err)
 			assert.Zero(t, len(files))
 		})
@@ -224,7 +223,7 @@ testbuf_sendall_buffer_persistent_chunks{storage="hybridBuffer"} 0
 }
 
 func TestBuffererSpaceLimit(t *testing.T) {
-	root, terr := ioutil.TempDir("", "example")
+	root, terr := os.MkdirTemp("", "example")
 	if terr != nil {
 		t.Fatal(terr)
 	}

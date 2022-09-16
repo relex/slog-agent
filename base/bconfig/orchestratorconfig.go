@@ -30,6 +30,6 @@ type PipelineArgs struct {
 	MetricKeyLocators   []base.LogFieldLocator
 	TransformConfigs    []LogTransformConfigHolder // Verified config list of transforms
 	OutputBufferPairs   []OutputBufferConfig
-	NewConsumerOverride base.ChunkConsumerConstructor // nil or override ChunkConsumer (ex: forwarder) for test
+	NewConsumerOverride base.ChunkConsumerOverrideCreator // nil or override ChunkConsumer (ex: forwarder) for test
 	SendAllAtEnd        bool                          // send all chunks to ChunkConsumer until consumed for test
 }

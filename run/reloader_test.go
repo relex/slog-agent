@@ -2,7 +2,6 @@ package run
 
 import (
 	"fmt"
-	"io/ioutil"
 	"net"
 	"os"
 	"strconv"
@@ -58,11 +57,11 @@ func TestReloader(t *testing.T) {
 			time.Sleep(1 * time.Second)
 			t.Run("reload errors", func(t *testing.T) {
 				testReloadInvalidConfig(t, orc.(*ReloadableOrchestrator), func(newConf string) error {
-					return ioutil.WriteFile(confFile.Name(), []byte(fmt.Sprintf(newConf, bufDir, srvAddr.String())), 0644)
+					return os.WriteFile(confFile.Name(), []byte(fmt.Sprintf(newConf, bufDir, srvAddr.String())), 0644)
 				})
 			})
 			t.Run("reload normal", func(t *testing.T) {
-				assert.Nil(t, ioutil.WriteFile(confFile.Name(), []byte(fmt.Sprintf(sampleYML2, bufDir, srvAddr.String())), 0644))
+				assert.Nil(t, os.WriteFile(confFile.Name(), []byte(fmt.Sprintf(sampleYML2, bufDir, srvAddr.String())), 0644))
 				orc.(*ReloadableOrchestrator).reload()
 			})
 		}()

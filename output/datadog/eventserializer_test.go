@@ -11,18 +11,12 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func getStringPtr(data string) *string {
-	return &data
-}
-
 var testCfg = SerializationConfig{
-	Source:  getStringPtr("testSource"),
-	Tags:    getStringPtr("testTags"),
-	Service: getStringPtr("testService"),
+	HiddenFields: []string{},
 }
 
 func TestSerializer_Succeeds(t *testing.T) {
-	serializer := NewEventSerializer(logger.Root(), shared.TestSchema, testCfg)
+	serializer := NewEventSerializer(logger.Root(), shared.TestSchema, testCfg, "testTag")
 	for _, record := range shared.TestInputRecords {
 		stream := serializer.SerializeRecord(shared.TestSchema.CopyTestRecord(record))
 		verifyLogStream(t, stream, record)
@@ -33,10 +27,8 @@ func verifyLogStream(t *testing.T, stream base.LogStream, record *base.LogRecord
 	var streamData map[string]string
 	assert.NoError(t, json.Unmarshal(stream, &streamData))
 
-	assert.Equal(t, streamData["ddsource"], *testCfg.Source)
-	assert.Equal(t, streamData["ddtags"], *testCfg.Tags)
-	assert.Equal(t, streamData["service"], *testCfg.Service)
 	assert.Equal(t, streamData["timestamp"], strconv.FormatInt(record.Timestamp.UnixMilli(), 10))
+	assert.Equal(t, streamData["ddtags"], "testTag")
 
 	schemaFields := shared.TestSchema.GetFieldNames()
 	assert.Equal(t, len(record.Fields), len(schemaFields))
