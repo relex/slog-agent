@@ -20,6 +20,9 @@ type chunkOperator struct {
 	maxTotalBytes int64
 }
 
+// chunkOperatorMetrics tracks all low-level metrics.
+// Both of persistentChunks and persistentChunkBytes only concern chunks in the agent, not necessarily all files on
+// disk. For instance, unreadable files would be logged and then ignored, with their numbers removed from the metrics.
 type chunkOperatorMetrics struct {
 	persistentChunks     promext.RWGauge
 	persistentChunkBytes promext.RWGauge
@@ -178,10 +181,6 @@ func (op *chunkOperator) UnloadChunk(chunkRef *base.LogChunk) bool {
 
 func (op *chunkOperator) RemoveChunk(chunk base.LogChunk) {
 	if !chunk.Saved {
-		return
-	}
-	if chunk.Data == nil {
-		op.logger.Errorf("BUG: cannot remove nil chunk id=%s. stack=%s", chunk.ID, util.Stack())
 		return
 	}
 	if op.maybeDir == nil {

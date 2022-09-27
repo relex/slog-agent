@@ -12,7 +12,17 @@ import (
 	"github.com/relex/slog-agent/util"
 )
 
-// bufferer is an intermediate buffer buf which saves log chunks to disk temporarily if needed
+// bufferer is an intermediate buffer buf which saves log chunks to disk temporarily if needed.
+// It consists of two main parts:
+//  1. bufferer.Accept() can be called to push given chunks into the long queue and may unload chunks from memory
+//     during the process.
+//  2. An outputFeeder is launched in the background to read chunks from the long queue, load them from disk if
+//     necessary, and then push loaded chunks into the short queue, which is then read by the output worker.
+//
+// The long queue "inputChannel" stores all of the queued chunk data or their filenames if unloaded. There is no
+// filesystem scanning during the whole process and all chunks must be present in the long queue to be processed.
+//
+// As Go channels are fixed-sized, the maximum count of chunks allowed is limited by defs.BufferMaxNumChunksInQueue.
 type bufferer struct {
 	logger       logger.Logger
 	queueDirPath string
