@@ -33,13 +33,13 @@ type bufferMetrics struct {
 // sendAllAtEnd: sends everything at shutdown and waits for all chunks to be confirmed by ChunkConsumerArgs.OnChunkConsumed.
 // true for testing only. Same functionality is activated if queue directory cannot be accessed.
 func newBufferer(parentLogger logger.Logger, rootPath string, bufferID string, matchChunkID func(string) bool,
-	parentMetricCreator promreg.MetricCreator, storageSpaceLimit int64, sendAllAtEnd bool,
+	parentMetricCreator promreg.MetricCreator, maxStorageBytes int64, sendAllAtEnd bool,
 ) base.ChunkBufferer {
 	bufLogger := parentLogger.WithField(defs.LabelComponent, "HybridBufferer")
 	metricCreator := makeBufferMetricCreator(parentMetricCreator)
 	queueDirPath := makeBufferQueueDir(bufLogger, rootPath, bufferID)
 
-	chunkOp := newChunkOperator(bufLogger, queueDirPath, matchChunkID, metricCreator, storageSpaceLimit)
+	chunkOp := newChunkOperator(bufLogger, queueDirPath, matchChunkID, metricCreator, maxStorageBytes)
 	if chunkOp.HasDir() {
 		bufLogger.Infof("use chunk saving dir: %s", queueDirPath)
 	} else {

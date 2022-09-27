@@ -13,11 +13,11 @@ import (
 )
 
 type chunkOperator struct {
-	logger     logger.Logger
-	maybeDir   *os.File
-	matchID    func(string) bool
-	metrics    chunkOperatorMetrics
-	spaceLimit int64
+	logger        logger.Logger
+	maybeDir      *os.File
+	matchChunkID  func(string) bool // check whether a filename is a valid chunk ID (e.g. with proper suffix)
+	metrics       chunkOperatorMetrics
+	maxTotalBytes int64
 }
 
 type chunkOperatorMetrics struct {
@@ -26,8 +26,8 @@ type chunkOperatorMetrics struct {
 	ioErrorsTotal        promext.RWCounter
 }
 
-func newChunkOperator(parentLogger logger.Logger, path string, matchID func(string) bool, metricCreator promreg.MetricCreator,
-	spaceLimit int64,
+func newChunkOperator(parentLogger logger.Logger, path string, matchChunkID func(string) bool,
+	metricCreator promreg.MetricCreator, maxTotalBytes int64,
 ) chunkOperator {
 	ologger := parentLogger
 
@@ -48,11 +48,11 @@ func newChunkOperator(parentLogger logger.Logger, path string, matchID func(stri
 	}
 
 	return chunkOperator{
-		logger:     ologger,
-		maybeDir:   maybeDir,
-		matchID:    matchID,
-		metrics:    metrics,
-		spaceLimit: spaceLimit,
+		logger:        ologger,
+		maybeDir:      maybeDir,
+		matchChunkID:  matchChunkID,
+		metrics:       metrics,
+		maxTotalBytes: maxTotalBytes,
 	}
 }
 
@@ -80,7 +80,7 @@ func (op *chunkOperator) CountExistingChunks() int {
 
 	numChunks := 0
 	for _, fn := range fnames {
-		if op.matchID(fn) {
+		if op.matchChunkID(fn) {
 			numChunks++
 		}
 	}
@@ -111,7 +111,7 @@ func (op *chunkOperator) ScanExistingChunks() []base.LogChunk {
 		if fn == idFileName {
 			continue
 		}
-		if !op.matchID(fn) {
+		if !op.matchChunkID(fn) {
 			op.logger.Warnf("skip unmatched chunk file id=%s", fn)
 			continue
 		}
@@ -158,7 +158,7 @@ func (op *chunkOperator) UnloadChunk(chunkRef *base.LogChunk) bool {
 		return false
 	}
 
-	if op.metrics.persistentChunkBytes.Get()+int64(len(chunkRef.Data)) > op.spaceLimit {
+	if op.metrics.persistentChunkBytes.Get()+int64(len(chunkRef.Data)) > op.maxTotalBytes {
 		op.logger.Errorf("cannot write chunk file id=%s: space limit reached", chunkRef.ID)
 		return false
 	}
