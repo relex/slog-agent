@@ -230,7 +230,7 @@ func (session *clientSession) collectLeftovers(maybePreviousLeftovers chan base.
 	// acknowledger in code below.
 	if maybePreviousLeftovers != nil {
 		close(maybePreviousLeftovers)
-		fromPrevious = collectChunksFromChannel(maybePreviousLeftovers)
+		fromPrevious = util.CollectFromChannel(maybePreviousLeftovers)
 	}
 
 	switch ending {
@@ -256,7 +256,7 @@ func (session *clientSession) collectLeftovers(maybePreviousLeftovers chan base.
 	if !session.ackerEnded.Wait(defs.IntermediateChannelTimeout) {
 		session.logger.Errorf("BUG: timeout waiting for acknowledger to hard stop. stack=%s", util.Stack())
 	}
-	fromAckerChannel := collectChunksFromChannel(session.ackerChan)
+	fromAckerChannel := util.CollectFromChannel(session.ackerChan)
 
 	// gather pendings chunks left in runAcknowledger's pendingChunksByID
 	var fromAckerPending []base.LogChunk
@@ -356,15 +356,6 @@ func (session *clientSession) runAcknowledger() {
 		session.onChunkAcked(nextChunk)
 		session.metrics.OnAcknowledged(nextChunk)
 	}
-}
-
-// collectChunksFromChannel collect remaining chunks from a CLOSED channel
-func collectChunksFromChannel(chunkChan chan base.LogChunk) []base.LogChunk {
-	collected := make([]base.LogChunk, 0, len(chunkChan)+20)
-	for c := range chunkChan {
-		collected = append(collected, c)
-	}
-	return collected
 }
 
 // newLeftoverChannel creates a new channel filled with leftover chunks, sorted and deduplicated
