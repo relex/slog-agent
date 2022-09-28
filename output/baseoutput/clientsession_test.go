@@ -13,7 +13,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestClientWorker(t *testing.T) {
+func TestSessionShutdown(t *testing.T) {
 	mockEnv := newClientMockEnv()
 	sessionEnded, sessionLeftovers, sessionReconnectPolicy := mockEnv.LaunchSession()
 
@@ -45,6 +45,9 @@ func TestClientWorker(t *testing.T) {
 	assert.Equal(t, 2, len(mockEnv.ConsumedChunks))
 }
 
+// TestRequestErrorAbortsAcknowledger verifies a session in half-close situation (1) is aborted immediately.
+//
+// This could happen when Fluentd refuses receving requests but continues to send ACKs normally.
 func TestRequestErrorAbortsAcknowledger(t *testing.T) {
 	abortSignal := channels.NewSignalAwaitable()
 
@@ -67,7 +70,7 @@ func TestRequestErrorAbortsAcknowledger(t *testing.T) {
 		return "", nil
 	}
 	mockEnv.ConnClose = func() {
-		// simulate aborting connection to force ConnSendChunk to end (instead of waiting until timeout)
+		// simulate aborting connection to force ConnReadChunkAck to end (instead of waiting until timeout)
 		abortSignal.Signal()
 	}
 
@@ -84,6 +87,9 @@ func TestRequestErrorAbortsAcknowledger(t *testing.T) {
 	assert.Equal(t, reconnectWithDelay, *sessionReconnectPolicy)
 }
 
+// TestResponseErrorAbortsConnection verifies a session in half-close situation (2) is aborted immediately.
+//
+// This could happen when Fluentd receives requests normally but the response side is already interrupted due to network issues.
 func TestResponseErrorAbortsConnection(t *testing.T) {
 	abortSignal := channels.NewSignalAwaitable()
 
