@@ -14,13 +14,13 @@ import (
 
 // bufferer is an intermediate buffer buf which saves log chunks to disk temporarily if needed.
 // It consists of two main parts:
-//  1. bufferer.Accept() can be called to push given chunks into the long queue and may unload chunks from memory
+//  1. bufferer.Accept() can be called to push given chunks into the persistent queue and may unload chunks from memory
 //     during the process.
-//  2. An outputFeeder is launched in the background to read chunks from the long queue, load them from disk if
-//     necessary, and then push loaded chunks into the short queue, which is then read by the output worker.
+//  2. An outputFeeder is launched in the background to read chunks from the persistent queue, load them from disk if
+//     necessary, and then push loaded chunks into the in-memory queue, which is then read by the output worker.
 //
-// The long queue "inputChannel" stores all of the queued chunk data or their filenames if unloaded. There is no
-// filesystem scanning during the whole process and all chunks must be present in the long queue to be processed.
+// The persistent queue "inputChannel" stores all of the queued chunk data or their filenames if unloaded. There is no
+// file scanning during the whole process and all chunks must be present in the persistent queue to be forwarded.
 //
 // As Go channels are fixed-sized, the maximum count of chunks allowed is limited by defs.BufferMaxNumChunksInQueue.
 type bufferer struct {

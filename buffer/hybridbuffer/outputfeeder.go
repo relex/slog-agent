@@ -10,8 +10,8 @@ import (
 	"github.com/relex/slog-agent/util"
 )
 
-// outputFeeder fetches chunks to be processed from bufferer.inputChannel (the long queue), loads their contents from
-// disk if unloaded, and then feed them to the output worker via outputChannel.
+// outputFeeder fetches chunks to be processed from bufferer.inputChannel (the persistent queue), loads their contents
+// from disk if unloaded, and then feed them to the output worker via outputChannel (the in-memory queue).
 type outputFeeder struct {
 	logger          logger.Logger
 	chunkMan        chunkManager
