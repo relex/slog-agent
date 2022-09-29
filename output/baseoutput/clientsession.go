@@ -1,7 +1,6 @@
 package baseoutput
 
 import (
-	"fmt"
 	"os"
 	"os/signal"
 	"sort"
@@ -177,23 +176,31 @@ func (session *clientSession) sendChunk(chunk base.LogChunk) (bool, reconnectPol
 	if err := session.conn.SendChunk(chunk, time.Now().Add(timeout)); err != nil {
 		session.logger.Warnf("failed to send: %s, %s", chunk.String(), err.Error())
 		session.metrics.OnError(err)
+
+		// abort here because failure to send does not mean the receiving side would immediately fail
+		session.abortConn(func() {
+			session.logger.Info("abort connection after error sending chunks to interrupt acknowledger")
+		})
 		return false, reconnectWithDelay
 	}
 
 	// pass forwarded chunk to acknowledger
 	select {
 	case session.ackerChan <- chunk:
+		session.metrics.OnForwarded(chunk)
+		return true, ""
+
 	case <-session.inputClosed.Channel():
 		session.logger.Infof("aborted before queueing chunk for ack due to stop request: %s", chunk.String())
+		// connection is aborted already by ClientWorker: client.inputClosed.Next(...)
 		return false, noReconnect
+
 	case <-session.ackerEnded.Channel():
 		// acknowledger terminated due to invalid server response, return true and error for reconnection
-		err := fmt.Errorf("aborted before queueing chunk for ack due to termination of acknowledger: %s", chunk.String())
-		session.logger.Info(err.Error())
+		session.logger.Infof("aborted before queueing chunk for ack due to termination of acknowledger: %s", chunk.String())
+		// no need to abort connection here as ackEnded can only be signaled due to ACK error (conn aborted) or the next stage collectLeftovers(...)
 		return false, reconnectWithDelay
 	}
-	session.metrics.OnForwarded(chunk)
-	return true, ""
 }
 
 // sendPing sends a forward message of zero logs and no ID (no ACK) to report status to server
@@ -202,10 +209,19 @@ func (session *clientSession) sendPing() error {
 	if err := session.conn.SendPing(time.Now().Add(defs.ForwarderBatchSendTimeoutBase)); err != nil {
 		session.logger.Warnf("failed to ping: %s", err.Error())
 		session.metrics.OnError(err)
+
+		// abort here because failure to ping does not mean the receiving side would immediately fail
+		session.abortConn(func() {
+			session.logger.Info("abort connection after error pinging to interrupt acknowledger")
+		})
 		return err
 	}
 	return nil
 }
+
+// FIXME: collection of pending chunks is horribly complicated. We should simplify it to a map-based approach to track
+// all of pending chunks, instead of using channels and the collecting process. The use of locks and cross-thread
+// synchronization shouldn't cause any performance problem as we expect dozens of chunks a second at most.
 
 func (session *clientSession) collectLeftovers(maybePreviousLeftovers chan base.LogChunk, ending acknowledgerEnding) chan base.LogChunk {
 	var fromPrevious []base.LogChunk
@@ -214,7 +230,7 @@ func (session *clientSession) collectLeftovers(maybePreviousLeftovers chan base.
 	// acknowledger in code below.
 	if maybePreviousLeftovers != nil {
 		close(maybePreviousLeftovers)
-		fromPrevious = collectChunksFromChannel(maybePreviousLeftovers)
+		fromPrevious = util.CollectFromChannel(maybePreviousLeftovers)
 	}
 
 	switch ending {
@@ -240,7 +256,7 @@ func (session *clientSession) collectLeftovers(maybePreviousLeftovers chan base.
 	if !session.ackerEnded.Wait(defs.IntermediateChannelTimeout) {
 		session.logger.Errorf("BUG: timeout waiting for acknowledger to hard stop. stack=%s", util.Stack())
 	}
-	fromAckerChannel := collectChunksFromChannel(session.ackerChan)
+	fromAckerChannel := util.CollectFromChannel(session.ackerChan)
 
 	// gather pendings chunks left in runAcknowledger's pendingChunksByID
 	var fromAckerPending []base.LogChunk
@@ -315,10 +331,9 @@ func (session *clientSession) runAcknowledger() {
 			clogger.Warnf("failed to read ACK: %s", ackErr.Error())
 			session.metrics.OnError(ackErr)
 
-			// even if a network error has happened when receiving, we still need to call Close here as the sending
-			// side (client=>server) may still be functioning and thus unable to quit by itself
+			// abort here because failure to receive does not mean the sending side would immediately fail
 			session.abortConn(func() {
-				clogger.Info("close connection")
+				clogger.Info("abort connection after error reading ACK to interrupt sending loop")
 			})
 			return
 		}
@@ -341,15 +356,6 @@ func (session *clientSession) runAcknowledger() {
 		session.onChunkAcked(nextChunk)
 		session.metrics.OnAcknowledged(nextChunk)
 	}
-}
-
-// collectChunksFromChannel collect remaining chunks from a CLOSED channel
-func collectChunksFromChannel(chunkChan chan base.LogChunk) []base.LogChunk {
-	collected := make([]base.LogChunk, 0, len(chunkChan)+20)
-	for c := range chunkChan {
-		collected = append(collected, c)
-	}
-	return collected
 }
 
 // newLeftoverChannel creates a new channel filled with leftover chunks, sorted and deduplicated

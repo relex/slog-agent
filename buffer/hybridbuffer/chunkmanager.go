@@ -94,10 +94,16 @@ func (man *chunkManager) OnChunkLeftover(chunk base.LogChunk) {
 	man.metrics.leftoverChunksTotal.Inc()
 }
 
+func (man *chunkManager) OnChunkCorrupted(chunk base.LogChunk) {
+	man.operator.RemoveChunk(chunk)
+	man.metrics.pendingChunks.Dec()
+	man.metrics.droppedChunksTotal.Inc()
+}
+
 func (man *chunkManager) OnChunkDropped(chunk base.LogChunk) {
 	man.operator.OnChunkDropped(chunk)
-	man.metrics.droppedChunksTotal.Inc()
 	man.metrics.pendingChunks.Dec()
+	man.metrics.droppedChunksTotal.Inc()
 }
 
 func (man *chunkManager) ShouldWaitPendingChunks() bool {

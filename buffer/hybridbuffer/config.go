@@ -30,8 +30,8 @@ func (cfg *Config) ListBufferIDs(parentLogger logger.Logger, matchChunkID func(s
 	return listBufferQueueIDs(clogger, rootPath, matchChunkID, metricCreator)
 }
 
-// NewBufferer creates a HybridBufferer
-// If bufferID is empty, the queue dir is the root dir as defined in .path
+// NewBufferer creates a HybridBufferer.
+// If bufferID is empty, the queue dir is the root dir as defined in .path.
 func (cfg *Config) NewBufferer(parentLogger logger.Logger, bufferID string, matchChunkID func(string) bool,
 	metricCreator promreg.MetricCreator, sendAllAtEnd bool,
 ) base.ChunkBufferer {

@@ -12,7 +12,17 @@ import (
 	"github.com/relex/slog-agent/util"
 )
 
-// bufferer is an intermediate buffer buf which saves log chunks to disk temporarily if needed
+// bufferer is an intermediate buffer buf which saves log chunks to disk temporarily if needed.
+// It consists of two main parts:
+//  1. bufferer.Accept() can be called to push given chunks into the persistent queue and may unload chunks from memory
+//     during the process.
+//  2. An outputFeeder is launched in the background to read chunks from the persistent queue, load them from disk if
+//     necessary, and then push loaded chunks into the in-memory queue, which is then read by the output worker.
+//
+// The persistent queue "inputChannel" stores all of the queued chunk data or their filenames if unloaded. There is no
+// file scanning during the whole process and all chunks must be present in the persistent queue to be forwarded.
+//
+// As Go channels are fixed-sized, the maximum count of chunks allowed is limited by defs.BufferMaxNumChunksInQueue.
 type bufferer struct {
 	logger       logger.Logger
 	queueDirPath string
@@ -33,13 +43,13 @@ type bufferMetrics struct {
 // sendAllAtEnd: sends everything at shutdown and waits for all chunks to be confirmed by ChunkConsumerArgs.OnChunkConsumed.
 // true for testing only. Same functionality is activated if queue directory cannot be accessed.
 func newBufferer(parentLogger logger.Logger, rootPath string, bufferID string, matchChunkID func(string) bool,
-	parentMetricCreator promreg.MetricCreator, storageSpaceLimit int64, sendAllAtEnd bool,
+	parentMetricCreator promreg.MetricCreator, maxStorageBytes int64, sendAllAtEnd bool,
 ) base.ChunkBufferer {
 	bufLogger := parentLogger.WithField(defs.LabelComponent, "HybridBufferer")
 	metricCreator := makeBufferMetricCreator(parentMetricCreator)
 	queueDirPath := makeBufferQueueDir(bufLogger, rootPath, bufferID)
 
-	chunkOp := newChunkOperator(bufLogger, queueDirPath, matchChunkID, metricCreator, storageSpaceLimit)
+	chunkOp := newChunkOperator(bufLogger, queueDirPath, matchChunkID, metricCreator, maxStorageBytes)
 	if chunkOp.HasDir() {
 		bufLogger.Infof("use chunk saving dir: %s", queueDirPath)
 	} else {

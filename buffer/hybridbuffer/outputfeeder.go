@@ -10,14 +10,16 @@ import (
 	"github.com/relex/slog-agent/util"
 )
 
+// outputFeeder fetches chunks to be processed from bufferer.inputChannel (the persistent queue), loads their contents
+// from disk if unloaded, and then feed them to the output worker via outputChannel (the in-memory queue).
 type outputFeeder struct {
 	logger          logger.Logger
 	chunkMan        chunkManager
 	consumerCounter *sync.WaitGroup
-	inputChannel    <-chan base.LogChunk // internal; LogChunk.Data can be nil if unloaded / saved on disk
+	inputChannel    <-chan base.LogChunk // internal; LogChunk.Data can be nil if unloaded (saved on disk)
 	inputClosed     channels.Awaitable   // internal; to abort ongoing input processing
 	metrics         bufferMetrics
-	outputChannel   chan base.LogChunk        // normal LogChunk
+	outputChannel   chan base.LogChunk        // loaded LogChunk(s) to be forwarded by the output worker
 	outputClosed    *channels.SignalAwaitable // to abort output processing if consumers are not waiting on output
 	stopped         *channels.SignalAwaitable
 }
@@ -98,14 +100,28 @@ func (feeder *outputFeeder) Run() {
 	feeder.logger.Info("ended")
 }
 
+// loadToOutput loads and feeds chunk to the output channel.
+//
+// Returns false if feeding is aborted, true otherwise (whether loading succeeds or not).
 func (feeder *outputFeeder) loadToOutput(chunk base.LogChunk) bool {
 	feeder.logger.Debugf("load chunk from queue: id=%s saved=%t", chunk.ID, chunk.Saved)
 	if !feeder.chunkMan.LoadOrDropChunk(&chunk) {
 		return true
 	}
 
+	// TODO: add output-specific chunk verification
+	if len(chunk.Data) == 0 {
+		if chunk.Saved {
+			feeder.logger.Errorf("encountered zero-length chunk on disk: %s", chunk.String())
+		} else {
+			feeder.logger.Errorf("BUG: encountered zero-length chunk after processing: %s", chunk.String())
+		}
+		feeder.chunkMan.OnChunkCorrupted(chunk)
+		return true
+	}
+
 	select {
-	case feeder.outputChannel <- chunk: // wait forever here
+	case feeder.outputChannel <- chunk: // wait forever here, this ultimately causes chunks to bufferer to be unloaded
 		return true
 	case <-feeder.inputClosed.Channel():
 		return false
