@@ -90,7 +90,7 @@ Buffer: log chunks are serialized and compressed to final output form before buf
 and CPU. The format is decided by the output type and multiple output types would require multiple chunks for the same
 logs.
 
-Output: fluentd tag creation is moved to orchestration because tags are normally identical for logs under the same
+Output: Fluentd tag creation is moved to orchestration because tags are normally identical for logs under the same
 keySet.
 
 # Implementation guidelines
