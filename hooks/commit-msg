@@ -1,0 +1,16 @@
+#!/bin/bash
+
+if [ -z "$1" ]; then
+	echo "Missing argument (commit message). Did you try to run this manually?"
+	exit 1
+fi
+
+commitTitle="$(cat $1 | head -n1)"
+
+# check semantic versioning scheme
+if ! echo "$commitTitle" | grep -qE '^(breaking|major|feat|minor|fix|hotfix|patch|doc|docs|style|refactor|perf|test|chore)(\([^)]+\))?:\s\w+'; then
+	echo "Your commit title did not follow semantic versioning: $commitTitle"
+	echo "Please see https://github.com/angular/angular.js/blob/master/DEVELOPERS.md#commit-message-format"
+	exit 1
+fi
+
