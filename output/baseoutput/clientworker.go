@@ -153,6 +153,7 @@ func (client *ClientWorker) runSession(leftovers chan base.LogChunk) (chan base.
 
 	defer func() {
 		sess.Abort(func() {
+			// as "abort" runs at most once, this should not be reached unless clientSession.collectLeftovers didn't work
 			client.logger.Info("close connection at the end of session")
 		})
 		client.activeSession.Store(nil)
