@@ -26,7 +26,7 @@ type clientSession struct {
 	abortConn    util.RunOnce
 	lastChunk    *base.LogChunk                  // last chunk in processing (to be added to leftovers if not completed)
 	ackerChan    chan base.LogChunk              // channel to pass chunks for acknowledger (wait for ACK and delete), close to end acknowledger
-	ackerAbort   *channels.SignalAwaitable       // signal to abort acknowledger immediately
+	ackerAbort   *channels.SignalAwaitable       // signal to abort acknowledger from the loop of reading ackerChan
 	ackerEnded   *channels.SignalAwaitable       // signal that acknowledger has ended
 	unacked      atomic.Pointer[[]base.LogChunk] // un-ACK'ed chunks set when acknowledger quits (to be resent in next session)
 }
@@ -240,18 +240,22 @@ func (session *clientSession) collectLeftovers(maybePreviousLeftovers chan base.
 		// wait for the soft shutdown to complete in given time, otherwise send a hard shutdown request
 		if !session.ackerEnded.Wait(defs.ForwarderAckerStopTimeout) {
 			session.logger.Warnf("timeout waiting for acknowledger to soft stop. stack=%s", util.Stack())
-			session.ackerAbort.Signal()
 		}
 	case endImmediately:
 		// we shouldn't end acknowledger gracefully during shutdown/restart because at this stage inputs are already
 		// closed and all client applications are effectively paused by the inability to log anything. The shutdown has
 		// to be done as quickly as possible even at the cost of duplicated logs in next start.
 		session.logger.Info("stopping acknowledger (hard)")
-		session.ackerAbort.Signal()
 		close(session.ackerChan)
 	default:
 		session.logger.Panic("invalid ending type: ", ending)
 	}
+	// stop the acknowledger from waiting on ackerChan in case it hasn't received all chunks
+	session.ackerAbort.Signal()
+	// stop connection in case the acknowledger is still waiting for a response from upstream
+	session.abortConn(func() {
+		session.logger.Info("close connection to stop acknowledger from waiting for responses")
+	})
 
 	if !session.ackerEnded.Wait(defs.IntermediateChannelTimeout) {
 		session.logger.Errorf("BUG: timeout waiting for acknowledger to hard stop. stack=%s", util.Stack())
