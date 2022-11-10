@@ -9,7 +9,7 @@ import (
 // messagePacker writes incoming log messages into a batch (chunk)
 type messagePacker struct {
 	logger            logger.Logger
-	currentChunk      *IntermediateChunk // current chunk before being made into final message
+	currentChunk      Chunker // current chunk before being made into final message
 	chunkFactory      *IntermediateChunkFactory
 	chunkMaxSizeBytes int
 	chunkMaxRecords   int
@@ -30,11 +30,7 @@ func NewMessagePacker(log logger.Logger, chunkMaxSizeBytes, chunkMaxRecords int,
 func (packer *messagePacker) WriteStream(stream base.LogStream) *base.LogChunk {
 	var previousChunk *base.LogChunk
 	if packer.currentChunk != nil {
-		if packer.chunkMaxRecords > 0 && packer.currentChunk.numRecords >= packer.chunkMaxRecords {
-			// flush when the amount of log records reaches max permitted amount, if it is defined
-			previousChunk = packer.FlushBuffer()
-		} else if packer.currentChunk.numBytes+len(stream) > packer.chunkMaxSizeBytes {
-			// otherwise flush when the total size reaches max permitted amount
+		if !packer.currentChunk.CanAppendData(len(stream)) {
 			previousChunk = packer.FlushBuffer()
 		}
 	}

@@ -68,22 +68,23 @@ func (cfg *Config) NewSerializer(parentLogger logger.Logger, schema base.LogSche
 // NewChunkMaker creates LogChunkMaker
 func (cfg *Config) NewChunkMaker(parentLogger logger.Logger, tag string) base.LogChunkMaker {
 	var asArray bool
-	var initCompessor shared.InitCompessorFunc
 
+	var initCompressorFunc shared.InitCompessorFunc
 	switch cfg.MessageMode {
 	case forwardprotocol.ModeForward:
 		asArray = true
 	case forwardprotocol.ModePackedForward:
 	case forwardprotocol.ModeCompressedPackedForward:
-		initCompessor = shared.InitGzipCompessor
+		initCompressorFunc = shared.InitGzipCompessor
 	default:
 		parentLogger.Fatalf("unsupported message mode: %s", cfg.MessageMode)
 	}
 
 	encoder := newEncoder(tag, asArray, msgBufCapacity)
-	basicChunkFactory := shared.NewChunkFactory(parentLogger, chunkIDSuffix, msgBufCapacity, initCompessor, encoder)
+	newChunkFunc := BuildNewChunkFunc(initCompressorFunc, encoder)
+	chunkFactory := shared.NewChunkFactory(parentLogger, chunkIDSuffix, msgBufCapacity, newChunkFunc, chunkMaxRecords, chunkMaxSizeBytes)
 
-	return shared.NewMessagePacker(parentLogger, chunkMaxSizeBytes, chunkMaxRecords, basicChunkFactory)
+	return shared.NewMessagePacker(parentLogger, chunkMaxSizeBytes, chunkMaxRecords, chunkFactory)
 }
 
 // NewForwarder creates the forwarding client

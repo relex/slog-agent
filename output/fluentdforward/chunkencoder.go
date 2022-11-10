@@ -4,10 +4,16 @@ import (
 	"bytes"
 
 	"github.com/relex/fluentlib/protocol/forwardprotocol"
-	"github.com/relex/slog-agent/output/shared"
 	"github.com/relex/slog-agent/util"
 	"github.com/vmihailenco/msgpack/v4"
 )
+
+type encodeChunkParams struct {
+	ID           string
+	NumRecords   int
+	NumBytes     int
+	IsCompressed bool
+}
 
 type chunkEncoder struct {
 	tag                  string
@@ -26,7 +32,7 @@ func newEncoder(tag string, asArray bool, msgpackBufferSize int) *chunkEncoder {
 	}
 }
 
-func (enc *chunkEncoder) EncodeChunk(data []byte, params *shared.EncodeChunkParams) ([]byte, error) {
+func (enc *chunkEncoder) EncodeChunk(data []byte, params *encodeChunkParams) ([]byte, error) {
 	defer enc.msgpackEncoderBuffer.Reset()
 
 	// root array
