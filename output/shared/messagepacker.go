@@ -19,7 +19,7 @@ type messagePacker struct {
 // The resulting chunk itself can be saved on disk with ID as the filename, or send as request to upstream
 func NewMessagePacker(log logger.Logger, chunkMaxSizeBytes, chunkMaxRecords int, chunkFactory *IntermediateChunkFactory) *messagePacker {
 	return &messagePacker{
-		logger:            log.WithField(defs.LabelComponent, "FluentdForwardMessagePacker"),
+		logger:            log.WithField(defs.LabelComponent, "MessagePacker"),
 		currentChunk:      nil,
 		chunkFactory:      chunkFactory,
 		chunkMaxSizeBytes: chunkMaxSizeBytes,
