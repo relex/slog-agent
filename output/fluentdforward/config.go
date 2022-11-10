@@ -81,7 +81,7 @@ func (cfg *Config) NewChunkMaker(parentLogger logger.Logger, tag string) base.Lo
 	}
 
 	encoder := newEncoder(tag, asArray, msgBufCapacity)
-	newChunkFunc := BuildNewChunkFunc(initCompressorFunc, encoder)
+	newChunkFunc := buildNewChunkFunc(initCompressorFunc, encoder)
 	chunkFactory := shared.NewChunkFactory(parentLogger, chunkIDSuffix, msgBufCapacity, newChunkFunc, chunkMaxRecords, chunkMaxSizeBytes)
 
 	return shared.NewMessagePacker(parentLogger, chunkMaxSizeBytes, chunkMaxRecords, chunkFactory)

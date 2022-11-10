@@ -57,7 +57,7 @@ func (cfg *Config) NewSerializer(parentLogger logger.Logger, schema base.LogSche
 
 //nolint:revive
 func (cfg *Config) NewChunkMaker(parentLogger logger.Logger, tag string) base.LogChunkMaker {
-	chunkFactory := shared.NewChunkFactory(parentLogger, chunkIDSuffix, bufCapacity, NewChunk, chunkMaxRecords, chunkMaxSizeBytes)
+	chunkFactory := shared.NewChunkFactory(parentLogger, chunkIDSuffix, bufCapacity, newChunkFunc, chunkMaxRecords, chunkMaxSizeBytes)
 	return shared.NewMessagePacker(parentLogger, chunkMaxSizeBytes, chunkMaxRecords, chunkFactory)
 }
 

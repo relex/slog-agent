@@ -18,7 +18,7 @@ type intermediateChunk struct {
 	writeBuffer          *bytes.Buffer  // an actual buffer that compressor writes to
 }
 
-func NewChunk(log logger.Logger, id string, writeBuffer *bytes.Buffer, maxRecords, maxBytes int) shared.Chunker {
+func newChunkFunc(log logger.Logger, id string, writeBuffer *bytes.Buffer, maxRecords, maxBytes int) shared.Chunker {
 	chunk := &intermediateChunk{
 		id:          id,
 		maxRecords:  maxRecords,
