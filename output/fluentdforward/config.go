@@ -84,7 +84,7 @@ func (cfg *Config) NewChunkMaker(parentLogger logger.Logger, tag string) base.Lo
 	newChunkFunc := buildNewChunkFunc(parentLogger, initCompressorFunc, encoder, chunkMaxRecords, chunkMaxSizeBytes)
 	chunkFactory := shared.NewChunkFactory(chunkIDSuffix, msgBufCapacity, newChunkFunc)
 
-	return shared.NewMessagePacker(parentLogger, chunkMaxSizeBytes, chunkMaxRecords, chunkFactory)
+	return shared.NewMessagePacker(parentLogger, chunkFactory)
 }
 
 // NewForwarder creates the forwarding client

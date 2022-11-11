@@ -59,7 +59,7 @@ func (cfg *Config) NewSerializer(parentLogger logger.Logger, schema base.LogSche
 func (cfg *Config) NewChunkMaker(parentLogger logger.Logger, tag string) base.LogChunkMaker {
 	newChunkFunc := buildNewChunkFunc(parentLogger, chunkMaxRecords, chunkMaxSizeBytes)
 	chunkFactory := shared.NewChunkFactory(chunkIDSuffix, bufCapacity, newChunkFunc)
-	return shared.NewMessagePacker(parentLogger, chunkMaxSizeBytes, chunkMaxRecords, chunkFactory)
+	return shared.NewMessagePacker(parentLogger, chunkFactory)
 }
 
 func (cfg *Config) NewForwarder(parentLogger logger.Logger, args base.ChunkConsumerArgs, metricCreator promreg.MetricCreator) base.ChunkConsumer {

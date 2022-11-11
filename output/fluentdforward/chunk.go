@@ -10,16 +10,20 @@ import (
 	"github.com/relex/slog-agent/util"
 )
 
+type encoder interface {
+	EncodeChunk(data []byte, params *encodeChunkParams) ([]byte, error)
+}
+
 type intermediateChunk struct {
 	id                   string
 	numRecords, numBytes int
 	maxRecords, maxBytes int
 	compressor           io.WriteCloser // could be something like a gzip.Writer or nil to disable compression
 	writeBuffer          *bytes.Buffer  // an actual buffer that compressor writes to
-	encoder              *chunkEncoder  // a function to finalize/encode the entire chunk after it's been assembled
+	encoder              encoder        // a function to finalize/encode the entire chunk after it's been assembled
 }
 
-func buildNewChunkFunc(log logger.Logger, initCompressorFunc shared.InitCompessorFunc, encoder *chunkEncoder, maxRecords, maxBytes int) shared.NewChunkFunc {
+func buildNewChunkFunc(log logger.Logger, initCompressorFunc shared.InitCompessorFunc, encoder encoder, maxRecords, maxBytes int) shared.NewChunkFunc {
 	return func(id string, writeBuffer *bytes.Buffer) shared.Chunker {
 		chunk := &intermediateChunk{
 			id:          id,

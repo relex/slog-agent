@@ -21,8 +21,6 @@ const (
 	testChunkIDSuffix     = ".ddtest"
 )
 
-type mockJSONEncoder struct{ msgKey string }
-
 func countExpectedPayloadLength(payload string, writeIterations int) int {
 	return len(payload)*writeIterations + len(",")*(writeIterations-1) + len("[]")
 }
@@ -31,7 +29,7 @@ func TestDatadogOutput_Succeeds_OnGzippedInput(t *testing.T) {
 	log := logger.Root()
 	newChunkFunc := buildNewChunkFunc(log, testChunkMaxRecords, testChunkMaxSizeBytes)
 	factory := shared.NewChunkFactory(testChunkIDSuffix, testBufCapacity, newChunkFunc)
-	packer := shared.NewMessagePacker(log, testChunkMaxSizeBytes, testChunkMaxRecords, factory)
+	packer := shared.NewMessagePacker(log, factory)
 
 	payload := `testPayload`
 	writeIterations := 5
@@ -58,7 +56,7 @@ func TestDatadogOutput_Flushes_OnMaxRecordsReached(t *testing.T) {
 	log := logger.Root()
 	newChunkFunc := buildNewChunkFunc(log, localChunkMaxRecords, testChunkMaxSizeBytes)
 	factory := shared.NewChunkFactory(testChunkIDSuffix, testBufCapacity, newChunkFunc)
-	packer := shared.NewMessagePacker(log, testChunkMaxSizeBytes, localChunkMaxRecords, factory)
+	packer := shared.NewMessagePacker(log, factory)
 
 	payload := base.LogStream("testPayload")
 	writeIterations := 50
@@ -84,7 +82,7 @@ func TestDatadogOutput_Flushes_OnMaxBytesReached(t *testing.T) {
 	log := logger.Root()
 	newChunkFunc := buildNewChunkFunc(log, testChunkMaxRecords, testChunkMaxSizeBytes)
 	factory := shared.NewChunkFactory(testChunkIDSuffix, testBufCapacity, newChunkFunc)
-	packer := shared.NewMessagePacker(log, testChunkMaxSizeBytes, testChunkMaxRecords, factory)
+	packer := shared.NewMessagePacker(log, factory)
 
 	payload := "10bytes..."
 	iterationsTillOverflow := (testChunkMaxSizeBytes - len("[]")) / (len(payload) + len(","))
@@ -112,7 +110,7 @@ func TestDatadogOutput_FlushNoPanic_OnNilCurrentChunk(t *testing.T) {
 	log := logger.Root()
 	newChunkFunc := buildNewChunkFunc(log, testChunkMaxRecords, testChunkMaxSizeBytes)
 	factory := shared.NewChunkFactory(testChunkIDSuffix, testBufCapacity, newChunkFunc)
-	packer := shared.NewMessagePacker(log, testChunkMaxSizeBytes, testChunkMaxRecords, factory)
+	packer := shared.NewMessagePacker(log, factory)
 
 	assert.Nil(t, packer.FlushBuffer())
 }
