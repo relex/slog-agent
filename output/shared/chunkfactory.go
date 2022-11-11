@@ -10,7 +10,7 @@ import (
 
 type (
 	InitCompessorFunc func(log logger.Logger, w io.Writer) io.WriteCloser
-	NewChunkFunc      func(log logger.Logger, id string, writeBuffer *bytes.Buffer, maxRecords, maxBytes int) Chunker
+	NewChunkFunc      func(id string, writeBuffer *bytes.Buffer) Chunker
 
 	Chunker interface {
 		CanAppendData(dataLength int) bool
@@ -20,30 +20,23 @@ type (
 )
 
 type IntermediateChunkFactory struct {
-	log                  logger.Logger
-	reusedChunkBuffer    *bytes.Buffer // since chunks are created consecutively, it's possible for them to share the data buffer
-	idGenerator          *chunkIDGenerator
-	newChunkFunc         NewChunkFunc
-	maxRecords, maxBytes int
+	reusedChunkBuffer *bytes.Buffer // since chunks are created consecutively, it's possible for them to share the data buffer
+	idGenerator       *chunkIDGenerator
+	newChunkFunc      NewChunkFunc
 }
 
 func NewChunkFactory(
-	log logger.Logger,
 	idSuffix string,
 	bufCapacity int,
 	newChunkFunc NewChunkFunc,
-	maxRecords, maxBytes int,
 ) *IntermediateChunkFactory {
 	return &IntermediateChunkFactory{
-		log:               log,
 		reusedChunkBuffer: bytes.NewBuffer(make([]byte, 0, bufCapacity)),
 		idGenerator:       newChunkIDGenerator(idSuffix),
 		newChunkFunc:      newChunkFunc,
-		maxRecords:        maxRecords,
-		maxBytes:          maxBytes,
 	}
 }
 
 func (factory *IntermediateChunkFactory) NewChunk() Chunker {
-	return factory.newChunkFunc(factory.log, factory.idGenerator.Generate(), factory.reusedChunkBuffer, factory.maxRecords, factory.maxBytes)
+	return factory.newChunkFunc(factory.idGenerator.Generate(), factory.reusedChunkBuffer)
 }

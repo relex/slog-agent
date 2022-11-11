@@ -18,25 +18,27 @@ type intermediateChunk struct {
 	writeBuffer          *bytes.Buffer  // an actual buffer that compressor writes to
 }
 
-func newChunkFunc(log logger.Logger, id string, writeBuffer *bytes.Buffer, maxRecords, maxBytes int) shared.Chunker {
-	chunk := &intermediateChunk{
-		id:          id,
-		maxRecords:  maxRecords,
-		maxBytes:    maxBytes,
-		compressor:  nil,
-		writeBuffer: writeBuffer,
+func buildNewChunkFunc(log logger.Logger, maxRecords, maxBytes int) shared.NewChunkFunc {
+	return func(id string, writeBuffer *bytes.Buffer) shared.Chunker {
+		chunk := &intermediateChunk{
+			id:          id,
+			maxRecords:  maxRecords,
+			maxBytes:    maxBytes,
+			compressor:  nil,
+			writeBuffer: writeBuffer,
+		}
+
+		chunk.compressor = shared.InitGzipCompessor(log, chunk.writeBuffer)
+
+		_, err := chunk.compressor.Write([]byte("["))
+		if err != nil {
+			log.Error(err)
+		} else {
+			chunk.numBytes += len("[")
+		}
+
+		return chunk
 	}
-
-	chunk.compressor = shared.InitGzipCompessor(log, chunk.writeBuffer)
-
-	_, err := chunk.compressor.Write([]byte("["))
-	if err != nil {
-		log.Error(err)
-	} else {
-		chunk.numBytes += len("[")
-	}
-
-	return chunk
 }
 
 // Write appends new log to log chunk
