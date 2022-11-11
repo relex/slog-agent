@@ -27,7 +27,7 @@ func countExpectedPayloadLength(payload string, writeIterations int) int {
 	return len(payload)*writeIterations + len(",")*(writeIterations-1) + len("[]")
 }
 
-func TestMessagePacker_Succeeds_OnGzippedInput(t *testing.T) {
+func TestDatadogOutput_Succeeds_OnGzippedInput(t *testing.T) {
 	log := logger.Root()
 	newChunkFunc := buildNewChunkFunc(log, testChunkMaxRecords, testChunkMaxSizeBytes)
 	factory := shared.NewChunkFactory(testChunkIDSuffix, testBufCapacity, newChunkFunc)
@@ -52,7 +52,7 @@ func TestMessagePacker_Succeeds_OnGzippedInput(t *testing.T) {
 	assert.Equal(t, countExpectedPayloadLength(payload, writeIterations), len(unzippedChunkData))
 }
 
-func TestMessagePacker_Flushes_OnMaxRecordsReached(t *testing.T) {
+func TestDatadogOutput_Flushes_OnMaxRecordsReached(t *testing.T) {
 	localChunkMaxRecords := 5
 
 	log := logger.Root()
@@ -80,7 +80,7 @@ func TestMessagePacker_Flushes_OnMaxRecordsReached(t *testing.T) {
 	}
 }
 
-func TestMessagePacker_Flushes_OnMaxBytesReached(t *testing.T) {
+func TestDatadogOutput_Flushes_OnMaxBytesReached(t *testing.T) {
 	log := logger.Root()
 	newChunkFunc := buildNewChunkFunc(log, testChunkMaxRecords, testChunkMaxSizeBytes)
 	factory := shared.NewChunkFactory(testChunkIDSuffix, testBufCapacity, newChunkFunc)
@@ -108,7 +108,7 @@ func TestMessagePacker_Flushes_OnMaxBytesReached(t *testing.T) {
 	}
 }
 
-func TestMessagePacker_FlushNoPanic_OnNilCurrentChunk(t *testing.T) {
+func TestDatadogOutput_FlushNoPanic_OnNilCurrentChunk(t *testing.T) {
 	log := logger.Root()
 	newChunkFunc := buildNewChunkFunc(log, testChunkMaxRecords, testChunkMaxSizeBytes)
 	factory := shared.NewChunkFactory(testChunkIDSuffix, testBufCapacity, newChunkFunc)
