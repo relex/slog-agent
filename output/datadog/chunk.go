@@ -41,23 +41,29 @@ func buildNewChunkFunc(log logger.Logger, maxRecords, maxBytes int) shared.NewCh
 	}
 }
 
+const recordDelimiter = (",")
+
 // Write appends new log to log chunk
 func (chunk *intermediateChunk) Write(data base.LogStream) error {
 	var err error
 
-	if chunk.numRecords != 0 {
-		data = append(base.LogStream(","), data...)
-	}
-
+	var writer io.Writer = chunk.writeBuffer
 	if chunk.compressor != nil {
-		_, err = chunk.compressor.Write(data)
-	} else {
-		_, err = chunk.writeBuffer.Write(data)
+		writer = chunk.compressor
 	}
 
+	// in order to build a correct json array [{},{},{}] - we need to append commas before every record other than the first one
+	if chunk.numRecords != 0 {
+		_, err = writer.Write(base.LogStream(recordDelimiter))
+		if err != nil {
+			return err
+		}
+	}
+
+	_, err = writer.Write(data)
 	if err == nil {
 		chunk.numRecords++
-		chunk.numBytes += len(data)
+		chunk.numBytes += len(recordDelimiter) + len(data)
 	}
 
 	return err
