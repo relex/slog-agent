@@ -69,7 +69,7 @@ func (cfg *Config) NewSerializer(parentLogger logger.Logger, schema base.LogSche
 func (cfg *Config) NewChunkMaker(parentLogger logger.Logger, tag string) base.LogChunkMaker {
 	var asArray bool
 
-	var initCompressorFunc shared.InitCompessorFunc
+	var initCompressorFunc shared.InitCompressorFunc
 	switch cfg.MessageMode {
 	case forwardprotocol.ModeForward:
 		asArray = true

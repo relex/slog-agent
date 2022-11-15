@@ -23,7 +23,7 @@ type intermediateChunk struct {
 	encoder              encoder        // a function to finalize/encode the entire chunk after it's been assembled
 }
 
-func buildNewChunkFunc(log logger.Logger, initCompressorFunc shared.InitCompessorFunc, encoder encoder, maxRecords, maxBytes int) shared.NewChunkFunc {
+func buildNewChunkFunc(log logger.Logger, initCompressorFunc shared.InitCompressorFunc, encoder encoder, maxRecords, maxBytes int) shared.NewChunkFunc {
 	return func(id string, writeBuffer *bytes.Buffer) shared.Chunker {
 		chunk := &intermediateChunk{
 			id:          id,

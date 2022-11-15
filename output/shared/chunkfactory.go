@@ -9,8 +9,8 @@ import (
 )
 
 type (
-	InitCompessorFunc func(log logger.Logger, w io.Writer) io.WriteCloser
-	NewChunkFunc      func(id string, writeBuffer *bytes.Buffer) Chunker
+	InitCompressorFunc func(log logger.Logger, w io.Writer) io.WriteCloser
+	NewChunkFunc       func(id string, writeBuffer *bytes.Buffer) Chunker
 
 	Chunker interface {
 		CanAppendData(dataLength int) bool
