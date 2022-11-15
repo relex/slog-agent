@@ -32,6 +32,9 @@ func newEncoder(tag string, asArray bool, msgpackBufferSize int) *chunkEncoder {
 	}
 }
 
+// TODO: The way EncodeChunk works now is to encode last depending on the mode selected,
+// but on production we always use the binary mode which is just a copying operation.
+// It's a waste of resource and should be changed to be similar to datadog's, though fluentd output is no longer a priority.
 func (enc *chunkEncoder) EncodeChunk(data []byte, params *encodeChunkParams) ([]byte, error) {
 	defer enc.msgpackEncoderBuffer.Reset()
 
