@@ -8,33 +8,25 @@ import (
 
 // messagePacker writes incoming log messages into a batch (chunk)
 type messagePacker struct {
-	logger            logger.Logger
-	currentChunk      *IntermediateChunk // current chunk before being made into final message
-	chunkFactory      *IntermediateChunkFactory
-	chunkMaxSizeBytes int
-	chunkMaxRecords   int
+	logger       logger.Logger
+	currentChunk Chunker // current chunk before being made into final message
+	chunkFactory *IntermediateChunkFactory
 }
 
 // NewMessagePacker creates a LogChunkMaker to pack MessagePackEventStream(s) into Message(s)
 // The resulting chunk itself can be saved on disk with ID as the filename, or send as request to upstream
-func NewMessagePacker(log logger.Logger, chunkMaxSizeBytes, chunkMaxRecords int, chunkFactory *IntermediateChunkFactory) *messagePacker {
+func NewMessagePacker(log logger.Logger, chunkFactory *IntermediateChunkFactory) *messagePacker {
 	return &messagePacker{
-		logger:            log.WithField(defs.LabelComponent, "FluentdForwardMessagePacker"),
-		currentChunk:      nil,
-		chunkFactory:      chunkFactory,
-		chunkMaxSizeBytes: chunkMaxSizeBytes,
-		chunkMaxRecords:   chunkMaxRecords,
+		logger:       log.WithField(defs.LabelComponent, "MessagePacker"),
+		currentChunk: nil,
+		chunkFactory: chunkFactory,
 	}
 }
 
 func (packer *messagePacker) WriteStream(stream base.LogStream) *base.LogChunk {
 	var previousChunk *base.LogChunk
 	if packer.currentChunk != nil {
-		if packer.chunkMaxRecords > 0 && packer.currentChunk.numRecords >= packer.chunkMaxRecords {
-			// flush when the amount of log records reaches max permitted amount, if it is defined
-			previousChunk = packer.FlushBuffer()
-		} else if packer.currentChunk.numBytes+len(stream) > packer.chunkMaxSizeBytes {
-			// otherwise flush when the total size reaches max permitted amount
+		if !packer.currentChunk.CanAppendData(len(stream)) {
 			previousChunk = packer.FlushBuffer()
 		}
 	}
