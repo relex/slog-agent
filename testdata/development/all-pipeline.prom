@@ -1,7 +1,7 @@
 testpipeline_input_passed_record_bytes_total 135311
 testpipeline_input_passed_records_total 24
-testpipeline_process_chunk_bytes_total{output="customFluentd"} 16985
-testpipeline_process_chunk_bytes_total{output="datadogAPI"} 16651
+testpipeline_process_chunk_bytes_total{output="customFluentd"} 16802
+testpipeline_process_chunk_bytes_total{output="datadogAPI"} 16417
 testpipeline_process_chunks_total{output="customFluentd"} 3
 testpipeline_process_chunks_total{output="datadogAPI"} 3
 testpipeline_process_dropped_record_bytes_total{key_host="basic-2",key_source="auth.log",key_vhost="bar.com"} 329

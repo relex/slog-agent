@@ -17,6 +17,7 @@ type testPipeline struct {
 	fallbackTimestamp time.Time
 	inputCounter      *base.LogInputCounter
 	inputParser       base.LogParser
+	outputNames       []string
 	outputDecoders    []base.ChunkDecoder
 	outputSavers      []chunkSaver
 	procCounter       *base.LogProcessCounter
@@ -61,6 +62,7 @@ func preparePipeline(configFile string, tagOverride string, metricCreator promre
 		fallbackTimestamp: time.Now(),
 		inputCounter:      inputCounter,
 		inputParser:       parser,
+		outputNames:       outputNames,
 		outputDecoders: lo.Map(conf.OutputBuffersPairs, func(pair bconfig.OutputBufferConfig, _ int) base.ChunkDecoder {
 			return pair.OutputConfig.Value
 		}),
@@ -76,6 +78,10 @@ func preparePipeline(configFile string, tagOverride string, metricCreator promre
 			return pair.OutputConfig.Value.NewChunkMaker(logger.Root(), tagOverride)
 		}),
 	}
+}
+
+func (p *testPipeline) GetOutputNames() []string {
+	return p.outputNames
 }
 
 func (p *testPipeline) Run(inputLines [][]byte, repeat int) {

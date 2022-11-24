@@ -6,15 +6,18 @@ import (
 	"github.com/relex/gotils/logger"
 	"github.com/relex/gotils/promexporter/promreg"
 	"github.com/relex/slog-agent/base"
+	"github.com/relex/slog-agent/base/bconfig"
 	"github.com/relex/slog-agent/orchestrate/obykeyset"
 	"github.com/relex/slog-agent/orchestrate/osingleton"
 	"github.com/relex/slog-agent/run"
+	"github.com/samber/lo"
 	"golang.org/x/exp/slices"
 )
 
 type agent struct {
 	loader         *run.Loader
 	inputAddresses []string
+	outputNames    []string
 	shutdownFn     func()
 	runRecovery    bool
 }
@@ -71,6 +74,9 @@ func startAgent(loader *run.Loader, outputOverrideCreator base.ChunkConsumerOver
 	return &agent{
 		loader:         loader,
 		inputAddresses: inputAddresses,
+		outputNames: lo.Map(loader.OutputBuffersPairs, func(outPair bconfig.OutputBufferConfig, _ int) string {
+			return outPair.Name
+		}),
 		shutdownFn: func() {
 			shutdownInputFn()
 			time.Sleep(1 * time.Second) // give orchestrator time to process flushed logs at the end of tcp listener
@@ -86,6 +92,10 @@ func (a *agent) Address() string {
 
 func (a *agent) GetMetricQuerier() promreg.MetricQuerier {
 	return a.loader.GetMetricQuerier()
+}
+
+func (a *agent) GetOutputNames() []string {
+	return a.outputNames
 }
 
 func (a *agent) StopAndWait() {

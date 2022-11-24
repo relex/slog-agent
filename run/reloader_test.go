@@ -111,7 +111,7 @@ func TestReloader(t *testing.T) {
 
 			labelledCounters := findMetricFamily(t, metricFamilies, "process_labelled_records_total")
 
-			assert.Empty(tt, promext.MatchExportedMetrics(labelledCounters, map[string]string{"label": "emailFilter"}), "old label sets removed")
+			assert.Empty(tt, promext.MatchExportedMetrics(labelledCounters.Metric, map[string]string{"label": "emailFilter"}), "old label sets removed")
 			assert.Equal(tt, float64(outStat.NumNew), promext.SumExportedMetrics(labelledCounters, map[string]string{"label": "MyMailFilter"}), "new label sets created and filled")
 
 			// no failure because in testReloadInvalidConfig initiateReload() is called directly

@@ -6,6 +6,7 @@ import (
 	"runtime"
 	"time"
 
+	"github.com/prometheus/client_golang/prometheus"
 	"github.com/relex/gotils/logger"
 	"github.com/relex/gotils/promexporter/promext"
 	"github.com/relex/gotils/promexporter/promreg"
@@ -34,7 +35,10 @@ func RunBenchmarkPipeline(inputPath string, outputPathPattern string, repeat int
 	costTracker := StartCostTracking()
 	pipeline.Run(inputRecords, repeat)
 
-	reportBenchmarkResult("BenchmarkPipeline", totalInputCount, totalInputLength, costTracker.Report(), mfactory)
+	reportBenchmarkResult(
+		"BenchmarkPipeline", totalInputCount, totalInputLength,
+		costTracker.Report(), mfactory, pipeline.GetOutputNames(),
+	)
 	logger.Info(promext.DumpMetrics("", true, false, mfactory))
 }
 
@@ -58,7 +62,10 @@ func RunBenchmarkAgent(inputPath string, outputPathPattern string, repeat int, c
 	logger.Info("stopping...")
 	agentInstance.StopAndWait()
 
-	reportBenchmarkResult("BenchmarkAgent", numRecords*repeat, int64(len(inputData))*int64(repeat), costTracker.Report(), agentInstance.GetMetricQuerier())
+	reportBenchmarkResult(
+		"BenchmarkAgent", numRecords*repeat, int64(len(inputData))*int64(repeat),
+		costTracker.Report(), agentInstance.GetMetricQuerier(), agentInstance.GetOutputNames(),
+	)
 	logger.Info(promext.DumpMetricsFrom("", true, true, agentInstance.GetMetricQuerier()))
 }
 
@@ -125,28 +132,46 @@ func feedInputToBenchmarkAgent(agentAddress string, inputData []byte, repeat int
 	runtime.UnlockOSThread()
 }
 
-func reportBenchmarkResult(title string, numLogs int, sizeOfLogs int64, report CostReport, mquerier promreg.MetricQuerier) {
-	metrics := []benchmarkMetric{
+func reportBenchmarkResult(
+	title string, numLogs int, sizeOfLogs int64,
+	report CostReport, mquerier promreg.MetricQuerier, outputNames []string,
+) {
+	printBenchmarkMetrics(title, []benchmarkMetric{
 		{fmt: "%.0f log/sec", val: float64(numLogs) / report.RealTime.Seconds()},
-		{fmt: "%.0f MB/sec", val: float64(sizeOfLogs) / 1048576 / report.RealTime.Seconds()},
+		{fmt: "%.0f MB/sec", val: float64(sizeOfLogs) / 1048576.0 / report.RealTime.Seconds()},
 		{fmt: "%0.2f alloc/log", val: float64(report.NumHeapAllocs) / float64(numLogs)},
 		{fmt: "%0.2f%% user", val: 100.0 * report.UserTime.Seconds() / report.RealTime.Seconds()},
 		{fmt: "%0.2f%% sys", val: 100.0 * report.SystemTime.Seconds() / report.RealTime.Seconds()},
 		{fmt: "%0.2f%% gc", val: 100.0 * report.GCCPUFraction},
 		{fmt: "%.02f sec", val: report.RealTime.Seconds()},
-	}
+	})
+
 	numPass := promext.SumMetricValues(mquerier.LookupMetricFamily("process_passed_records_total"))
 	numDrop := promext.SumMetricValues(mquerier.LookupMetricFamily("process_dropped_records_total"))
 	if int(numPass)+int(numDrop) != numLogs {
 		logger.Errorf("numbers of processed records don't match: %d, should be %d", int(numPass)+int(numDrop), numLogs)
 	}
-	numChunks := promext.SumMetricValues(mquerier.LookupMetricFamily("process_chunks_total"))
-	numBytes := promext.SumMetricValues(mquerier.LookupMetricFamily("process_chunk_bytes_total"))
-	metrics = append(metrics, benchmarkMetric{fmt: "%.0f log/chunk", val: float64(numLogs) / numChunks})
-	metrics = append(metrics, benchmarkMetric{fmt: "%.0f KB/chunk", val: numBytes / 1024.0 / numChunks})
-	metrics = append(metrics, benchmarkMetric{fmt: "%.0f MB in", val: float64(sizeOfLogs) / 1048576})
-	metrics = append(metrics, benchmarkMetric{fmt: "%.0f MB out", val: numBytes / 1048576})
-	printBenchmarkMetrics(title, metrics)
+
+	printBenchmarkMetrics(title+":filter", []benchmarkMetric{
+		{fmt: "%.0f logs passed", val: numPass},
+		{fmt: "%.0f logs dropped", val: numDrop},
+		{fmt: "%.0f MB in", val: float64(sizeOfLogs) / 1048576},
+	})
+
+	for _, outName := range outputNames {
+		labels := prometheus.Labels{"output": outName}
+
+		encBytes := promext.SumMetricValues2(mquerier.LookupMetricFamily("process_serialized_bytes_total"), labels)
+		outChunks := promext.SumMetricValues2(mquerier.LookupMetricFamily("process_chunks_total"), labels)
+		outBytes := promext.SumMetricValues2(mquerier.LookupMetricFamily("process_chunk_bytes_total"), labels)
+
+		printBenchmarkMetrics(title+":output:"+outName, []benchmarkMetric{
+			{fmt: "%.0f MB encoded", val: float64(encBytes) / 1048576.0},
+			{fmt: "%.0f log/chunk", val: float64(numLogs) / outChunks},
+			{fmt: "%.0f KB/chunk", val: float64(outBytes) / 1024.0 / outChunks},
+			{fmt: "%.0f MB out", val: float64(outBytes) / 1048576.0},
+		})
+	}
 }
 
 func printBenchmarkMetrics(title string, metrics []benchmarkMetric) {
