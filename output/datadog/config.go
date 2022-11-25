@@ -2,6 +2,7 @@ package datadog
 
 import (
 	"errors"
+	"io"
 	"strings"
 	"time"
 
@@ -31,14 +32,12 @@ const (
 
 type Config struct {
 	bconfig.Header `yaml:",inline"`
-	Serialization  SerializationConfig
-	Upstream       UpstreamConfig
+	Serialization  SerializationConfig `yaml:"serialization"`
+	Upstream       UpstreamConfig      `yaml:"upstream"`
 }
 
 type SerializationConfig struct {
-	Source  *string
-	Tags    *string
-	Service *string
+	HiddenFields []string `yaml:"hiddenFields"`
 }
 
 type UpstreamConfig struct {
@@ -46,13 +45,17 @@ type UpstreamConfig struct {
 	HTTPTimeout time.Duration `yaml:"httpTimeout"`
 }
 
+func (cfg *Config) DecodeChunkToJSON(chunk base.LogChunk, separator []byte, indented bool, writer io.Writer) (base.LogChunkInfo, error) {
+	return dumpDatadogJSON(chunk, separator, indented, writer)
+}
+
 //nolint:revive
 func (cfg *Config) MatchChunkID(chunkID string) bool {
 	return strings.HasSuffix(chunkID, chunkIDSuffix)
 }
 
-func (cfg *Config) NewSerializer(parentLogger logger.Logger, schema base.LogSchema) base.LogSerializer {
-	return NewEventSerializer(parentLogger, schema, cfg.Serialization)
+func (cfg *Config) NewSerializer(parentLogger logger.Logger, schema base.LogSchema, tag string) base.LogSerializer {
+	return NewEventSerializer(parentLogger, schema, cfg.Serialization, tag)
 }
 
 //nolint:revive

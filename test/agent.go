@@ -6,15 +6,18 @@ import (
 	"github.com/relex/gotils/logger"
 	"github.com/relex/gotils/promexporter/promreg"
 	"github.com/relex/slog-agent/base"
+	"github.com/relex/slog-agent/base/bconfig"
 	"github.com/relex/slog-agent/orchestrate/obykeyset"
 	"github.com/relex/slog-agent/orchestrate/osingleton"
 	"github.com/relex/slog-agent/run"
+	"github.com/samber/lo"
 	"golang.org/x/exp/slices"
 )
 
 type agent struct {
 	loader         *run.Loader
 	inputAddresses []string
+	outputNames    []string
 	shutdownFn     func()
 	runRecovery    bool
 }
@@ -24,7 +27,7 @@ type agent struct {
 // 1. output chunks may be intercepted before real/network forwarder. If intercepted, the bufferer flushes everything before shutdown instead of saving them for recovery.
 //
 // 2. orchestration keys and tags from config may be overridden
-func startAgent(loader *run.Loader, newChunkSaver base.ChunkConsumerConstructor, keysOverride []string, tagOverride string) *agent {
+func startAgent(loader *run.Loader, outputOverrideCreator base.ChunkConsumerOverrideCreator, keysOverride []string, tagOverride string) *agent {
 	if len(loader.Inputs) != 1 {
 		logger.Warnf("only the first input is used for testing - there are %d", len(loader.Inputs))
 	}
@@ -60,8 +63,8 @@ func startAgent(loader *run.Loader, newChunkSaver base.ChunkConsumerConstructor,
 	}
 
 	// flush everything at the end if the output is not a real forwarder client
-	if newChunkSaver != nil {
-		loader.PipelineArgs.NewConsumerOverride = newChunkSaver
+	if outputOverrideCreator != nil {
+		loader.PipelineArgs.NewConsumerOverride = outputOverrideCreator
 		loader.PipelineArgs.SendAllAtEnd = true
 	}
 
@@ -71,12 +74,15 @@ func startAgent(loader *run.Loader, newChunkSaver base.ChunkConsumerConstructor,
 	return &agent{
 		loader:         loader,
 		inputAddresses: inputAddresses,
+		outputNames: lo.Map(loader.OutputBuffersPairs, func(outPair bconfig.OutputBufferConfig, _ int) string {
+			return outPair.Name
+		}),
 		shutdownFn: func() {
 			shutdownInputFn()
 			time.Sleep(1 * time.Second) // give orchestrator time to process flushed logs at the end of tcp listener
 			orchestrator.Shutdown()
 		},
-		runRecovery: newChunkSaver == nil,
+		runRecovery: outputOverrideCreator == nil,
 	}
 }
 
@@ -86,6 +92,10 @@ func (a *agent) Address() string {
 
 func (a *agent) GetMetricQuerier() promreg.MetricQuerier {
 	return a.loader.GetMetricQuerier()
+}
+
+func (a *agent) GetOutputNames() []string {
+	return a.outputNames
 }
 
 func (a *agent) StopAndWait() {

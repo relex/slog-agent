@@ -1,7 +1,7 @@
 package test
 
 import (
-	"io/ioutil"
+	"os"
 	"testing"
 
 	"github.com/relex/gotils/logger"
@@ -22,15 +22,15 @@ func TestConfigDump(t *testing.T) {
 
 	configDump, e := util.MarshalYaml(config)
 	assert.Nil(t, e)
-	assert.Nil(t, ioutil.WriteFile(testdata.GetConfigDumpPath(), []byte(configDump), 0644))
+	assert.Nil(t, os.WriteFile(testdata.GetConfigDumpPath(), []byte(configDump), 0644))
 }
 
 func TestConfigParsing(t *testing.T) {
 	if util.IsTestGenerationMode() {
 		return
 	}
-	expectedDump, eerr := ioutil.ReadFile(testdata.GetConfigDumpPath())
-	assert.Nil(t, eerr)
+	expectedDump, rerr := os.ReadFile(testdata.GetConfigDumpPath())
+	assert.Nil(t, rerr)
 
 	config, _, cstats, cerr := run.ParseConfigFile(testdata.GetConfigPath())
 	assert.Nil(t, cerr)

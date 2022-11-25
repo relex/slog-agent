@@ -1,17 +1,25 @@
 package base
 
 import (
+	"io"
+
 	"github.com/relex/gotils/channels"
 	"github.com/relex/gotils/logger"
 )
 
-// ChunkConsumerConstructor creates a ChunkConsumer
-type ChunkConsumerConstructor func(parentLogger logger.Logger, args ChunkConsumerArgs) ChunkConsumer
+// ChunkConsumerOverrideCreator defines a function to construct a ChunkConsumer override for testing purposes.
+//
+// It takes the name of the specific output, a decoder for the output type, and consumer args.
+//
+// An override is created per output (to support multi-output).
+type ChunkConsumerOverrideCreator func(parentLogger logger.Logger, name string, decoder ChunkDecoder, args ChunkConsumerArgs) ChunkConsumer
 
-// ChunkConsumer is a worker to consume buffered chunks for forwarding or else
-// A consumer should be created with ChunkConsumerArgs as input
+// ChunkConsumer is a worker to consume buffered chunks for forwarding or else.
+//
+// A consumer should be created with ChunkConsumerArgs as input.
+//
 // It should initiate shutdown by the end of InputChannel or the InputClosed signal,
-// and never attempt to read any leftover chunk from InputChannel once it's closed
+// and never attempt to read any leftover chunk from InputChannel once it's closed.
 type ChunkConsumer interface {
 	PipelineWorker
 }
@@ -24,4 +32,9 @@ type ChunkConsumerArgs struct {
 	OnChunkConsumed func(chunk LogChunk) // to be called when a chunk is consumed / committed
 	OnChunkLeftover func(chunk LogChunk) // to be called when a chunk is left unconsumed at the end
 	OnFinished      func()               // to be called after the consumer ends
+}
+
+// ChunkDecoder provides an interface to verify and decode resulting chunks. Used for testing and internal verifications.
+type ChunkDecoder interface {
+	DecodeChunkToJSON(chunk LogChunk, separator []byte, indented bool, writer io.Writer) (LogChunkInfo, error)
 }

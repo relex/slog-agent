@@ -19,9 +19,11 @@ import (
 type LogOutputConfig interface {
 	BaseConfig
 
+	base.ChunkDecoder
+
 	MatchChunkID(chunkID string) bool
 
-	NewSerializer(parentLogger logger.Logger, schema base.LogSchema) base.LogSerializer
+	NewSerializer(parentLogger logger.Logger, schema base.LogSchema, tag string) base.LogSerializer
 
 	NewChunkMaker(parentLogger logger.Logger, tag string) base.LogChunkMaker
 
