@@ -59,7 +59,7 @@ linters-settings:
     statements: 70
 
   gocognit:
-    min-complexity: 30 # default: 30     
+    min-complexity: 30 # default: 30
 
   # might need more well defined config after we reenable it
   gocritic:
@@ -75,9 +75,9 @@ linters-settings:
     enable-all: true
     disable:
       - fieldalignment
-        
+
   lll:
-    line-length: 150 # default: 120 
+    line-length: 150 # default: 120
 
   nlreturn:
     block-size: 3
@@ -160,7 +160,7 @@ linters:
     - maintidx          # measures the maintainability index of each function
     - makezero          # finds slice declarations with non-zero initial length
     - misspell          # finds commonly misspelled English words in comments
-    - nakedret          # finds naked returns in long functions 
+    - nakedret          # finds naked returns in long functions
     - nilnil            # checks that there is no simultaneous return of nil error and an invalid value
     - nolintlint        # reports bad nolint directives
     - nonamedreturns    # warns on named returns
@@ -181,7 +181,7 @@ linters:
     - containedctx      # detects structs with context.Context field
     - contextcheck      # checks if you use a non-inherited context
     - durationcheck     # makes sure you don't multiply two instances of time.Duration
-    - errname           # checks that sentinel errors are prefixed with the Err and error types are suffixed with the Error 
+    - errname           # checks that sentinel errors are prefixed with the Err and error types are suffixed with the Error
     - execinquery       # checks where you could use db.Exec instead of db.Query
     - exportloopref     # checks for pointers to enclosing loop variables
     - goprintffuncname  # checks that printf-like functions are named with `f` at the end

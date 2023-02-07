@@ -31,14 +31,13 @@ func TestBufferer(t *testing.T) {
 	buf.Start()
 	dir := buf.QueueDirPath()
 	// produce logs
-	noTimeout := make(chan time.Time)
 	for i := 0; i < 50; i++ {
 		c := base.LogChunk{
 			ID:    fmt.Sprintf("%d", i),
 			Data:  []byte(fmt.Sprintf("content-%d", i)),
 			Saved: false,
 		}
-		buf.Accept(c, noTimeout)
+		buf.Accept(c)
 	}
 	for len(buf.feeder.outputChannel) < 5 {
 		time.Sleep(10 * time.Millisecond)
@@ -115,14 +114,13 @@ func TestBuffererShutdown(t *testing.T) {
 	buf := newBufferer(logger.Root(), root, "b2", testMatchChunkID, mfactory, 1048576, false).(*bufferer)
 	buf.Start()
 	dir := buf.QueueDirPath()
-	noTimeout := make(chan time.Time)
 	for i := 0; i < 50; i++ {
 		c := base.LogChunk{
 			ID:    fmt.Sprintf("%d", i),
 			Data:  []byte(fmt.Sprintf("content-%d", i)),
 			Saved: false,
 		}
-		buf.Accept(c, noTimeout)
+		buf.Accept(c)
 	}
 	buf.Destroy()
 	for i := 0; i < 50; i++ {
@@ -162,14 +160,13 @@ func TestBuffererSendAllAtEnd(t *testing.T) {
 	dir := buf.QueueDirPath()
 
 	// produce logs
-	noTimeout := make(chan time.Time)
 	for i := 0; i < 50; i++ {
 		c := base.LogChunk{
 			ID:    fmt.Sprintf("%d", i),
 			Data:  []byte(fmt.Sprintf("content-%d", i)),
 			Saved: false,
 		}
-		buf.Accept(c, noTimeout)
+		buf.Accept(c)
 	}
 	for len(buf.feeder.outputChannel) < 5 {
 		time.Sleep(10 * time.Millisecond)
@@ -234,14 +231,13 @@ func TestBuffererSpaceLimit(t *testing.T) {
 	buf := newBufferer(logger.Root(), root, "bspace", testMatchChunkID, mfactory, 100, true).(*bufferer)
 	buf.Start()
 	dir := buf.QueueDirPath()
-	noTimeout := make(chan time.Time)
 	for i := 0; i < 50; i++ {
 		c := base.LogChunk{
 			ID:    fmt.Sprintf("%d", i),
 			Data:  []byte(fmt.Sprintf("%010d", i)),
 			Saved: false,
 		}
-		buf.Accept(c, noTimeout)
+		buf.Accept(c)
 	}
 	time.Sleep(100 * time.Millisecond)
 	// start retriving chunks

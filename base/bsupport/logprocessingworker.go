@@ -46,7 +46,7 @@ func NewLogProcessingWorker(parentLogger logger.Logger,
 	return worker
 }
 
-func (worker *LogProcessingWorker) onInput(buffer []*base.LogRecord, timeout <-chan time.Time) {
+func (worker *LogProcessingWorker) onInput(buffer []*base.LogRecord) {
 	if len(buffer) == 0 {
 		return
 	}
@@ -74,32 +74,32 @@ func (worker *LogProcessingWorker) onInput(buffer []*base.LogRecord, timeout <-c
 			maybeChunk := output.WriteStream(stream)
 			if maybeChunk != nil {
 				worker.procCounter.CountChunk(i, maybeChunk)
-				output.AcceptChunk(*maybeChunk, timeout)
+				output.AcceptChunk(*maybeChunk)
 			}
 		}
 	}
 }
 
-func (worker *LogProcessingWorker) onTick(timeout <-chan time.Time) {
+func (worker *LogProcessingWorker) onTick() {
 	// send buffered streams as a chunk if X seconds have passed
 	if time.Since(worker.lastChunkTime) < defs.IntermediateFlushInterval {
 		return
 	}
-	worker.flushChunk(timeout)
+	worker.flushChunk()
 	worker.procCounter.UpdateMetrics()
 }
 
-func (worker *LogProcessingWorker) onStop(timeout <-chan time.Time) {
-	worker.flushChunk(timeout)
+func (worker *LogProcessingWorker) onStop() {
+	worker.flushChunk()
 	worker.procCounter.UpdateMetrics()
 }
 
-func (worker *LogProcessingWorker) flushChunk(timeout <-chan time.Time) {
+func (worker *LogProcessingWorker) flushChunk() {
 	for i, output := range worker.outputList {
 		maybeChunk := output.FlushBuffer()
 		if maybeChunk != nil {
 			worker.procCounter.CountChunk(i, maybeChunk)
-			output.AcceptChunk(*maybeChunk, timeout)
+			output.AcceptChunk(*maybeChunk)
 		}
 	}
 }

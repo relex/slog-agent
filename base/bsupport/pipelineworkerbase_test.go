@@ -28,7 +28,7 @@ func newTestPipelineWorker(parentLogger logger.Logger, input <-chan []*base.LogR
 	return worker
 }
 
-func (worker *testPipelineWorker) onInput(inBuffer []*base.LogRecord, timeout <-chan time.Time) {
+func (worker *testPipelineWorker) onInput(inBuffer []*base.LogRecord) {
 	outBuffer := make([]*base.LogRecord, 0, len(inBuffer))
 
 	for index, record := range inBuffer {
@@ -45,13 +45,13 @@ func (worker *testPipelineWorker) onInput(inBuffer []*base.LogRecord, timeout <-
 	select {
 	case worker.outputChannel <- outBuffer:
 		break
-	case <-timeout:
+	case <-time.After(defs.IntermediateChannelTimeout):
 		worker.Logger().Errorf("BUG: timeout sending to channel: %d records. stack=%s", len(outBuffer), util.Stack())
 		break
 	}
 }
 
-func (worker *testPipelineWorker) onStop(timeout <-chan time.Time) {
+func (worker *testPipelineWorker) onStop() {
 	close(worker.outputChannel)
 	worker.Logger().Infof("destroy channel, remaining=%d", len(worker.outputChannel))
 }

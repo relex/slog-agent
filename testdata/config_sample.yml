@@ -88,7 +88,7 @@ inputs:
 
       - type: addFields                           # addFields: Add or update one or more fields
         fields:
-          pnum: ${task[-1:]}                      # value may reference other variables by $var or ${var} 
+          pnum: ${task[-1:]}                      # value may reference other variables by $var or ${var}
                                                   #       may also use substring (no overflow),
                                                   #       e.g. ${task[-3:-1]} result in "78" for task=56789
 
@@ -160,8 +160,8 @@ transformations:
             metricLabel: downsampled              # percentage < 100 would create an additional label with "!" in front, e.g.
                                                   #   label="!downsampled" to count matched but retained logs
 
-          - type: switch                          
-            cases:                                
+          - type: switch
+            cases:
               - match:
                   source: access.log
                 then:
@@ -187,7 +187,7 @@ transformations:
           # Examples of generic/abandoned transforms which should be avoided in production mode
           #
           - type: addFields                       # addFields: could cause high CPU & mem when field values are huge
-            fields:                               # 
+            fields:                               #
               log: task=$task $log                #   ex: 60K error dumps in "log" field, all of them rewritten / recreated
                                                   #
                                                   # May be replaced by serialization rewrites (see "inline" rewrite below)
@@ -251,7 +251,7 @@ transformations:
 
 
 # Multi-output: executed in the exact sequence here
-outputBufferPairs: 
+outputBufferPairs:
   - name: customFluentd
     ########################################################################################################################
     # Buffer offers storage / queues to store processed log chunks outside of memory when needed

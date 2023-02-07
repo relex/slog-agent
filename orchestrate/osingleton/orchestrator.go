@@ -22,7 +22,6 @@ type singletonOrchestrator struct {
 type singletonOrchestratorChild struct {
 	logger       logger.Logger
 	inputChannel chan []*base.LogRecord
-	sendTimeout  *time.Timer
 }
 
 // NewOrchestrator creates a singleton Orchestrator backed by one pipeline to aggregate and process all incoming logs
@@ -40,7 +39,6 @@ func (o *singletonOrchestrator) NewSink(clientAddress string, clientNumber base.
 	return &singletonOrchestratorChild{
 		logger:       base.NewSinkLogger(o.logger, clientAddress, clientNumber),
 		inputChannel: o.inputChannel,
-		sendTimeout:  time.NewTimer(defs.IntermediateChannelTimeout),
 	}
 }
 
@@ -55,14 +53,13 @@ func (oc *singletonOrchestratorChild) Accept(buffer []*base.LogRecord) {
 	select {
 	case oc.inputChannel <- reusableBuffer:
 		// TODO: update metrics
-	case <-oc.sendTimeout.C:
+	case <-time.After(defs.IntermediateChannelTimeout):
 		oc.logger.Errorf("BUG: timeout flushing: %d records. stack=%s", len(reusableBuffer), util.Stack())
 	}
 }
 
 // Tick renews internal timeout timer
 func (oc *singletonOrchestratorChild) Tick() {
-	util.ResetTimer(oc.sendTimeout, defs.IntermediateChannelTimeout)
 }
 
 // Close does nothing

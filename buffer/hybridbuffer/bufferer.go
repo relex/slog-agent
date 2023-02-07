@@ -101,7 +101,7 @@ func (buf *bufferer) RegisterNewConsumer() base.ChunkConsumerArgs {
 }
 
 // Accept accepts incoming chunks
-func (buf *bufferer) Accept(chunk base.LogChunk, _ <-chan time.Time) {
+func (buf *bufferer) Accept(chunk base.LogChunk) {
 	// divide by 2 because channel length is not updated in time
 	if buf.feeder.NumOutput() >= defs.BufferMaxNumChunksInMemory/2 {
 		buf.logger.Debugf("unload chunk for queuing: id=%s len=%d", chunk.ID, len(chunk.Data))
