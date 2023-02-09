@@ -9,7 +9,6 @@ import (
 	"github.com/relex/slog-agent/base"
 	"github.com/relex/slog-agent/defs"
 	"github.com/relex/slog-agent/orchestrate/obase"
-	"github.com/relex/slog-agent/util"
 	"github.com/relex/slog-agent/util/localcachedmap"
 )
 
@@ -35,7 +34,6 @@ type byKeySetOrchestratorSink struct {
 	logger          logger.Logger
 	workerMap       *localcachedmap.LocalCachedMap[chan<- []*base.LogRecord, *channelInputBuffer] // append-only locac cache of byKeySetOrchestrator.workerMap
 	keySetExtractor base.FieldSetExtractor                                                        // extractor to fetch keys from LogRecord(s)
-	sendTimeout     *time.Timer
 }
 
 // NewOrchestrator creates an Orchestrator to distribute logs to different pipelines by unique combinations of key labels (key set)
@@ -95,7 +93,6 @@ func (o *byKeySetOrchestrator) NewSink(clientAddress string, clientNumber base.C
 		logger:          base.NewSinkLogger(o.logger, clientAddress, clientNumber),
 		workerMap:       o.workerMap.MakeLocalMap(),
 		keySetExtractor: *base.NewFieldSetExtractor(o.keyLocators),
-		sendTimeout:     time.NewTimer(defs.IntermediateChannelTimeout),
 	}
 }
 
@@ -130,7 +127,7 @@ func (oc *byKeySetOrchestratorSink) Accept(buffer []*base.LogRecord) {
 		tempKeySet := keySetExtractor.Extract(record)
 		cache := workerMap.GetOrCreate(tempKeySet, oc.onNewLinkToPipeline)
 		if cache.Append(record) {
-			cache.Flush(now, oc.sendTimeout, oc.logger, tempKeySet)
+			cache.Flush(now, oc.logger, tempKeySet)
 		}
 	}
 }
@@ -138,7 +135,6 @@ func (oc *byKeySetOrchestratorSink) Accept(buffer []*base.LogRecord) {
 // Tick renews internal timeout timer
 func (oc *byKeySetOrchestratorSink) Tick() {
 	oc.flushAllLocalBuffers(false)
-	util.ResetTimer(oc.sendTimeout, defs.IntermediateChannelTimeout)
 }
 
 // Close flushes all pending logs
@@ -162,6 +158,6 @@ func (oc *byKeySetOrchestratorSink) flushAllLocalBuffers(forceAll bool) {
 		if !forceAll && now.Sub(cache.LastFlushTime) < defs.IntermediateFlushInterval {
 			return
 		}
-		cache.Flush(now, oc.sendTimeout, oc.logger, mergedKey)
+		cache.Flush(now, oc.logger, mergedKey)
 	})
 }

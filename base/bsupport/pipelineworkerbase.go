@@ -6,7 +6,6 @@ import (
 	"github.com/relex/gotils/channels"
 	"github.com/relex/gotils/logger"
 	"github.com/relex/slog-agent/defs"
-	"github.com/relex/slog-agent/util"
 )
 
 // PipelineWorkerBase is the base worker class for pipeline workers
@@ -18,9 +17,9 @@ type PipelineWorkerBase[T any] struct {
 	_baseLogger  logger.Logger
 	_baseInput   <-chan T
 	_baseStopped *channels.SignalAwaitable
-	_baseOnInput func(input T, timeout <-chan time.Time)
-	_baseOnTick  func(timeout <-chan time.Time)
-	_baseOnStop  func(timeout <-chan time.Time)
+	_baseOnInput func(input T)
+	_baseOnTick  func()
+	_baseOnStop  func()
 }
 
 // NewPipelineWorkerBase creates a new PipelineWorkerBase for specified data type in channel
@@ -34,9 +33,9 @@ func NewPipelineWorkerBase[T any](baseLogger logger.Logger, inputChannel <-chan 
 
 // InitInternal initializes the internal function references called in processing loops
 func (worker *PipelineWorkerBase[T]) InitInternal(
-	inputHandler func(input T, timeout <-chan time.Time),
-	tickHandler func(timeout <-chan time.Time),
-	stopHandler func(timeout <-chan time.Time),
+	inputHandler func(input T),
+	tickHandler func(),
+	stopHandler func(),
 ) {
 	if worker._baseOnInput != nil {
 		worker._baseLogger.Panic("re-initialization called")
@@ -62,23 +61,19 @@ func (worker *PipelineWorkerBase[T]) Stopped() channels.Awaitable {
 }
 
 func (worker *PipelineWorkerBase[T]) _baseRun() {
-	timeoutTimer := time.NewTimer(defs.IntermediateChannelTimeout)
-	worker._baseProcessMain(timeoutTimer)
+	worker._baseProcessMain()
 
 	if worker._baseOnTick != nil {
-		util.ResetTimer(timeoutTimer, defs.IntermediateChannelTimeout)
-		worker._baseOnTick(timeoutTimer.C)
+		worker._baseOnTick()
 	}
 	if worker._baseOnStop != nil {
-		util.ResetTimer(timeoutTimer, defs.IntermediateChannelTimeout)
-		worker._baseOnStop(timeoutTimer.C)
+		worker._baseOnStop()
 	}
-	timeoutTimer.Stop()
 	worker._baseStopped.Signal()
 }
 
 // runMainLoop waits and processes incoming input until stop request, returns true for cleanup or false to abort
-func (worker *PipelineWorkerBase[T]) _baseProcessMain(timeoutTimer *time.Timer) {
+func (worker *PipelineWorkerBase[T]) _baseProcessMain() {
 	worker._baseLogger.Info("start main loop")
 	ticker := time.NewTicker(defs.IntermediateFlushInterval)
 SELECT_LOOP:
@@ -89,12 +84,11 @@ SELECT_LOOP:
 				worker._baseLogger.Infof("end main loop on input channel close")
 				break SELECT_LOOP
 			}
-			worker._baseOnInput(value, timeoutTimer.C)
+			worker._baseOnInput(value)
 		case <-ticker.C:
 			if worker._baseOnTick != nil {
-				worker._baseOnTick(timeoutTimer.C)
+				worker._baseOnTick()
 			}
-			util.ResetTimer(timeoutTimer, defs.IntermediateChannelTimeout)
 		}
 	}
 	ticker.Stop()

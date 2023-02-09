@@ -61,7 +61,7 @@ applications' logging if pipelines are properly set-up / isolated (e.g. by app-n
 For a typical server CPU (e.g. Xeon, 2GHz), a single pipeline / core should be able to handle at least:
 
 - 300-500K log/s for small logs, around 100-200 bytes each including syslog headers
-- 200K log/s or 400MB/s for larger logs 
+- 200K log/s or 400MB/s for larger logs
 
 Note on servers with more than a few dozens of CPU cores, an optimal `GOMAXPROCS` has to be measured and set for
 production workload, until https://github.com/golang/go/issues/28808 is resolved

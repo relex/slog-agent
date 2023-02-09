@@ -44,6 +44,7 @@ func newLogRecord(maxFields int) *LogRecord {
 
 // NewRecord creates new record of empty values
 func (alloc *LogAllocator) NewRecord(input []byte) (*LogRecord, string) {
+	// pooling speeds up 10% in agent benchmarks but minus 20% in pipeline benchmarks
 	record := alloc.recordPool.Get().(*LogRecord)
 	record._refCount += alloc.initialRefCount
 	if len(input) > defs.InputLogMinMessageBytesToPool {

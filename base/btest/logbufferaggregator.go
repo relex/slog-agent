@@ -19,7 +19,6 @@ type logBufferAggregator struct {
 type logBufferAggregatorSink struct {
 	logger        logger.Logger
 	outputChannel chan<- []*base.LogRecord
-	sendTimeout   *time.Timer
 }
 
 // NewLogBufferAggregator creates a basic implementation of MultiSinkBufferReceiver, to collect incoming log batches into a single channel
@@ -36,7 +35,6 @@ func (recv *logBufferAggregator) NewSink(clientAddress string, clientNumber base
 	return &logBufferAggregatorSink{
 		logger:        slogger,
 		outputChannel: recv.outputChannel,
-		sendTimeout:   time.NewTimer(defs.IntermediateChannelTimeout),
 	}
 }
 
@@ -53,14 +51,13 @@ func (sess *logBufferAggregatorSink) Accept(buffer []*base.LogRecord) {
 	select {
 	case sess.outputChannel <- reusableBuffer:
 		break
-	case <-sess.sendTimeout.C:
+	case <-time.After(defs.IntermediateChannelTimeout):
 		sess.logger.Errorf("BUG: timeout flushing: %d records. stack=%s", len(reusableBuffer), util.Stack())
 		break
 	}
 }
 
 func (sess *logBufferAggregatorSink) Tick() {
-	util.ResetTimer(sess.sendTimeout, defs.IntermediateChannelTimeout)
 }
 
 // Close ends this channel

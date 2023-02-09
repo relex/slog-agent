@@ -12,7 +12,7 @@ import (
 
 // channelInputBuffer buffers input logs before flushing them into a channel
 //
-// A channel can have multiple buffers
+// # A channel can have multiple buffers
 //
 // A buffer is NOT thread-safe and it should be created for each of gorouting sending logs to a channel
 type channelInputBuffer struct {
@@ -43,17 +43,18 @@ func (cache *channelInputBuffer) Append(record *base.LogRecord) bool { // xx:inl
 }
 
 // Flush flushes all pending logs to the channel
-func (cache *channelInputBuffer) Flush(now time.Time, sendTimeout *time.Timer, parentLogger logger.Logger, loggingKey interface{}) {
+func (cache *channelInputBuffer) Flush(now time.Time, parentLogger logger.Logger, loggingKey interface{}) {
 	pendingLogs := cache.PendingLogs
 	reusableLogBuffer := bsupport.CopyLogBuffer(pendingLogs)
 	cache.PendingLogs = pendingLogs[:0]
 	cache.PendingBytes = 0
 	cache.LastFlushTime = now
 
+	// Send with timeout; There is enough buffering to make on-demand timer allocations trivial.
 	select {
 	case cache.Channel <- reusableLogBuffer:
 		// TODO: update metrics
-	case <-sendTimeout.C:
+	case <-time.After(defs.IntermediateChannelTimeout):
 		parentLogger.Errorf("BUG: timeout flushing: %d records for %s. stack=%s", len(reusableLogBuffer), loggingKey, util.Stack())
 	}
 }

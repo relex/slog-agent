@@ -18,7 +18,6 @@ type logMessageAggregator struct {
 type logMessageAggregatorSink struct {
 	logger        logger.Logger
 	outputChannel chan<- string
-	sendTimeout   *time.Timer
 }
 
 // NewLogMessageAggregator creates a basic implementation of MultiSinkMessageReceiver, to collect incoming log messages into a single channel
@@ -34,7 +33,6 @@ func (recv *logMessageAggregator) NewSink(clientAddress string, clientNumber bas
 	return &logMessageAggregatorSink{
 		logger:        recv.logger.WithField(defs.LabelClient, clientAddress),
 		outputChannel: recv.outputChannel,
-		sendTimeout:   time.NewTimer(defs.IntermediateChannelTimeout),
 	}
 }
 
@@ -47,14 +45,13 @@ func (sess *logMessageAggregatorSink) Accept(value []byte) {
 	select {
 	case sess.outputChannel <- scopy:
 		return
-	case <-sess.sendTimeout.C:
+	case <-time.After(defs.IntermediateChannelTimeout):
 		sess.logger.Errorf("BUG: timeout sending to channel: \"%s\". stack=%s", scopy, util.Stack())
 		break
 	}
 }
 
 func (sess *logMessageAggregatorSink) Flush() {
-	util.ResetTimer(sess.sendTimeout, defs.IntermediateChannelTimeout)
 }
 
 func (sess *logMessageAggregatorSink) Close() {
