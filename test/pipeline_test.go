@@ -58,7 +58,10 @@ func TestPipeline(t *testing.T) {
 			pipeline.Run(loadInputRecords(localInPath), 1)
 
 			for outName, expected := range expectedOutputs {
-				assert.Equal(t, expected, actualOutputGetters[outName](), "known output %s", outName)
+				outGetter := actualOutputGetters[outName]
+				if assert.NotNil(t, outGetter, "known output %s", outName) {
+					assert.Equal(t, expected, outGetter(), "known output %s", outName)
+				}
 			}
 
 			for outName := range actualOutputGetters {
