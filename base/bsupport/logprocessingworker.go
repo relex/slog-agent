@@ -12,7 +12,7 @@ import (
 type LogProcessingWorker struct {
 	PipelineWorkerBase[[]*base.LogRecord]
 	deallocator   *base.LogAllocator
-	procCounter   *base.LogProcessCounter
+	procCounter   *base.LogProcessCounterSet
 	transformList []base.LogTransformFunc
 	outputList    []OutputInterface
 	lastChunkTime time.Time
@@ -28,7 +28,7 @@ type OutputInterface struct {
 
 // NewLogProcessingWorker creates LogProcessingWorker
 func NewLogProcessingWorker(parentLogger logger.Logger,
-	input <-chan []*base.LogRecord, deallocator *base.LogAllocator, procCounter *base.LogProcessCounter,
+	input <-chan []*base.LogRecord, deallocator *base.LogAllocator, procCounter *base.LogProcessCounterSet,
 	transforms []base.LogTransformFunc, outputInterfaces []OutputInterface,
 ) *LogProcessingWorker {
 	worker := &LogProcessingWorker{
@@ -51,7 +51,7 @@ func (worker *LogProcessingWorker) onInput(buffer []*base.LogRecord) {
 		return
 	}
 	for _, record := range buffer {
-		icounter := worker.procCounter.SelectInputCounter(record)
+		icounter := worker.procCounter.SelectMetricKeySet(record)
 		if RunTransforms(record, worker.transformList) == base.DROP {
 			icounter.CountRecordDrop(record)
 			worker.deallocator.Release(record)

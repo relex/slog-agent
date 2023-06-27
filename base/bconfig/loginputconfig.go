@@ -18,7 +18,7 @@ type LogInputConfig interface {
 		stopRequest channels.Awaitable) (base.LogInput, error)
 
 	NewParser(parentLogger logger.Logger, allocator *base.LogAllocator, schema base.LogSchema,
-		inputCounter *base.LogInputCounter) (base.LogParser, error)
+		inputCounter *base.LogInputCounterSet) (base.LogParser, error)
 
 	VerifyConfig(schema base.LogSchema) error
 }

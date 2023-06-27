@@ -10,7 +10,7 @@ import (
 )
 
 // LogParserConstructor represents a function to create new LogParser instances in LogParsingReceiver
-type LogParserConstructor = func(parentLogger logger.Logger, inputCounter *base.LogInputCounter) base.LogParser
+type LogParserConstructor = func(parentLogger logger.Logger, inputCounter *base.LogInputCounterSet) base.LogParser
 
 type logParsingReceiver struct {
 	logger         logger.Logger
@@ -26,7 +26,7 @@ type logParsingReceiverSink struct {
 	bufferedLogs  []*base.LogRecord
 	bufferedBytes int
 	now           time.Time
-	inputCounter  *base.LogInputCounter
+	inputCounter  *base.LogInputCounterSet
 }
 
 // NewLogParsingReceiver creates a MultiSinkMessageReceiver to parse incoming logs, buffer them and pass to a buffer receiver

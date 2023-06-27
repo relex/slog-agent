@@ -55,7 +55,7 @@ func (cfg *Config) NewInput(_ logger.Logger, allocator *base.LogAllocator, schem
 	inputLogger := logger.WithField(defs.LabelComponent, "SyslogInput")
 
 	// createParser is for each of incoming connection to create their own parser instance (which contains buffer/cache)
-	createParser := func(parentLogger logger.Logger, inputCounter *base.LogInputCounter) base.LogParser {
+	createParser := func(parentLogger logger.Logger, inputCounter *base.LogInputCounterSet) base.LogParser {
 		parser, err := syslogparser.NewParser(parentLogger, allocator, schema, cfg.LevelMapping, inputCounter)
 		if err != nil {
 			parentLogger.Panic("failed to create parser: ", err)
@@ -81,7 +81,7 @@ func (cfg *Config) NewInput(_ logger.Logger, allocator *base.LogAllocator, schem
 
 // NewParser creates a parser for test pipeline
 func (cfg *Config) NewParser(parentLogger logger.Logger, allocator *base.LogAllocator, schema base.LogSchema,
-	inputCounter *base.LogInputCounter,
+	inputCounter *base.LogInputCounterSet,
 ) (base.LogParser, error) {
 	if len(cfg.LevelMapping) == 0 {
 		return nil, fmt.Errorf(".levelMapping is empty")
