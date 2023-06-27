@@ -162,7 +162,7 @@ func (op *chunkOperator) UnloadChunk(chunkRef *base.LogChunk) bool {
 	}
 
 	if op.metrics.persistentChunkBytes.Get()+int64(len(chunkRef.Data)) > op.maxTotalBytes {
-		op.logger.Errorf("cannot write chunk file id=%s: space limit reached", chunkRef.ID)
+		op.logger.Warnf("cannot write chunk file id=%s: space limit reached", chunkRef.ID)
 		return false
 	}
 
