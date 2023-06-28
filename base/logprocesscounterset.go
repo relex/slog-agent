@@ -35,7 +35,7 @@ type LogProcessCounterSet struct {
 // FIXME: why is logCustomCounterHost not used here?
 type logProcessCustomCounterVec struct {
 	index           int
-	countMetricVec  *promext.LazyRWCounterVec
+	countMetricVec  *promext.LazyRWCounterVec // Use lazy-init counters as there could be many unused metrics for many pipelines
 	lengthMetricVec *promext.LazyRWCounterVec
 }
 

@@ -16,8 +16,8 @@ type logCustomCounterHost struct {
 
 // logCustomCounterImpl represents a pair of (total log count, total log length) metrics by specific label-set
 type logCustomCounterImpl struct {
-	countMetric     promext.RWCounter
-	lengthMetric    promext.RWCounter
+	countMetric     promext.LazyRWCounter
+	lengthMetric    promext.LazyRWCounter
 	unwrittenCount  uint64
 	unwrittenLength uint64
 }

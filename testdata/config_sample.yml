@@ -135,6 +135,10 @@ metricKeys: [host, vhost, source]       # metricKeys define additional fields as
 ########################################################################################################################
 # Transformations run on each of log-processing pipelines
 #
+# All custom metrics (transforms with "metricLabel") are lazy-initialized as they're likely to be tied to specific
+# pipelines and most combinations would be unused. This blocks the detection of zero to non-zero transition in alert
+# rules.
+#
 transformations:
 
   - type: switch                                  # switch: Switch-Case branches, no fallthrough

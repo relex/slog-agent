@@ -15,7 +15,7 @@ import (
 const (
 	queueDirHashLength = 8
 	idFileName         = ".id"
-	xattrBufferID      = "user.hybridbufferID"
+	xattrBufferID      = "user.hybridbufferID" // FIXME: deprecated, remove this
 )
 
 func makeBufferQueueDir(parentLogger logger.Logger, rootPath string, bufferID string) string {
@@ -85,11 +85,12 @@ func listBufferQueueIDs(parentLogger logger.Logger, rootPath string, matchChunkI
 			idBytes, idErr = xattr.Get(path, xattrBufferID)
 			if idErr != nil {
 				parentLogger.Warnf("ignore buffer dir without .id, path='%s': %s", path, idErr.Error())
+				continue
 			}
 		}
 
 		if len(idBytes) == 0 {
-			parentLogger.Warnf("ignore buffer dir with empty .id, path='%s': %s", path, idErr.Error())
+			parentLogger.Warnf("ignore buffer dir with empty .id, path='%s'", path)
 			continue
 		}
 		id := util.StringFromBytes(idBytes)
