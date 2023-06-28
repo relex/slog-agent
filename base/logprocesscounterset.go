@@ -6,9 +6,9 @@ import (
 	"github.com/relex/slog-agent/util"
 )
 
-// LogProcessCounter tracks metrics for log transform, serialization and chunk making
+// LogProcessCounterSet tracks metrics for log transform, serialization and chunk making.
 //
-// LogProcessCounter must be accessed through pointer. It's not concurrently usable. Counter-vectors and counters
+// LogProcessCounterSet must be accessed through pointer. It's not concurrently usable. Counter-vectors and counters
 // created here may duplicate with others, as long as the labels match.
 //
 // It tracks counters by metric keys (ex: vhost+source) that are not part of orchestration keys (ex: level), by
@@ -17,44 +17,47 @@ import (
 //
 // LogInputCounter's own custom counter registry is ignored here, as map access per counter update would be very
 // inefficient.
-type LogProcessCounter struct {
-	factory                promreg.MetricCreator
-	metricKeyExtractor     FieldSetExtractor                     // to extract metric keys from log records
-	metricKeyNames         []string                              // label names of metric keys (ex: key_vhost)
-	customCounterVecMap    map[string]logProcessCustomCounterVec // map of custom label => counter-vector[label], with unfilled metric key labels
-	inputCounterPairByKeys map[string]logInputCounterPair        // map of merged metric key => (input counter, custom counters)
-	currentCustomCounters  []*logCustomCounter                   // currently selected counter array of specific key-set
-	serializedLengthTotal  []valueCounterProvider                // an array of per-output metrics counters, accessed by output index
-	chunksCountTotal       []valueCounterProvider
-	chunksLengthTotal      []valueCounterProvider
-	mergeKeyBuffer         []byte // reused buffer to build merged metric key from record
+type LogProcessCounterSet struct {
+	factory             promreg.MetricCreator
+	metricKeyExtractor  FieldSetExtractor                     // to extract metric keys from log records
+	metricKeyNames      []string                              // label names of metric keys (ex: key_vhost)
+	customCounterVecMap map[string]logProcessCustomCounterVec // map of custom label => counter-vector[label], with unfilled metric key labels
+	keySetPairs         map[string]logKeySetCounterPair       // map of merged metric key => (input counter, custom counters)
+
+	serializedLengthTotal []valueCounterProvider // an array of per-output metrics counters, accessed by output index
+	chunksCountTotal      []valueCounterProvider
+	chunksLengthTotal     []valueCounterProvider
+
+	currentCustomCounters []*logCustomCounterImpl // custom counter array of the currently selected metric key-set
+	mergeKeyBuffer        []byte              // reused buffer to build merged metric key from record
 }
 
+// FIXME: why is logCustomCounterHost not used here?
 type logProcessCustomCounterVec struct {
 	index           int
-	countMetricVec  *promext.LazyRWCounterVec
+	countMetricVec  *promext.LazyRWCounterVec // Use lazy-init counters as there could be many unused metrics for many pipelines
 	lengthMetricVec *promext.LazyRWCounterVec
 }
 
-type logInputCounterPair struct {
-	inputCounter   *LogInputCounter
-	customCounters []*logCustomCounter
+type logKeySetCounterPair struct {
+	inputCounter   *LogInputCounterSet
+	customCounters []*logCustomCounterImpl
 }
 
 // NewLogProcessCounter creates a LogProcessCounter
-func NewLogProcessCounter(factory promreg.MetricCreator, schema LogSchema, keyLocators []LogFieldLocator, outputNames []string) *LogProcessCounter {
+func NewLogProcessCounter(factory promreg.MetricCreator, schema LogSchema, keyLocators []LogFieldLocator, outputNames []string) *LogProcessCounterSet {
 	metricKeyNames := make([]string, len(keyLocators))
 	for i, loc := range keyLocators {
 		metricKeyNames[i] = "key_" + loc.Name(schema)
 	}
-	counter := &LogProcessCounter{
-		factory:                factory,
-		metricKeyExtractor:     *NewFieldSetExtractor(keyLocators),
-		metricKeyNames:         metricKeyNames,
-		customCounterVecMap:    make(map[string]logProcessCustomCounterVec, 100),
-		inputCounterPairByKeys: make(map[string]logInputCounterPair, 2000),
-		currentCustomCounters:  nil,
-		mergeKeyBuffer:         make([]byte, 0, 200),
+	counter := &LogProcessCounterSet{
+		factory:               factory,
+		metricKeyExtractor:    *NewFieldSetExtractor(keyLocators),
+		metricKeyNames:        metricKeyNames,
+		customCounterVecMap:   make(map[string]logProcessCustomCounterVec, 100),
+		keySetPairs:           make(map[string]logKeySetCounterPair, 2000),
+		currentCustomCounters: nil,
+		mergeKeyBuffer:        make([]byte, 0, 200),
 	}
 
 	counter.serializedLengthTotal = make([]valueCounterProvider, len(outputNames))
@@ -79,7 +82,7 @@ func NewLogProcessCounter(factory promreg.MetricCreator, schema LogSchema, keyLo
 // RegisterCustomCounter registers a custom counter by label and count/length pointers
 //
 // This method must not be called in processing stage, when counters are already being selected and updated
-func (pcounter *LogProcessCounter) RegisterCustomCounter(label string) func(length int) {
+func (pcounter *LogProcessCounterSet) RegisterCustomCounter(label string) func(length int) {
 	counterVec, exists := pcounter.customCounterVecMap[label]
 	if !exists {
 		counterVec = logProcessCustomCounterVec{
@@ -99,9 +102,12 @@ func (pcounter *LogProcessCounter) RegisterCustomCounter(label string) func(leng
 	}
 }
 
-// SelectInputCounter gets or adds the input counter for key-set of the given record and marks its custom counter
-// array as current, for subsequent transforms to update counter values for the correct key-set
-func (pcounter *LogProcessCounter) SelectInputCounter(record *LogRecord) *LogInputCounter {
+// SelectMetricKeySet switches the current metric key set to that of the given record.
+//
+// 1. Subsequent transforms would write counter values to the correct key-set.
+//
+// 2. Returns an input counter for that key-set.
+func (pcounter *LogProcessCounterSet) SelectMetricKeySet(record *LogRecord) *LogInputCounterSet {
 	tempKeys := pcounter.metricKeyExtractor.Extract(record)
 
 	tempMergedKey := pcounter.mergeKeyBuffer
@@ -111,25 +117,25 @@ func (pcounter *LogProcessCounter) SelectInputCounter(record *LogRecord) *LogInp
 	pcounter.mergeKeyBuffer = tempMergedKey[:0]
 
 	// try to get existing counter by temp key, no new key string is created here
-	pair, found := pcounter.inputCounterPairByKeys[string(tempMergedKey)]
+	pair, found := pcounter.keySetPairs[string(tempMergedKey)]
 	if !found {
 		// copy transient field values from record for storing into map and counters
 		permKeys := util.DeepCopyStrings(tempKeys)
 		permMergedKey := util.DeepCopyStringFromBytes(tempMergedKey)
-		customCounters := make([]*logCustomCounter, len(pcounter.customCounterVecMap))
+		customCounters := make([]*logCustomCounterImpl, len(pcounter.customCounterVecMap))
 		for _, vec := range pcounter.customCounterVecMap {
-			customCounters[vec.index] = &logCustomCounter{
+			customCounters[vec.index] = &logCustomCounterImpl{
 				countMetric:     vec.countMetricVec.WithLabelValues(permKeys...),
 				lengthMetric:    vec.lengthMetricVec.WithLabelValues(permKeys...),
 				unwrittenCount:  0,
 				unwrittenLength: 0,
 			}
 		}
-		pair = logInputCounterPair{
+		pair = logKeySetCounterPair{
 			inputCounter:   NewLogInputCounter(pcounter.factory.AddOrGetPrefix("", pcounter.metricKeyNames, permKeys)),
 			customCounters: customCounters,
 		}
-		pcounter.inputCounterPairByKeys[permMergedKey] = pair
+		pcounter.keySetPairs[permMergedKey] = pair
 	}
 
 	pcounter.currentCustomCounters = pair.customCounters
@@ -137,19 +143,19 @@ func (pcounter *LogProcessCounter) SelectInputCounter(record *LogRecord) *LogInp
 }
 
 // CountStream updates counters for stream serialization
-func (pcounter *LogProcessCounter) CountStream(outputIndex int, stream LogStream) { // xx:inline
+func (pcounter *LogProcessCounterSet) CountStream(outputIndex int, stream LogStream) { // xx:inline
 	pcounter.serializedLengthTotal[outputIndex].unwrittenValue += uint64(len(stream))
 }
 
 // CountChunk updates counters for chunk generation
-func (pcounter *LogProcessCounter) CountChunk(outputIndex int, chunk *LogChunk) { // xx:inline
+func (pcounter *LogProcessCounterSet) CountChunk(outputIndex int, chunk *LogChunk) { // xx:inline
 	pcounter.chunksCountTotal[outputIndex].unwrittenValue++
 	pcounter.chunksLengthTotal[outputIndex].unwrittenValue += uint64(len(chunk.Data))
 }
 
 // UpdateMetrics writes unwritten values in the counter to underlying Prometheus counters
-func (pcounter *LogProcessCounter) UpdateMetrics() {
-	for _, pair := range pcounter.inputCounterPairByKeys {
+func (pcounter *LogProcessCounterSet) UpdateMetrics() {
+	for _, pair := range pcounter.keySetPairs {
 		pair.inputCounter.UpdateMetrics()
 		for _, counter := range pair.customCounters {
 			counter.UpdateMetrics()

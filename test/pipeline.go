@@ -15,12 +15,12 @@ import (
 type testPipeline struct {
 	deallocator       base.LogAllocator
 	fallbackTimestamp time.Time
-	inputCounter      *base.LogInputCounter
+	inputCounter      *base.LogInputCounterSet
 	inputParser       base.LogParser
 	outputNames       []string
 	outputDecoders    []base.ChunkDecoder
 	outputSavers      []chunkSaver
-	procCounter       *base.LogProcessCounter
+	procCounter       *base.LogProcessCounterSet
 	transforms        []base.LogTransformFunc
 	serializers       []base.LogSerializer
 	chunkMakers       []base.LogChunkMaker
@@ -108,7 +108,7 @@ func (p *testPipeline) process(s []byte, chunkHolder []*base.LogChunk) {
 	if record == nil {
 		return
 	}
-	icounter := p.procCounter.SelectInputCounter(record)
+	icounter := p.procCounter.SelectMetricKeySet(record)
 	if bsupport.RunTransforms(record, p.transforms) == base.DROP {
 		icounter.CountRecordDrop(record)
 		p.deallocator.Release(record)

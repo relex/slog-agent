@@ -5,11 +5,11 @@ import (
 	"github.com/relex/gotils/promexporter/promreg"
 )
 
-// LogInputCounter tracks metrics for incoming logs
+// LogInputCounterSet tracks metrics for incoming logs
 //
-// LogInputCounter must be accessed through pointer. It's not concurrently usable. Counter-vectors and counters
+// LogInputCounterSet must be accessed through pointer. It's not concurrently usable. Counter-vectors and counters
 // created here may duplicate with others, as long as the labels match.
-type LogInputCounter struct {
+type LogInputCounterSet struct {
 	logCustomCounterHost
 	passedRecordsCountTotal   valueCounterProvider
 	passedRecordsLengthTotal  valueCounterProvider
@@ -24,8 +24,8 @@ type valueCounterProvider struct {
 }
 
 // NewLogInputCounter creates a LogInputCounter
-func NewLogInputCounter(metricCreator promreg.MetricCreator) *LogInputCounter {
-	return &LogInputCounter{
+func NewLogInputCounter(metricCreator promreg.MetricCreator) *LogInputCounterSet {
+	return &LogInputCounterSet{
 		logCustomCounterHost: *newLogCustomCounterHost(metricCreator),
 		passedRecordsCountTotal: valueCounterProvider{
 			metricCreator.AddOrGetCounter("passed_records_total", "Numbers of passed log records", nil, nil), 0,
@@ -43,19 +43,19 @@ func NewLogInputCounter(metricCreator promreg.MetricCreator) *LogInputCounter {
 }
 
 // CountRecordPass updates counters for log record passing
-func (icounter *LogInputCounter) CountRecordPass(record *LogRecord) { // xx:inline
+func (icounter *LogInputCounterSet) CountRecordPass(record *LogRecord) { // xx:inline
 	icounter.passedRecordsCountTotal.unwrittenValue++
 	icounter.passedRecordsLengthTotal.unwrittenValue += uint64(record.RawLength)
 }
 
 // CountRecordDrop updates counters for log record dropping
-func (icounter *LogInputCounter) CountRecordDrop(record *LogRecord) { // xx:inline
+func (icounter *LogInputCounterSet) CountRecordDrop(record *LogRecord) { // xx:inline
 	icounter.droppedRecordsCountTotal.unwrittenValue++
 	icounter.droppedRecordsLengthTotal.unwrittenValue += uint64(record.RawLength)
 }
 
 // UpdateMetrics writes unwritten values in the counter to underlying Prometheus counters
-func (icounter *LogInputCounter) UpdateMetrics() {
+func (icounter *LogInputCounterSet) UpdateMetrics() {
 	icounter.logCustomCounterHost.UpdateMetrics()
 
 	icounter.passedRecordsCountTotal.UpdateMetric()

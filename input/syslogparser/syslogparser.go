@@ -29,7 +29,7 @@ type syslogParser struct {
 	allocator            *base.LogAllocator
 	schema               base.LogSchema
 	levelMapping         []string
-	inputCounter         *base.LogInputCounter
+	inputCounter         *base.LogInputCounterSet
 	timezoneCache        map[string]*time.Location
 	fieldFacilityLocator base.LogFieldLocator
 	fieldLevelLocator    base.LogFieldLocator
@@ -40,7 +40,7 @@ type syslogParser struct {
 
 // MustNewParser creates a new syslogParser or panic
 func MustNewParser(parentLogger logger.Logger, allocator *base.LogAllocator, schema base.LogSchema,
-	levelMapping []string, inputCounter *base.LogInputCounter,
+	levelMapping []string, inputCounter *base.LogInputCounterSet,
 ) base.LogParser {
 	parser, err := NewParser(parentLogger, allocator, schema, levelMapping, inputCounter)
 	if err != nil {
@@ -52,7 +52,7 @@ func MustNewParser(parentLogger logger.Logger, allocator *base.LogAllocator, sch
 
 // NewParser creates a new syslogParser
 func NewParser(parentLogger logger.Logger, allocator *base.LogAllocator, schema base.LogSchema,
-	levelMapping []string, inputCounter *base.LogInputCounter,
+	levelMapping []string, inputCounter *base.LogInputCounterSet,
 ) (base.LogParser, error) {
 	if len(levelMapping) == 0 {
 		levelMapping = syslogprotocol.SeverityNames
