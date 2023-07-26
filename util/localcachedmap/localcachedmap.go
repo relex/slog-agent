@@ -25,7 +25,7 @@ type GlobalCachedMap[G any, L any] struct {
 	createObject  GlobalObjectConstructor[G]    // func to create new global object, called within global mutex
 	deleteObject  GlobalObjectDestructor[G]     // func to destroy global object
 	wrapObject    LocalWrapperConstructor[G, L] // func to wrap global object in local cache
-	objectCounter *sync.WaitGroup               // global object counter, for finalization
+	objectCounter *util.TrackedWaitGroup        // global object counter, for finalization
 }
 
 // NewGlobalMap creates a globalMap
@@ -40,7 +40,7 @@ func NewGlobalMap[G any, L any](
 		createObject:  createFunc,
 		deleteObject:  deleteFunc,
 		wrapObject:    wrapFunc,
-		objectCounter: &sync.WaitGroup{},
+		objectCounter: &util.TrackedWaitGroup{},
 	}
 }
 
@@ -57,7 +57,7 @@ func (gm *GlobalCachedMap[G, L]) MakeLocalMap() *LocalCachedMap[G, L] {
 
 // PeekNumObjects returns the size of the map
 func (gm *GlobalCachedMap[G, L]) PeekNumObjects() int {
-	return util.PeekWaitGroup(gm.objectCounter)
+	return gm.objectCounter.Peek()
 }
 
 // Destroy closes all worker channels and wait for workers to finish
@@ -89,10 +89,11 @@ type LocalCachedMap[G any, L any] struct {
 	keyBuffer []byte                 // preallocated buffer to merge keys
 }
 
-//nolint:revive
 // GetOrCreate gets or creates a global object and returns the local cache of it
 //
 // The given tempKeys is assumed to be transient and will be copied if it needs to be stored in the global map
+//
+//nolint:revive
 func (lm *LocalCachedMap[G, L]) GetOrCreate(tempKeys []string, onCreating func(permKeys []string)) L {
 	tempMergedKey := lm.keyBuffer
 	for _, tkey := range tempKeys {
@@ -116,8 +117,9 @@ func (lm *LocalCachedMap[G, L]) GetOrCreate(tempKeys []string, onCreating func(p
 	return newLocalCache
 }
 
-//nolint:revive
 // Walk iterates through each of (key, value) pair
+//
+//nolint:revive
 func (lm *LocalCachedMap[G, L]) Walk(action func(key string, localCache L)) {
 	for key, localCache := range lm.localMap {
 		action(key, localCache)
