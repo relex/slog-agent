@@ -142,10 +142,7 @@ anchors: []
 func runTestEnv(t *testing.T, logReceiver receivers.Receiver, confYML string,
 	do func(bufDir string, confFile *os.File, srvAddr net.Addr)) {
 
-	bufDir, bufDirErr := os.MkdirTemp("", fmt.Sprintf("slog-agent-%s-buf-*", t.Name()))
-	assert.Nil(t, bufDirErr)
-	defer os.RemoveAll(bufDir)
-
+	bufDir := t.TempDir()
 	confFile, confFileErr := os.CreateTemp("", fmt.Sprintf("slog-agent-%s-conf-*.yml", t.Name()))
 	assert.Nil(t, confFileErr)
 	defer os.Remove(confFile.Name())

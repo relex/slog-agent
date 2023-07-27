@@ -20,10 +20,7 @@ func testMatchChunkID(chunkID string) bool {
 }
 
 func TestBufferer(t *testing.T) {
-	root, terr := os.MkdirTemp("", "example")
-	if terr != nil {
-		t.Fatal(terr)
-	}
+	root := t.TempDir()
 	defs.BufferMaxNumChunksInQueue = 100
 	defs.BufferMaxNumChunksInMemory = 5
 	mfactory := promreg.NewMetricFactory("testbuf_buffer_", nil, nil)
@@ -104,10 +101,7 @@ func TestBufferer(t *testing.T) {
 }
 
 func TestBuffererShutdown(t *testing.T) {
-	root, terr := os.MkdirTemp("", "example")
-	if terr != nil {
-		t.Fatal(terr)
-	}
+	root := t.TempDir()
 	defs.BufferMaxNumChunksInQueue = 100
 	defs.BufferMaxNumChunksInMemory = 5
 	mfactory := promreg.NewMetricFactory("testbuf_shutdown_buffer_", nil, nil)
@@ -148,10 +142,7 @@ testbuf_shutdown_buffer_persistent_chunks{storage="hybridBuffer"} 50
 }
 
 func TestBuffererSendAllAtEnd(t *testing.T) {
-	root, terr := os.MkdirTemp("", "example")
-	if terr != nil {
-		t.Fatal(terr)
-	}
+	root := t.TempDir()
 	defs.BufferMaxNumChunksInQueue = 100
 	defs.BufferMaxNumChunksInMemory = 5
 	mfactory := promreg.NewMetricFactory("testbuf_sendall_buffer_", nil, nil)
@@ -220,10 +211,7 @@ testbuf_sendall_buffer_persistent_chunks{storage="hybridBuffer"} 0
 }
 
 func TestBuffererSpaceLimit(t *testing.T) {
-	root, terr := os.MkdirTemp("", "example")
-	if terr != nil {
-		t.Fatal(terr)
-	}
+	root := t.TempDir()
 	defs.BufferMaxNumChunksInQueue = 100
 	defs.BufferMaxNumChunksInMemory = 0          // force all chunks to be persisted
 	defs.BufferShutDownTimeout = 1 * time.Second // quick shutdown in case of unread chunks

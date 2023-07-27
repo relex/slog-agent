@@ -9,10 +9,8 @@ import (
 )
 
 func TestFiles(t *testing.T) {
-	rootPath, err := os.MkdirTemp("", "slog-agent-test-util-*")
-	assert.Nil(t, err)
+	rootPath := t.TempDir()
 	t.Log("TestFiles: " + rootPath)
-	defer os.RemoveAll(rootPath)
 
 	assert.Nil(t, os.Mkdir(path.Join(rootPath, "subDir1"), 0755))
 	assert.Nil(t, os.Mkdir(path.Join(rootPath, "subDir2"), 0755))
