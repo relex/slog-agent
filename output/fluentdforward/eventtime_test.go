@@ -24,7 +24,7 @@ func TestEncodeEventTime(t *testing.T) {
 		end = EncodeEventTime(buf, start, timeValue)
 		assert.Equal(t, 10, end-start, msg, timeValue)
 		tm, derr := decoder.DecodeInterface()
-		assert.Nil(t, derr, msg, timeValue)
+		assert.NoError(t, derr, msg, timeValue)
 		assert.Equal(t, timeValue.UnixNano(), tm.(*forwardprotocol.EventTime).Time.UnixNano(), msg, timeValue)
 		start = end
 	}

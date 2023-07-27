@@ -14,7 +14,7 @@ func TestEncodeFloat64(t *testing.T) {
 		buf := make([]byte, 100)
 		off := EncodeFloat64(buf, 0, floatValue)
 		dlen, derr := msgpack.NewDecoder(bytes.NewBuffer(buf[:off])).DecodeFloat64()
-		assert.Nil(t, derr, "test encoding float64 %f", floatValue)
+		assert.NoError(t, derr, "test encoding float64 %f", floatValue)
 		assert.Equal(t, floatValue, dlen, "test encoding float64 %f", floatValue)
 	}
 }
@@ -24,7 +24,7 @@ func TestEncodeInt32(t *testing.T) {
 		buf := make([]byte, 100)
 		off := EncodeInt32(buf, 0, intValue)
 		dlen, derr := msgpack.NewDecoder(bytes.NewBuffer(buf[:off])).DecodeInt32()
-		assert.Nil(t, derr, "test encoding int32 %f", intValue)
+		assert.NoError(t, derr, "test encoding int32 %f", intValue)
 		assert.Equal(t, intValue, dlen, "test encoding int32 %f", intValue)
 	}
 }

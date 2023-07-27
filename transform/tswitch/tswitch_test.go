@@ -18,7 +18,7 @@ func TestSwitchConfig(t *testing.T) {
 	schema := base.MustNewLogSchema([]string{"type", "cost"})
 	{
 		c := &Config{}
-		assert.Nil(t, util.UnmarshalYamlString(`
+		assert.NoError(t, util.UnmarshalYamlString(`
 type: switch
 cases:
   - match:
@@ -34,7 +34,7 @@ cases:
         fields:
           cost: 20
 `, c))
-		assert.Nil(t, c.VerifyConfig(schema))
+		assert.NoError(t, c.VerifyConfig(schema))
 		tf := c.NewTransform(schema, logger.Root(), nil)
 		{
 			record := schema.NewTestRecord1(base.LogFields{"Fruit", ""})

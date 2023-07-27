@@ -13,7 +13,7 @@ func TestInlineRewrite(t *testing.T) {
 	schema := base.MustNewLogSchema([]string{"id", "msg"})
 	{
 		c := &Config{}
-		assert.Nil(t, util.UnmarshalYamlString(`
+		assert.NoError(t, util.UnmarshalYamlString(`
 type: inline
 field: id
 `, c))

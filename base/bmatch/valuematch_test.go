@@ -74,9 +74,7 @@ func TestValueMatchRegex(t *testing.T) {
 func TestValueMatchRegexInvalid(t *testing.T) {
 	d := &valueMatchTestData{}
 	e := util.UnmarshalYamlString(`value: !!regex ^Hello[.*World`, d)
-	if assert.NotNil(t, e) {
-		assert.Contains(t, e.Error(), "yaml line 1:8: Failed value-match of tag !!regex: error parsing regexp: ")
-	}
+	assert.ErrorContains(t, e, "yaml line 1:8: Failed value-match of tag !!regex: error parsing regexp: ")
 }
 
 func TestValueMatchLengthGreaterThan(t *testing.T) {
@@ -96,7 +94,7 @@ func TestValueMatchLengthLessThan(t *testing.T) {
 func tryBuildMatch(t *testing.T, matcherYAML string) valueMatcher {
 	d := &valueMatchTestData{}
 
-	if assert.Nil(t, util.UnmarshalYamlString(matcherYAML, d)) {
+	if assert.NoError(t, util.UnmarshalYamlString(matcherYAML, d)) {
 		return d.Value.match
 	}
 	return nil

@@ -24,22 +24,22 @@ func TestStringTemplate(t *testing.T) {
 			return record[index]
 		}, nil
 	}
-	if tmpl, err := NewExpander("mytag-$appname:${msgid}-route0", resolveVariable); assert.Nil(t, err) {
+	if tmpl, err := NewExpander("mytag-$appname:${msgid}-route0", resolveVariable); assert.NoError(t, err) {
 		result := tmpl.Run([]string{"163", "TestParser", "10"})
 		assert.Equal(t, "mytag-TestParser:10-route0", result)
 	}
-	if tmpl, err := NewExpander("mytag-${appname[1:-6]}-", resolveVariable); assert.Nil(t, err) {
+	if tmpl, err := NewExpander("mytag-${appname[1:-6]}-", resolveVariable); assert.NoError(t, err) {
 		result := tmpl.Run([]string{"4", "TestParser", ""})
 		assert.Equal(t, "mytag-est-", result)
 	}
-	if tmpl, err := NewExpander("mytag-${appname[:3]}-", resolveVariable); assert.Nil(t, err) {
+	if tmpl, err := NewExpander("mytag-${appname[:3]}-", resolveVariable); assert.NoError(t, err) {
 		result := tmpl.Run([]string{"", "ID", ""})
 		assert.Equal(t, "mytag-ID-", result)
 	}
 }
 
 func TestStringTemplate1(t *testing.T) {
-	if tmpl, err := NewExpander("nothing", nil); assert.Nil(t, err) {
+	if tmpl, err := NewExpander("nothing", nil); assert.NoError(t, err) {
 		assert.Equal(t, 1, len(tmpl.partProviders))
 		result := tmpl.Run([]string(nil))
 		assert.Equal(t, "nothing", result)
@@ -58,7 +58,7 @@ func TestStringTemplate1(t *testing.T) {
 			return record[index]
 		}, nil
 	}
-	if tmpl, err := NewExpander("${key1[-2:]}", resolveVariable); assert.Nil(t, err) {
+	if tmpl, err := NewExpander("${key1[-2:]}", resolveVariable); assert.NoError(t, err) {
 		assert.Equal(t, 1, len(tmpl.partProviders))
 		result := tmpl.Run([]string{"10", "foo"})
 		assert.Equal(t, "oo", result)

@@ -15,7 +15,7 @@ func TestExtractHeadTransform(t *testing.T) {
 	iID := 1
 	{
 		c := &Config{}
-		if !assert.Nil(t, util.UnmarshalYamlString(`
+		if !assert.NoError(t, util.UnmarshalYamlString(`
 type: extractHead
 key: filename
 pattern: '[a-z0-9].'
@@ -24,7 +24,7 @@ destKey: id
 `, c)) {
 			return
 		}
-		if !assert.Nil(t, c.VerifyConfig(schema)) {
+		if !assert.NoError(t, c.VerifyConfig(schema)) {
 			return
 		}
 		tf := c.NewTransform(schema, logger.Root(), nil)
@@ -51,7 +51,7 @@ func TestExtractTailTransform(t *testing.T) {
 	iID := 1
 	{
 		c := &Config{}
-		assert.Nil(t, util.UnmarshalYamlString(`
+		assert.NoError(t, util.UnmarshalYamlString(`
 type: extractTail
 key: filename
 pattern: '.[0-9]$'

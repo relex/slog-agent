@@ -9,19 +9,19 @@ import (
 
 func TestNet(t *testing.T) {
 	lsnr, lerr := net.Listen("tcp", "localhost:0")
-	assert.Nil(t, lerr)
+	assert.NoError(t, lerr)
 
 	t.Log("listening " + lsnr.Addr().String())
 
 	go func() {
 		cconn, cerr := net.Dial("tcp", lsnr.Addr().String())
-		assert.Nil(t, cerr)
+		assert.NoError(t, cerr)
 
 		cconn.Close()
 	}()
 
 	sconn, serr := lsnr.Accept()
-	assert.Nil(t, serr)
+	assert.NoError(t, serr)
 
 	t.Run("get FD", func(tt *testing.T) {
 		fd := GetFDFromTCPConnOrPanic(sconn.(*net.TCPConn))
@@ -33,7 +33,7 @@ func TestNet(t *testing.T) {
 		maxSz := 1048576 * 16
 		minSz := 1048576
 		sz, err := TrySetTCPReadBuffer(sconn.(*net.TCPConn), maxSz, minSz)
-		assert.Nil(t, err)
+		assert.NoError(t, err)
 		assert.GreaterOrEqual(t, sz, minSz)
 		assert.LessOrEqual(t, sz, maxSz)
 	})
@@ -41,8 +41,9 @@ func TestNet(t *testing.T) {
 	t.Run("check error", func(tt *testing.T) {
 		sconn.Close()
 		_, err := sconn.Write([]byte("Hi"))
-		assert.NotNil(t, err)
-		assert.True(t, IsNetworkError(err))
-		assert.True(t, IsNetworkClosed(err))
+		if assert.Error(t, err) {
+			assert.True(t, IsNetworkError(err))
+			assert.True(t, IsNetworkClosed(err))
+		}
 	})
 }

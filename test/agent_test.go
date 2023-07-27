@@ -19,7 +19,7 @@ func TestAgent(t *testing.T) {
 
 	// launch agent
 	loader, confErr := run.NewLoaderFromConfigFile(testdata.GetConfigPath(), "testagent_")
-	assert.Nil(t, confErr)
+	assert.NoError(t, confErr)
 	loader.ConfigStats.Log(logger.WithField("test", t.Name()))
 
 	collectedMultiOutputs, outputOverrideCreator := prepareInMemoryConsumerOverride(t)
@@ -74,13 +74,13 @@ func TestAgent(t *testing.T) {
 		})
 		t.Run("check metrics", func(tt *testing.T) {
 			expectedMetrics, err := os.ReadFile("../testdata/development/all-agent.prom")
-			if assert.Nil(tt, err) {
+			if assert.NoError(tt, err) {
 				assert.Equal(tt, string(expectedMetrics), promext.DumpMetricsFrom("", true, true, agt.GetMetricQuerier()))
 			}
 		})
 	} else {
 		// output JSONs are to be generated from pipeline test, not here
-		assert.Nil(t, os.WriteFile("../testdata/development/all-agent.prom", []byte(promext.DumpMetricsFrom("", true, true, agt.GetMetricQuerier())), 0644))
+		assert.NoError(t, os.WriteFile("../testdata/development/all-agent.prom", []byte(promext.DumpMetricsFrom("", true, true, agt.GetMetricQuerier())), 0644))
 	}
 }
 
@@ -97,7 +97,7 @@ func getInputDataAndExpectedOutputsByTag(t *testing.T) (map[string][]byte, expec
 		title := testdata.GetInputTitle(t, inPath)
 		{
 			inputData, ierr := os.ReadFile(inPath)
-			assert.Nil(t, ierr)
+			assert.NoError(t, ierr)
 			inputDataByTag[title] = inputData
 		}
 		{
@@ -109,7 +109,7 @@ func getInputDataAndExpectedOutputsByTag(t *testing.T) (map[string][]byte, expec
 					expectedMultiOutputResults[outputName] = expectedByTag
 				}
 				expectedResult, oerr := os.ReadFile(outputPath)
-				assert.Nil(t, oerr)
+				assert.NoError(t, oerr)
 				expectedByTag[title] = string(expectedResult)
 			}
 		}

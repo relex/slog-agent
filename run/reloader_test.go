@@ -36,7 +36,7 @@ func TestReloader(t *testing.T) {
 
 	runTestEnv(t, logRecv, sampleConf, func(bufDir string, confFile *os.File, srvAddr net.Addr) {
 		ld, confErr := NewReloaderFromConfigFile(confFile.Name(), t.Name()+"_")
-		assert.Nil(t, confErr)
+		assert.NoError(t, confErr)
 		assert.Empty(t, ld.ConfigStats.UnusedFields)
 
 		orc := ld.StartOrchestrator(logger.Root())
@@ -44,7 +44,7 @@ func TestReloader(t *testing.T) {
 		inAddrs, shutdownIn := ld.LaunchInputs(orc)
 		assert.Equal(t, 1, len(inAddrs))
 		conn, connErr := net.Dial("tcp", inAddrs[0])
-		assert.Nil(t, connErr)
+		assert.NoError(t, connErr)
 
 		oldMetricGatherer := ld.Loader.GetMetricGatherer()
 		newMetricGatherer := ld.GetMetricGatherer()
@@ -61,7 +61,7 @@ func TestReloader(t *testing.T) {
 				})
 			})
 			t.Run("reload normal", func(t *testing.T) {
-				assert.Nil(t, os.WriteFile(confFile.Name(), []byte(fmt.Sprintf(sampleYML2, bufDir, srvAddr.String())), 0644))
+				assert.NoError(t, os.WriteFile(confFile.Name(), []byte(fmt.Sprintf(sampleYML2, bufDir, srvAddr.String())), 0644))
 				orc.(*ReloadableOrchestrator).reload()
 			})
 		}()
@@ -76,9 +76,9 @@ func TestReloader(t *testing.T) {
 			numInput++
 			_, sendErr := conn.Write([]byte(fmt.Sprintf(`<167>1 2020-07-20T03:48:20.154+03:00 host1 appServ/foo.com 51629 cron.log - Test me@gmail.com, %d
 `, numInput)))
-			assert.Nil(t, sendErr)
+			assert.NoError(t, sendErr)
 		}
-		assert.Nil(t, conn.Close())
+		assert.NoError(t, conn.Close())
 
 		inCountCh <- numInput
 		outStat := <-outStatCh
@@ -97,7 +97,7 @@ func TestReloader(t *testing.T) {
 		t.Run("check metrics before reloading", func(tt *testing.T) {
 			metricFamilies, promErr := oldMetricGatherer.Gather()
 
-			assert.Nil(tt, promErr)
+			assert.NoError(tt, promErr)
 			// input metrics are carried to new registry
 			assert.Equal(tt, float64(outStat.NumOld), getMetricValue(t, metricFamilies, "process_passed_records_total", nil))
 		})
@@ -105,7 +105,7 @@ func TestReloader(t *testing.T) {
 		t.Run("check metrics after reloading", func(tt *testing.T) {
 			metricFamilies, promErr := newMetricGatherer.Gather()
 
-			assert.Nil(tt, promErr)
+			assert.NoError(tt, promErr)
 			assert.Equal(tt, float64(numInput), getMetricValue(t, metricFamilies, "input_passed_records_total", map[string]string{"protocol": "syslog"}))
 			assert.Equal(tt, float64(outStat.NumNew), getMetricValue(t, metricFamilies, "process_passed_records_total", nil))
 
@@ -125,7 +125,7 @@ slogagent_reloads_total{status="success"} 1
 
 func testReloadInvalidConfig(t *testing.T, orc *ReloadableOrchestrator, writeConf func(string) error) {
 	{
-		assert.Nil(t, writeConf(assembleConfig(
+		assert.NoError(t, writeConf(assembleConfig(
 			strings.ReplaceAll(sampleSchemaConf, "maxFields: 12", "maxFields: 13"),
 			sampleInputConf,
 			sampleOrchestrationConf,
@@ -137,7 +137,7 @@ func testReloadInvalidConfig(t *testing.T, orc *ReloadableOrchestrator, writeCon
 		assert.EqualError(t, err, "schema/maxFields must not change: old=12, new=13")
 	}
 	{
-		assert.Nil(t, writeConf(assembleConfig(
+		assert.NoError(t, writeConf(assembleConfig(
 			strings.ReplaceAll(sampleSchemaConf, "facility, level, time,", "time, facility, level,"),
 			sampleInputConf,
 			sampleOrchestrationConf,
@@ -149,7 +149,7 @@ func testReloadInvalidConfig(t *testing.T, orc *ReloadableOrchestrator, writeCon
 		assert.EqualError(t, err, "schema/fields: required field \"facility\" has been moved, from=1th to=2th")
 	}
 	{
-		assert.Nil(t, writeConf(assembleConfig(
+		assert.NoError(t, writeConf(assembleConfig(
 			strings.ReplaceAll(sampleSchemaConf, ", extradata", ""),
 			sampleInputConf,
 			sampleOrchestrationConf,
@@ -161,7 +161,7 @@ func testReloadInvalidConfig(t *testing.T, orc *ReloadableOrchestrator, writeCon
 		assert.EqualError(t, err, "inputs[0] yaml line 9:5: incompatible with schema: field 'extradata' is not defined in schema")
 	}
 	{
-		assert.Nil(t, writeConf(assembleConfig(
+		assert.NoError(t, writeConf(assembleConfig(
 			sampleSchemaConf,
 			sampleInputConf+`
       - type: delFields
@@ -173,11 +173,10 @@ func testReloadInvalidConfig(t *testing.T, orc *ReloadableOrchestrator, writeCon
 		)))
 		f, err := orc.initiateReload()
 		assert.Nil(t, f)
-		assert.NotNil(t, err)
-		assert.Contains(t, err.Error(), "inputs must not change: old=- type: syslog")
+		assert.ErrorContains(t, err, "inputs must not change: old=- type: syslog")
 	}
 	{
-		assert.Nil(t, writeConf(assembleConfig(
+		assert.NoError(t, writeConf(assembleConfig(
 			sampleSchemaConf,
 			sampleInputConf,
 			strings.ReplaceAll(sampleOrchestrationConf, "keys: [app]", "keys: [app, source]"),

@@ -15,7 +15,7 @@ type LogMatcherTestData struct {
 func TestLogMatch(t *testing.T) {
 	schema := base.MustNewLogSchema([]string{"facility", "level", "log", "task", "source"})
 	d := &LogMatcherTestData{}
-	if !assert.Nil(t, util.UnmarshalYamlString(`
+	if !assert.NoError(t, util.UnmarshalYamlString(`
 match:
   facility: !!regex (local[0-9]|syslog)
   level: !!str-not DEBUG

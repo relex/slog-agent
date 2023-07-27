@@ -100,7 +100,7 @@ func TestFluentforwardOutput_Flushes_OnMaxRecordsReached(t *testing.T) {
 			assert.NoError(t, err)
 
 			reader, err := gzip.NewReader(bytes.NewReader(outputMap[encoder.msgKey]))
-			assert.Nil(t, err)
+			assert.NoError(t, err)
 			unzippedChunkData, err := io.ReadAll(reader)
 			assert.NoError(t, err)
 			assert.Equal(t, len(payload)*localChunkMaxRecords, len(unzippedChunkData))
@@ -126,7 +126,7 @@ func TestFluentforwardOutput_Flushes_OnMaxBytesReached(t *testing.T) {
 			assert.True(t, strings.HasSuffix(chunk.ID, testChunkIDSuffix))
 
 			reader, err := gzip.NewReader(bytes.NewReader(chunk.Data))
-			assert.Nil(t, err)
+			assert.NoError(t, err)
 			unzippedChunkData, err := io.ReadAll(reader)
 			assert.NoError(t, err)
 			assert.Equal(t, len(payload)*iterationsTillOverflow, len(unzippedChunkData))

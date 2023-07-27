@@ -23,7 +23,7 @@ func TestIfTransform(t *testing.T) {
 	iFruit := 2
 	{
 		c := &Config{}
-		assert.Nil(t, util.UnmarshalYamlString(`
+		assert.NoError(t, util.UnmarshalYamlString(`
 type: if
 match:
   type: Fruit

@@ -13,7 +13,7 @@ func TestTruncateTransform(t *testing.T) {
 	schema := base.MustNewLogSchema([]string{"message"})
 	{
 		c := &Config{}
-		if !assert.Nil(t, util.UnmarshalYamlString(`
+		if !assert.NoError(t, util.UnmarshalYamlString(`
 type: truncate
 key: message
 maxLen: 5
@@ -21,7 +21,7 @@ suffix: ...
 `, c)) {
 			return
 		}
-		if !assert.Nil(t, c.VerifyConfig(schema)) {
+		if !assert.NoError(t, c.VerifyConfig(schema)) {
 			return
 		}
 		tf := c.NewTransform(schema, logger.Root(), nil)

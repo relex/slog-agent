@@ -68,7 +68,7 @@ func TestDatadogOutput_Flushes_OnMaxRecordsReached(t *testing.T) {
 			assert.True(t, strings.HasSuffix(chunk.ID, testChunkIDSuffix))
 
 			reader, err := gzip.NewReader(bytes.NewReader(chunk.Data))
-			assert.Nil(t, err)
+			assert.NoError(t, err)
 			unzippedChunkData, err := io.ReadAll(reader)
 			assert.NoError(t, err)
 			assert.Equal(t, countExpectedPayloadLength(string(payload), localChunkMaxRecords), len(unzippedChunkData))
@@ -93,7 +93,7 @@ func TestDatadogOutput_Flushes_OnMaxBytesReached(t *testing.T) {
 			assert.NotNil(t, chunk)
 			assert.True(t, strings.HasSuffix(chunk.ID, testChunkIDSuffix))
 			reader, err := gzip.NewReader(bytes.NewReader(chunk.Data))
-			assert.Nil(t, err)
+			assert.NoError(t, err)
 			unzippedChunkData, err := io.ReadAll(reader)
 			assert.NoError(t, err)
 			assert.Equal(t, countExpectedPayloadLength(string(payload), iterationsTillOverflow), len(unzippedChunkData))

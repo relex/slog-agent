@@ -30,14 +30,14 @@ func TestYAMLMarshal(t *testing.T) {
 		Name:  "succ",
 		Child: yamlChildType("here"),
 	})
-	assert.Nil(t, err)
+	assert.NoError(t, err)
 	assert.Equal(t, "name: succ\nchild: here\n", y)
 }
 
 func TestYAMLUnmarshal(t *testing.T) {
 	var yp yamlParentType
 
-	assert.ErrorContains(t, UnmarshalYamlString(`
+	assert.EqualError(t, UnmarshalYamlString(`
 name: hi
 child: fail
 `, &yp), "yaml line 3:8: Fail")

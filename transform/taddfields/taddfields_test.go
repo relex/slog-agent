@@ -16,7 +16,7 @@ func TestAddFieldsTransform(t *testing.T) {
 	iLog := 5
 	{
 		c := &Config{}
-		assert.Nil(t, util.UnmarshalYamlString(`
+		assert.NoError(t, util.UnmarshalYamlString(`
 type: addFields
 fields:
   app: $ident($pid)
@@ -33,7 +33,7 @@ fields:
 	}
 	{
 		c := &Config{}
-		assert.Nil(t, util.UnmarshalYamlString(`
+		assert.NoError(t, util.UnmarshalYamlString(`
 type: addFields
 fields:
   app: $ident($pid)

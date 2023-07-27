@@ -13,7 +13,7 @@ import (
 func TestRedactEmailTransform(t *testing.T) {
 	schema := base.MustNewLogSchema([]string{"log"})
 	c := &Config{}
-	assert.Nil(t, util.UnmarshalYamlString(`
+	assert.NoError(t, util.UnmarshalYamlString(`
 type: redactEmail
 key: log
 metricLabel: email
@@ -30,6 +30,6 @@ metricLabel: email
 func TestRedactEmailTransformVerify(t *testing.T) {
 	schema := base.MustNewLogSchema([]string{"log"})
 	c := &Config{}
-	assert.Nil(t, util.UnmarshalYamlString("type: redactEmail\nkey: ''", c))
+	assert.NoError(t, util.UnmarshalYamlString("type: redactEmail\nkey: ''", c))
 	assert.EqualError(t, c.VerifyConfig(schema), ".key is unspecified")
 }

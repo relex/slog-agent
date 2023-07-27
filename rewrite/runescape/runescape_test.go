@@ -11,7 +11,7 @@ import (
 func TestUnescapeRewrite(t *testing.T) {
 	{
 		c := &Config{}
-		assert.Nil(t, util.UnmarshalYamlString(`
+		assert.NoError(t, util.UnmarshalYamlString(`
 type: unescape
 `, c))
 		rw := c.NewRewriter(base.LogSchema{}, nil)

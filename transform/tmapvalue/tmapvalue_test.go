@@ -12,7 +12,7 @@ import (
 func TestMapValueTransform(t *testing.T) {
 	schema := base.MustNewLogSchema([]string{"severity"})
 	c := &Config{}
-	assert.Nil(t, util.UnmarshalYamlString(`
+	assert.NoError(t, util.UnmarshalYamlString(`
 type: mapValue
 key: severity
 mapping:

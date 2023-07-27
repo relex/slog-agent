@@ -13,7 +13,7 @@ import (
 func TestDropTransform(t *testing.T) {
 	schema := base.MustNewLogSchema([]string{"name", "alt"})
 	c := &Config{}
-	assert.Nil(t, util.UnmarshalYamlString(`
+	assert.NoError(t, util.UnmarshalYamlString(`
 type: drop
 match:
   name: Foo
@@ -50,7 +50,7 @@ metricLabel: test
 func TestDropTransformWithPercentage(t *testing.T) {
 	schema := base.MustNewLogSchema([]string{"msg"})
 	c := &Config{}
-	assert.Nil(t, util.UnmarshalYamlString(`
+	assert.NoError(t, util.UnmarshalYamlString(`
 type: drop
 match:
   msg: !!str-start Hi

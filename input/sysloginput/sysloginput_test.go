@@ -30,7 +30,7 @@ func TestSyslogTCPInputConfig(t *testing.T) {
 	selLog := schema.MustCreateFieldLocator("log")
 
 	config := &Config{}
-	if !assert.Nil(t, util.UnmarshalYamlString(`
+	if !assert.NoError(t, util.UnmarshalYamlString(`
 type: syslog
 address: localhost:0
 levelMapping: [OFF, FATAL, CRIT, ERROR, WARN, NOTICE, INFO, DEBUG]
@@ -47,20 +47,20 @@ extractions:
 
 	// create and launch input (the server)
 	input, inputErr := config.NewInput(logger.Root(), allocator, schema, logAggregator, mfactory, stopInput)
-	if !assert.Nil(t, inputErr) {
+	if !assert.NoError(t, inputErr) {
 		return
 	}
 	input.Start()
 
 	// create client connection to send test logs
 	conn, cerr := net.Dial("tcp", input.Address())
-	assert.Nil(t, cerr)
+	assert.NoError(t, cerr)
 	_, cerr = conn.Write([]byte(testMalformedLogLine)) // has to be first otherwise it'd be treated as multi-line content
-	assert.Nil(t, cerr)
+	assert.NoError(t, cerr)
 	_, cerr = conn.Write([]byte(testCorrectLogLine))
-	assert.Nil(t, cerr)
+	assert.NoError(t, cerr)
 	_, cerr = conn.Write([]byte(testOversizedLogLine))
-	assert.Nil(t, cerr)
+	assert.NoError(t, cerr)
 
 	// check resulting logs
 	{
@@ -73,7 +73,7 @@ extractions:
 
 	stopInput.Signal()
 	assert.True(t, input.Stopped().Wait(defs.TestReadTimeout))
-	assert.Nil(t, conn.Close())
+	assert.NoError(t, conn.Close())
 
 	assert.Equal(t, `test_input_dropped_record_bytes_total{protocol="syslog"} 11
 test_input_dropped_records_total{protocol="syslog"} 1
