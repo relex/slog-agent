@@ -1,8 +1,6 @@
 package hybridbuffer
 
 import (
-	"sync"
-
 	"github.com/relex/gotils/channels"
 	"github.com/relex/gotils/logger"
 	"github.com/relex/slog-agent/base"
@@ -15,7 +13,7 @@ import (
 type outputFeeder struct {
 	logger          logger.Logger
 	chunkMan        chunkManager
-	consumerCounter *sync.WaitGroup
+	consumerCounter *util.TrackedWaitGroup
 	inputChannel    <-chan base.LogChunk // internal; LogChunk.Data can be nil if unloaded (saved on disk)
 	inputClosed     channels.Awaitable   // internal; to abort ongoing input processing
 	metrics         bufferMetrics
@@ -31,7 +29,7 @@ func newOutputFeeder(parentLogger logger.Logger, chunkMan chunkManager,
 	return outputFeeder{
 		logger:          flogger,
 		chunkMan:        chunkMan,
-		consumerCounter: &sync.WaitGroup{},
+		consumerCounter: &util.TrackedWaitGroup{},
 		inputChannel:    inputChannel,
 		inputClosed:     inputClosed,
 		metrics:         metrics,
@@ -93,7 +91,7 @@ func (feeder *outputFeeder) Run() {
 	feeder.saveEverything(lastInputChunk)
 
 	// wait for consumers here because the callbacks depend on chunkMan/dir
-	feeder.logger.Infof("waiting for consumers: count=%d", util.PeekWaitGroup(feeder.consumerCounter))
+	feeder.logger.Infof("waiting for consumers: count=%d", feeder.consumerCounter.Peek())
 	feeder.consumerCounter.Wait()
 	feeder.chunkMan.Close()
 	feeder.stopped.Signal()

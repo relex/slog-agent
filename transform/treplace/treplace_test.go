@@ -13,7 +13,7 @@ func TestReplaceTransform(t *testing.T) {
 	schema := base.MustNewLogSchema([]string{"log"})
 	{
 		c := &Config{}
-		assert.Nil(t, util.UnmarshalYamlString(`
+		assert.NoError(t, util.UnmarshalYamlString(`
 type: replace
 key: log
 pattern: '([Ee]-?mail[:=]*) *"?[\w.-]+@[\w.-]+"?'

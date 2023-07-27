@@ -20,10 +20,7 @@ func testMatchChunkID(chunkID string) bool {
 }
 
 func TestBufferer(t *testing.T) {
-	root, terr := os.MkdirTemp("", "example")
-	if terr != nil {
-		t.Fatal(terr)
-	}
+	root := t.TempDir()
 	defs.BufferMaxNumChunksInQueue = 100
 	defs.BufferMaxNumChunksInMemory = 5
 	mfactory := promreg.NewMetricFactory("testbuf_buffer_", nil, nil)
@@ -67,7 +64,7 @@ func TestBufferer(t *testing.T) {
 			}
 			if savedStart {
 				_, err := os.Stat(dir + "/" + c.ID)
-				assert.Nil(t, err, i)
+				assert.NoError(t, err, i)
 			}
 			consumerArgs.OnChunkConsumed(c) // remove files if saved
 		}
@@ -82,8 +79,8 @@ func TestBufferer(t *testing.T) {
 		for i := 0; i < 5; i++ {
 			fn := fmt.Sprintf("%d", i)
 			_, err := os.Stat(dir + "/" + fn)
-			assert.Nil(t, err, i)
-			assert.Nil(t, os.Remove(dir+"/"+fn))
+			assert.NoError(t, err, i)
+			assert.NoError(t, os.Remove(dir+"/"+fn))
 		}
 	})
 	t.Run("check consumed chunks", func(tt *testing.T) {
@@ -97,17 +94,14 @@ func TestBufferer(t *testing.T) {
 		for i := 20; i < 50; i++ {
 			fn := fmt.Sprintf("%d", i)
 			_, err := os.Stat(dir + "/" + fn)
-			assert.Nil(t, err, i)
-			assert.Nil(t, os.Remove(dir+"/"+fn))
+			assert.NoError(t, err, i)
+			assert.NoError(t, os.Remove(dir+"/"+fn))
 		}
 	})
 }
 
 func TestBuffererShutdown(t *testing.T) {
-	root, terr := os.MkdirTemp("", "example")
-	if terr != nil {
-		t.Fatal(terr)
-	}
+	root := t.TempDir()
 	defs.BufferMaxNumChunksInQueue = 100
 	defs.BufferMaxNumChunksInMemory = 5
 	mfactory := promreg.NewMetricFactory("testbuf_shutdown_buffer_", nil, nil)
@@ -126,8 +120,8 @@ func TestBuffererShutdown(t *testing.T) {
 	for i := 0; i < 50; i++ {
 		fn := fmt.Sprintf("%d", i)
 		_, err := os.Stat(dir + "/" + fn)
-		assert.Nil(t, err, i)
-		assert.Nil(t, os.Remove(dir+"/"+fn))
+		assert.NoError(t, err, i)
+		assert.NoError(t, os.Remove(dir+"/"+fn))
 	}
 	assert.Zero(t, len(buf.inputChannel))
 	assert.Zero(t, len(buf.feeder.outputChannel))
@@ -148,10 +142,7 @@ testbuf_shutdown_buffer_persistent_chunks{storage="hybridBuffer"} 50
 }
 
 func TestBuffererSendAllAtEnd(t *testing.T) {
-	root, terr := os.MkdirTemp("", "example")
-	if terr != nil {
-		t.Fatal(terr)
-	}
+	root := t.TempDir()
 	defs.BufferMaxNumChunksInQueue = 100
 	defs.BufferMaxNumChunksInMemory = 5
 	mfactory := promreg.NewMetricFactory("testbuf_sendall_buffer_", nil, nil)
@@ -182,14 +173,14 @@ func TestBuffererSendAllAtEnd(t *testing.T) {
 			assert.Equal(t, fmt.Sprintf("content-%d", i), string(c.Data), i)
 			assert.False(t, c.Saved, i)
 			_, err := os.Stat(dir + "/" + c.ID)
-			assert.NotNil(t, err, i)
+			assert.Error(t, err, i)
 		}
 	})
 	go func() {
 		buf.Destroy()
 		t.Run("check shutdown", func(tt *testing.T) {
 			files, err := os.ReadDir(dir)
-			assert.Nil(t, err)
+			assert.NoError(t, err)
 			assert.Zero(t, len(files))
 		})
 	}()
@@ -220,10 +211,7 @@ testbuf_sendall_buffer_persistent_chunks{storage="hybridBuffer"} 0
 }
 
 func TestBuffererSpaceLimit(t *testing.T) {
-	root, terr := os.MkdirTemp("", "example")
-	if terr != nil {
-		t.Fatal(terr)
-	}
+	root := t.TempDir()
 	defs.BufferMaxNumChunksInQueue = 100
 	defs.BufferMaxNumChunksInMemory = 0          // force all chunks to be persisted
 	defs.BufferShutDownTimeout = 1 * time.Second // quick shutdown in case of unread chunks
@@ -250,7 +238,7 @@ func TestBuffererSpaceLimit(t *testing.T) {
 			assert.Equal(t, fmt.Sprintf("%010d", i), string(c.Data), i)
 			if assert.True(t, c.Saved, i) {
 				_, err := os.Stat(dir + "/" + c.ID)
-				assert.Nil(t, err, i)
+				assert.NoError(t, err, i)
 			}
 			consumerArgs.OnChunkConsumed(c) // remove files if saved
 		}

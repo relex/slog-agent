@@ -13,7 +13,7 @@ func TestDelFieldsTransform(t *testing.T) {
 	schema := base.MustNewLogSchema([]string{"a", "b", "c"})
 	{
 		c := &Config{}
-		assert.Nil(t, util.UnmarshalYamlString(`
+		assert.NoError(t, util.UnmarshalYamlString(`
 type: delFields
 keys: [a, b]
 `, c))

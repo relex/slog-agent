@@ -21,22 +21,22 @@ func TestTCPLineListener(t *testing.T) {
 	stop := channels.NewSignalAwaitable()
 	recv, out := btest.NewLogMessageAggregator(rlogger)
 	lsnr, addr, err := NewTCPLineListener(rlogger, addrParam, testLine, recv, stop)
-	assert.Nil(t, err)
+	assert.NoError(t, err)
 	assert.NotEqual(t, addrParam, addr)
 	lsnr.Start()
 	conn, err := net.Dial("tcp", addr)
-	if !assert.Nil(t, err) {
-		t.Error(err)
+	if !assert.NoError(t, err) {
+		return
 	}
 	_, err = conn.Write([]byte(line1 + "\n"))
-	assert.Nil(t, err)
+	assert.NoError(t, err)
 	_, err = conn.Write([]byte(line2 + "\n"))
-	assert.Nil(t, err)
+	assert.NoError(t, err)
 	assert.Equal(t, line1, readCh(out))
 	assert.Equal(t, line2, readCh(out))
 	_, err = conn.Write([]byte(line3)) // no newline end - close should force flushing
-	assert.Nil(t, err)
-	assert.Nil(t, conn.Close())
+	assert.NoError(t, err)
+	assert.NoError(t, conn.Close())
 	assert.Equal(t, line3, readCh(out))
 	stop.Signal()
 	assert.True(t, lsnr.Stopped().Wait(defs.TestReadTimeout))
@@ -52,14 +52,14 @@ func TestTCPLineListenerEnd(t *testing.T) {
 	lsnr.Start()
 	conn, _ := net.Dial("tcp", addr)
 	_, err := conn.Write([]byte(line1 + "\n"))
-	assert.Nil(t, err)
+	assert.NoError(t, err)
 	assert.Equal(t, line1, readCh(out))
 	_, err = conn.Write([]byte(line2)) // no newline end - close should force flushing
-	assert.Nil(t, err)
+	assert.NoError(t, err)
 	time.Sleep(500 * time.Millisecond)
 	stop.Signal()
 	assert.True(t, lsnr.Stopped().Wait(defs.TestReadTimeout))
-	assert.Nil(t, conn.Close())
+	assert.NoError(t, conn.Close())
 	assert.Equal(t, line2, readCh(out))
 }
 
@@ -74,8 +74,8 @@ func TestTCPLineListenerMultiRead(t *testing.T) {
 	lsnr.Start()
 	conn, _ := net.Dial("tcp", addr)
 	_, err := conn.Write([]byte(line)) // no newline end - close should force flushing
-	assert.Nil(t, err)
-	assert.Nil(t, conn.Close())
+	assert.NoError(t, err)
+	assert.NoError(t, conn.Close())
 	assert.Equal(t, line, readCh(out))
 	stop.Signal()
 	assert.True(t, lsnr.Stopped().Wait(defs.TestReadTimeout))

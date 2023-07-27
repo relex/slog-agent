@@ -26,9 +26,9 @@ func TestParseRFC3339Timestamp(t *testing.T) {
 	timezoneCache := make(map[string]*time.Location)
 	for _, tc := range testCases {
 		ourTime, err := parseRFC3339Timestamp(tc.timestamp, timezoneCache)
-		assert.Nil(t, err, tc.timestamp+" our parsing")
+		assert.NoError(t, err, tc.timestamp+" our parsing")
 		theirTime, err := time.Parse(tc.layout, tc.timestamp)
-		assert.Nil(t, err, tc.timestamp+" go parsing")
+		assert.NoError(t, err, tc.timestamp+" go parsing")
 		assert.Equal(t, theirTime.UnixNano(), ourTime.UnixNano(), tc.timestamp+" UNIX nanoseconds")
 		_, ourOffset := ourTime.Zone()
 		_, theirOffset := theirTime.Zone()

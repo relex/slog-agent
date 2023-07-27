@@ -56,31 +56,31 @@ func TestMultiLineReader(t *testing.T) {
 	h := newMultiLineReaderHelper(input)
 	{
 		input <- "> Something\n"
-		assert.Nil(t, h.reader.Read())
+		assert.NoError(t, h.reader.Read())
 		assert.Zero(t, len(h.output))
 		input <- "> Some"
-		assert.Nil(t, h.reader.Read())
+		assert.NoError(t, h.reader.Read())
 		input <- "Thing"
-		assert.Nil(t, h.reader.Read())
+		assert.NoError(t, h.reader.Read())
 		assert.Zero(t, len(h.output))
 		input <- "\nElse"
-		assert.Nil(t, h.reader.Read())
+		assert.NoError(t, h.reader.Read())
 		if assert.Equal(t, h.nextOutput(), len(h.output)) {
 			assert.Equal(t, "> Something", h.fetchOutput())
 		}
 	}
 	{
 		input <- "\n> Line 1\n."
-		assert.Nil(t, h.reader.Read())
+		assert.NoError(t, h.reader.Read())
 		if assert.Equal(t, h.nextOutput(), len(h.output)) {
 			assert.Equal(t, "> SomeThing\nElse", h.fetchOutput())
 		}
 		input <- "Line 2\n."
-		assert.Nil(t, h.reader.Read())
+		assert.NoError(t, h.reader.Read())
 		input <- "Line 3\n"
-		assert.Nil(t, h.reader.Read())
+		assert.NoError(t, h.reader.Read())
 		input <- "x\n> MLine 1\nMLine 2\n> A\nB\nC\n> Next\n"
-		assert.Nil(t, h.reader.Read())
+		assert.NoError(t, h.reader.Read())
 		if assert.Equal(t, h.nextOutput(), len(h.output)-2) {
 			assert.Equal(t, "> Line 1\n.Line 2\n.Line 3\nx", h.fetchOutput())
 		}
@@ -91,7 +91,7 @@ func TestMultiLineReader(t *testing.T) {
 			assert.Equal(t, "> A\nB\nC", h.fetchOutput())
 		}
 		input <- "End\n"
-		assert.Nil(t, h.reader.Read())
+		assert.NoError(t, h.reader.Read())
 		assert.Equal(t, h.fetchEnd, len(h.output))
 		h.reader.Flush()
 		if assert.Equal(t, h.nextOutput(), len(h.output)) {
@@ -105,26 +105,26 @@ func TestMultiLineReader(t *testing.T) {
 func testMultiLineReaderOverflow(t *testing.T, input chan<- string, h *mlrHelper) {
 	t.Run("overflow all garbage", func(tt *testing.T) {
 		input <- "01234567890123456789"
-		assert.Nil(t, h.reader.Read())
+		assert.NoError(t, h.reader.Read())
 		input <- "01234567890123456789"
-		assert.Nil(t, h.reader.Read())
+		assert.NoError(t, h.reader.Read())
 		assert.Equal(t, 40, h.reader.offsetAppend)
 		assert.Zero(t, h.reader.offsetSearch)
 		input <- "0123456789"
-		assert.Nil(t, h.reader.Read())
+		assert.NoError(t, h.reader.Read())
 		assert.Zero(t, h.reader.offsetAppend)
 		assert.Zero(t, h.reader.offsetSearch)
 		assert.Equal(t, h.fetchEnd, len(h.output))
 	})
 	t.Run("overflow single record", func(tt *testing.T) {
 		input <- "> abcdefgh0123456789"
-		assert.Nil(t, h.reader.Read())
+		assert.NoError(t, h.reader.Read())
 		input <- "01234567890123456789"
-		assert.Nil(t, h.reader.Read())
+		assert.NoError(t, h.reader.Read())
 		assert.Equal(t, 40, h.reader.offsetAppend)
 		assert.Zero(t, h.reader.offsetSearch)
 		input <- "ABCDEFGHIJKLMNOP"
-		assert.Nil(t, h.reader.Read())
+		assert.NoError(t, h.reader.Read())
 		assert.Zero(t, h.reader.offsetAppend)
 		assert.Zero(t, h.reader.offsetSearch)
 		if assert.Equal(t, h.nextOutput(), len(h.output)) {
@@ -133,13 +133,13 @@ func testMultiLineReaderOverflow(t *testing.T, input chan<- string, h *mlrHelper
 	})
 	t.Run("overflow mid record", func(tt *testing.T) {
 		input <- "012345678\n> abcdefgh"
-		assert.Nil(t, h.reader.Read())
+		assert.NoError(t, h.reader.Read())
 		input <- "01234567890123456789"
-		assert.Nil(t, h.reader.Read())
+		assert.NoError(t, h.reader.Read())
 		assert.Equal(t, 40, h.reader.offsetAppend)
 		assert.Equal(t, 10, h.reader.offsetSearch)
 		input <- "ABCDEFGHIJKLMNOP"
-		assert.Nil(t, h.reader.Read())
+		assert.NoError(t, h.reader.Read())
 		assert.Zero(t, h.reader.offsetAppend)
 		assert.Zero(t, h.reader.offsetSearch)
 		if assert.Equal(t, h.nextOutput(), len(h.output)) {
@@ -148,14 +148,14 @@ func testMultiLineReaderOverflow(t *testing.T, input chan<- string, h *mlrHelper
 	})
 	t.Run("overflow two records", func(tt *testing.T) {
 		input <- ">12345678\n> abcdefgh"
-		assert.Nil(t, h.reader.Read())
+		assert.NoError(t, h.reader.Read())
 		input <- "01234567890123456789"
-		assert.Nil(t, h.reader.Read())
+		assert.NoError(t, h.reader.Read())
 		assert.Equal(t, 40, h.reader.offsetAppend)
 		assert.Equal(t, 10, h.reader.offsetSearch)
 		assert.Equal(t, h.fetchEnd, len(h.output))
 		input <- "ABCDEFGHIJKLMNOP"
-		assert.Nil(t, h.reader.Read())
+		assert.NoError(t, h.reader.Read())
 		assert.Zero(t, h.reader.offsetAppend)
 		assert.Zero(t, h.reader.offsetSearch)
 		if assert.Equal(t, h.nextOutput(), len(h.output)-1) {
@@ -169,14 +169,14 @@ func testMultiLineReaderOverflow(t *testing.T, input chan<- string, h *mlrHelper
 	})
 	t.Run("overflow all newlines", func(tt *testing.T) {
 		input <- "\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n"
-		assert.Nil(t, h.reader.Read())
+		assert.NoError(t, h.reader.Read())
 		input <- "\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n"
-		assert.Nil(t, h.reader.Read())
+		assert.NoError(t, h.reader.Read())
 		assert.Equal(t, 39, h.reader.offsetAppend)
 		assert.Equal(t, 39, h.reader.offsetSearch)
 		assert.Equal(t, h.fetchEnd, len(h.output))
 		input <- "\n\n\n\n\n\n\n\n\n> helloxxx"
-		assert.Nil(t, h.reader.Read())
+		assert.NoError(t, h.reader.Read())
 		assert.Zero(t, h.reader.offsetAppend)
 		assert.Zero(t, h.reader.offsetSearch)
 		if assert.Equal(t, h.nextOutput(), len(h.output)) {
@@ -188,7 +188,7 @@ func testMultiLineReaderOverflow(t *testing.T, input chan<- string, h *mlrHelper
 func testMultiLineReaderFlush(t *testing.T, input chan<- string, h *mlrHelper) {
 	t.Run("flush last remained", func(tt *testing.T) {
 		input <- "> shut \ndown 1"
-		assert.Nil(t, h.reader.Read())
+		assert.NoError(t, h.reader.Read())
 		assert.Equal(t, h.fetchEnd, len(h.output))
 		h.reader.Flush()
 		if assert.Equal(t, h.nextOutput(), len(h.output)) {
@@ -201,7 +201,7 @@ func testMultiLineReaderFlush(t *testing.T, input chan<- string, h *mlrHelper) {
 		assert.Zero(t, h.reader.offsetAppend)
 
 		input <- "> shut \ndown 2"
-		assert.Nil(t, h.reader.Read())
+		assert.NoError(t, h.reader.Read())
 		assert.Equal(t, h.fetchEnd, len(h.output))
 		h.reader.FlushAll()
 		assert.Zero(t, h.reader.offsetAppend)
@@ -210,7 +210,7 @@ func testMultiLineReaderFlush(t *testing.T, input chan<- string, h *mlrHelper) {
 		}
 
 		input <- "> shut down 3\n"
-		assert.Nil(t, h.reader.Read())
+		assert.NoError(t, h.reader.Read())
 		assert.Equal(t, h.fetchEnd, len(h.output))
 		h.reader.FlushAll()
 		assert.Zero(t, h.reader.offsetAppend)

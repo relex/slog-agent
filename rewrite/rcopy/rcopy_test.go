@@ -11,7 +11,7 @@ import (
 func TestCopyRewrite(t *testing.T) {
 	{
 		c := &Config{}
-		assert.Nil(t, util.UnmarshalYamlString(`
+		assert.NoError(t, util.UnmarshalYamlString(`
 type: copy
 `, c))
 		rw := c.NewRewriter(base.LogSchema{}, nil)

@@ -19,7 +19,7 @@ func TestEncodeArrayLen(t *testing.T) {
 		end = EncodeArrayLen4(buf, start, lenValue)
 		assert.Equal(t, 1, end-start, msg4, lenValue)
 		dlen, derr := decoder.DecodeArrayLen()
-		assert.Nil(t, derr, msg4, lenValue)
+		assert.NoError(t, derr, msg4, lenValue)
 		assert.Equal(t, lenValue, dlen, msg4, lenValue)
 		start = end
 	}
@@ -28,7 +28,7 @@ func TestEncodeArrayLen(t *testing.T) {
 		end = EncodeArrayLen16(buf, start, lenValue)
 		assert.Equal(t, 3, end-start, msg16, lenValue)
 		dlen, derr := decoder.DecodeArrayLen()
-		assert.Nil(t, derr, msg16, lenValue)
+		assert.NoError(t, derr, msg16, lenValue)
 		assert.Equal(t, lenValue, dlen, msg16, lenValue)
 		start = end
 	}
@@ -37,7 +37,7 @@ func TestEncodeArrayLen(t *testing.T) {
 		end = EncodeArrayLen32(buf, start, lenValue)
 		assert.Equal(t, 5, end-start, msg32, lenValue)
 		dlen, derr := decoder.DecodeArrayLen()
-		assert.Nil(t, derr, msg32, lenValue)
+		assert.NoError(t, derr, msg32, lenValue)
 		assert.Equal(t, lenValue, dlen, msg32, lenValue)
 		start = end
 	}
@@ -50,7 +50,7 @@ func TestEncodeMapLen(t *testing.T) {
 		pos := EncodeMapLen4(buf, 0, lenValue)
 		assert.Equal(t, 1, pos, msg4, lenValue)
 		dlen, derr := msgpack.NewDecoder(bytes.NewBuffer(buf[:pos])).DecodeMapLen()
-		assert.Nil(t, derr, msg4, lenValue)
+		assert.NoError(t, derr, msg4, lenValue)
 		assert.Equal(t, lenValue, dlen, msg4, lenValue)
 	}
 	msg16 := "test encoding map16 len="
@@ -59,7 +59,7 @@ func TestEncodeMapLen(t *testing.T) {
 		pos := EncodeMapLen16(buf, 0, lenValue)
 		assert.Equal(t, 3, pos, msg16, lenValue)
 		dlen, derr := msgpack.NewDecoder(bytes.NewBuffer(buf[:pos])).DecodeMapLen()
-		assert.Nil(t, derr, msg16, lenValue)
+		assert.NoError(t, derr, msg16, lenValue)
 		assert.Equal(t, lenValue, dlen, msg16, lenValue)
 	}
 	msg32 := "test encoding map32 len="
@@ -68,7 +68,7 @@ func TestEncodeMapLen(t *testing.T) {
 		pos := EncodeMapLen32(buf, 0, lenValue)
 		assert.Equal(t, 5, pos, msg32, lenValue)
 		dlen, derr := msgpack.NewDecoder(bytes.NewBuffer(buf[:pos])).DecodeMapLen()
-		assert.Nil(t, derr, msg32, lenValue)
+		assert.NoError(t, derr, msg32, lenValue)
 		assert.Equal(t, lenValue, dlen, msg32, lenValue)
 	}
 }
@@ -80,7 +80,7 @@ func TestEncodeString(t *testing.T) {
 		pos := EncodeString4(buf, 0, strValue)
 		assert.Equal(t, len(strValue)+1, pos, msg4, strValue)
 		dstr, derr := msgpack.NewDecoder(bytes.NewBuffer(buf[:pos])).DecodeString()
-		assert.Nil(t, derr, msg4, strValue)
+		assert.NoError(t, derr, msg4, strValue)
 		assert.Equal(t, strValue, dstr, msg4, strValue)
 	}
 	msg16 := "test encoding str16 ="
@@ -89,7 +89,7 @@ func TestEncodeString(t *testing.T) {
 		pos := EncodeString16(buf, 0, strValue)
 		assert.Equal(t, len(strValue)+3, pos, msg16, strValue)
 		dstr, derr := msgpack.NewDecoder(bytes.NewBuffer(buf[:pos])).DecodeString()
-		assert.Nil(t, derr, msg16, strValue)
+		assert.NoError(t, derr, msg16, strValue)
 		assert.Equal(t, strValue, dstr, msg16, strValue)
 	}
 	msg32 := "test encoding str32 len="
@@ -98,7 +98,7 @@ func TestEncodeString(t *testing.T) {
 		pos := EncodeString32(buf, 0, strValue)
 		assert.Equal(t, len(strValue)+5, pos, msg32, len(strValue))
 		dstr, derr := msgpack.NewDecoder(bytes.NewBuffer(buf[:pos])).DecodeString()
-		assert.Nil(t, derr, msg32, len(strValue))
+		assert.NoError(t, derr, msg32, len(strValue))
 		assert.Equal(t, strValue, dstr, msg32, len(strValue))
 	}
 }

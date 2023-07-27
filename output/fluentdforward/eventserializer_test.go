@@ -26,7 +26,7 @@ var testSerializationConfig = SerializationConfig{
 
 func TestForwardLogEventSerializer(t *testing.T) {
 	serializer, err := NewEventSerializer(logger.Root(), shared.TestSchema, testSerializationConfig)
-	assert.Nil(t, err)
+	assert.NoError(t, err)
 	for i, record := range shared.TestInputRecords {
 		stream := serializer.SerializeRecord(shared.TestSchema.CopyTestRecord(record))
 		decoder := msgpack.NewDecoder(bytes.NewBuffer(stream))
@@ -38,7 +38,7 @@ func TestForwardLogEventSerializer(t *testing.T) {
 
 func testVerifyLogRecord(t *testing.T, nth int, decoder *msgpack.Decoder) {
 	var entry forwardprotocol.EventEntry
-	assert.Nil(t, decoder.Decode(&entry), fmt.Sprintf("record[%d] err", nth))
+	assert.NoError(t, decoder.Decode(&entry), fmt.Sprintf("record[%d] err", nth))
 	assert.Equal(t, shared.TestInputRecords[nth].Timestamp.UnixNano(), entry.Time.UnixNano(), fmt.Sprintf("record[%d] timestamp", nth))
 	assert.Equal(t, shared.TestOutputFieldMaps[nth], entry.Record, fmt.Sprintf("record[%d] fields", nth))
 }

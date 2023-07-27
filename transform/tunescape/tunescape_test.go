@@ -12,8 +12,8 @@ import (
 func TestUnescapeTransform(t *testing.T) {
 	schema := base.MustNewLogSchema([]string{"msg"})
 	c := &Config{}
-	assert.Nil(t, util.UnmarshalYamlString("type: unescape\nkey: msg", c))
-	assert.Nil(t, c.VerifyConfig(schema))
+	assert.NoError(t, util.UnmarshalYamlString("type: unescape\nkey: msg", c))
+	assert.NoError(t, c.VerifyConfig(schema))
 	tf := c.NewTransform(schema, logger.Root(), nil)
 	{
 		record := schema.NewTestRecord1(base.LogFields{`x\Xhello\n`})
@@ -33,7 +33,7 @@ func TestUnescapeTransformConfig(t *testing.T) {
 	schema := base.MustNewLogSchema([]string{"msg", "msg2"})
 	{
 		c := &Config{}
-		assert.Nil(t, util.UnmarshalYamlString("type: unescape\nkey: msg2", c))
+		assert.NoError(t, util.UnmarshalYamlString("type: unescape\nkey: msg2", c))
 		tf := c.NewTransform(schema, logger.Root(), nil)
 		record := schema.NewTestRecord1(base.LogFields{`x\nHello`, `x\nWorld`})
 		_ = tf.Transform(record)
@@ -42,7 +42,7 @@ func TestUnescapeTransformConfig(t *testing.T) {
 	}
 	{
 		c := &Config{}
-		assert.Nil(t, util.UnmarshalYamlString("type: unescape\nkey: ''", c))
+		assert.NoError(t, util.UnmarshalYamlString("type: unescape\nkey: ''", c))
 		assert.EqualError(t, c.VerifyConfig(schema), ".key is unspecified")
 	}
 }

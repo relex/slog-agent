@@ -29,7 +29,7 @@ func TestDataGeneration(t *testing.T) {
 		pipeline.Run(inLines, 1)
 	}
 
-	assert.Nil(t, os.WriteFile("../testdata/development/all-pipeline.prom", []byte(promext.DumpMetrics("", true, true, mfactory)), 0644))
+	assert.NoError(t, os.WriteFile("../testdata/development/all-pipeline.prom", []byte(promext.DumpMetrics("", true, true, mfactory)), 0644))
 }
 
 func TestPipeline(t *testing.T) {
@@ -44,7 +44,7 @@ func TestPipeline(t *testing.T) {
 			// output name => expected contents
 			expectedOutputs := lo.MapValues(testdata.ListOutputNamesAndFiles(tt, inTitle), func(expectedOutPath, _ string) string {
 				expectedContent, eOutErr := os.ReadFile(expectedOutPath)
-				assert.Nil(t, eOutErr, "reading "+expectedOutPath)
+				assert.NoError(t, eOutErr, "reading "+expectedOutPath)
 				return string(expectedContent)
 			})
 
@@ -72,7 +72,7 @@ func TestPipeline(t *testing.T) {
 	}
 	t.Run("check metrics", func(tt *testing.T) {
 		expectedMetrics, err := os.ReadFile("../testdata/development/all-pipeline.prom")
-		if assert.Nil(tt, err) {
+		if assert.NoError(tt, err) {
 			assert.Equal(tt, string(expectedMetrics), promext.DumpMetrics("", true, true, mfactory))
 		}
 	})

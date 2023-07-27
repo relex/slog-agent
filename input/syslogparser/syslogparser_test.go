@@ -20,7 +20,7 @@ func TestSyslogParser(t *testing.T) {
 	mfactory := promreg.NewMetricFactory("syslog_parser_", nil, nil)
 	counter := base.NewLogInputCounter(mfactory)
 	parser, err := NewParser(logger.WithField("test", t.Name()), allocator, schema, syslogprotocol.SeverityNames, counter)
-	assert.Nil(t, err)
+	assert.NoError(t, err)
 	{
 		tm := time.Now()
 		r1 := parser.Parse([]byte(line1), tm)

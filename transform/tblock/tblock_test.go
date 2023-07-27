@@ -22,7 +22,7 @@ func TestBlockTransform(t *testing.T) {
 	iName := 1
 	{
 		c := &Config{}
-		assert.Nil(t, util.UnmarshalYamlString(`
+		assert.NoError(t, util.UnmarshalYamlString(`
 type: block
 steps:
   - type: addFields

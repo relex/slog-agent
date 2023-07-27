@@ -93,7 +93,7 @@ func TestLoader(t *testing.T) {
 
 	runTestEnv(t, logRecv, sampleConf, func(bufDir string, confFile *os.File, srvAddr net.Addr) {
 		ld, confErr := NewLoaderFromConfigFile(confFile.Name(), t.Name()+"_")
-		assert.Nil(t, confErr)
+		assert.NoError(t, confErr)
 		assert.Equal(t, []string{"facility", "level", "time", "host", "app", "pid", "source", "extradata", "log"}, ld.ConfigStats.FixedFields)
 		assert.Empty(t, ld.ConfigStats.UnusedFields)
 
@@ -105,27 +105,27 @@ func TestLoader(t *testing.T) {
 		metricGatherer := ld.GetMetricGatherer()
 
 		conn, connErr := net.Dial("tcp", inputAddrs[0])
-		assert.Nil(t, connErr)
+		assert.NoError(t, connErr)
 
 		// send logs
 		// DO NOT use testdata here - need to have different config(s) and different outputs
 		_, sendErr := conn.Write([]byte(`<167>1 2020-07-20T03:48:20.154+03:00 host1 appServ/foo.com 51629 cron.log - [Initializer] - Hello Foo
 <166>1 2020-07-20T03:48:33.760+03:00 host1 appServ/foo.com 51629 access.log - Hello Bar me@gmail.com
 `))
-		assert.Nil(t, sendErr)
+		assert.NoError(t, sendErr)
 
 		// check server results
 		result := <-outBatchCh
 		assert.Equal(t, 2, len(result.Entries))
 		assert.Equal(t, "[Initializer] - Hello Foo hello", result.Entries[0].Record["log"])
 		assert.Equal(t, "info", result.Entries[1].Record["level"])
-		assert.Nil(t, conn.Close())
+		assert.NoError(t, conn.Close())
 
 		shutdownInputs()
 		orc.Shutdown()
 
 		metricFamilies, promErr := metricGatherer.Gather()
-		assert.Nil(t, promErr)
+		assert.NoError(t, promErr)
 		assert.Equal(t, float64(1), getMetricValue(t, metricFamilies, "process_labelled_records_total",
 			map[string]string{"label": "emailFilter"}))
 		assert.Equal(t, float64(2), getMetricValue(t, metricFamilies, "input_passed_records_total",
@@ -142,12 +142,9 @@ anchors: []
 func runTestEnv(t *testing.T, logReceiver receivers.Receiver, confYML string,
 	do func(bufDir string, confFile *os.File, srvAddr net.Addr)) {
 
-	bufDir, bufDirErr := os.MkdirTemp("", fmt.Sprintf("slog-agent-%s-buf-*", t.Name()))
-	assert.Nil(t, bufDirErr)
-	defer os.RemoveAll(bufDir)
-
+	bufDir := t.TempDir()
 	confFile, confFileErr := os.CreateTemp("", fmt.Sprintf("slog-agent-%s-conf-*.yml", t.Name()))
-	assert.Nil(t, confFileErr)
+	assert.NoError(t, confFileErr)
 	defer os.Remove(confFile.Name())
 
 	srvConf := server.Config{}
@@ -155,8 +152,8 @@ func runTestEnv(t *testing.T, logReceiver receivers.Receiver, confYML string,
 	srv, srvAddr := server.LaunchServer(logger.WithField("test", t.Name()), srvConf, logReceiver)
 
 	_, writeErr := confFile.WriteString(fmt.Sprintf(confYML, bufDir, srvAddr.String()))
-	assert.Nil(t, writeErr)
-	assert.Nil(t, confFile.Close())
+	assert.NoError(t, writeErr)
+	assert.NoError(t, confFile.Close())
 
 	defer srv.Shutdown()
 

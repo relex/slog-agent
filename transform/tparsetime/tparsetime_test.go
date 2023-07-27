@@ -15,7 +15,7 @@ func TestParseTimeTransform(t *testing.T) {
 	schema := base.MustNewLogSchema([]string{"time"})
 	c := &Config{}
 
-	if !assert.Nil(t, util.UnmarshalYamlString(`
+	if !assert.NoError(t, util.UnmarshalYamlString(`
 type: parseTime
 key: time
 errorLabel: timeError
@@ -23,7 +23,7 @@ errorLabel: timeError
 		return
 	}
 
-	if !assert.Nil(t, c.VerifyConfig(schema)) {
+	if !assert.NoError(t, c.VerifyConfig(schema)) {
 		return
 	}
 

@@ -17,12 +17,12 @@ func TestConfigDump(t *testing.T) {
 	}
 	t.Log("regenerate config dump...")
 	config, _, cstats, cerr := run.ParseConfigFile(testdata.GetConfigPath())
-	assert.Nil(t, cerr)
+	assert.NoError(t, cerr)
 	cstats.Log(logger.WithField("test", t.Name()))
 
 	configDump, e := util.MarshalYaml(config)
-	assert.Nil(t, e)
-	assert.Nil(t, os.WriteFile(testdata.GetConfigDumpPath(), []byte(configDump), 0644))
+	assert.NoError(t, e)
+	assert.NoError(t, os.WriteFile(testdata.GetConfigDumpPath(), []byte(configDump), 0644))
 }
 
 func TestConfigParsing(t *testing.T) {
@@ -30,14 +30,14 @@ func TestConfigParsing(t *testing.T) {
 		return
 	}
 	expectedDump, rerr := os.ReadFile(testdata.GetConfigDumpPath())
-	assert.Nil(t, rerr)
+	assert.NoError(t, rerr)
 
 	config, _, cstats, cerr := run.ParseConfigFile(testdata.GetConfigPath())
-	assert.Nil(t, cerr)
+	assert.NoError(t, cerr)
 	cstats.Log(logger.WithField("test", t.Name()))
 
 	configDump, e := util.MarshalYaml(config)
-	assert.Nil(t, e)
+	assert.NoError(t, e)
 
 	assert.Equal(t, string(expectedDump), configDump)
 }

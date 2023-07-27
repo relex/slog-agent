@@ -8,17 +8,17 @@ import (
 )
 
 func TestExtractor(t *testing.T) {
-	if ex, err := newStringExtractor(extractFromStart, []string{"[", "*", "]"}, 100); assert.Nil(t, err) {
+	if ex, err := newStringExtractor(extractFromStart, []string{"[", "*", "]"}, 100); assert.NoError(t, err) {
 		lbl, txt := ex.Extract("[Hello]Message")
 		assert.Equal(t, "Hello", lbl)
 		assert.Equal(t, "Message", txt)
 	}
-	if ex, err := newStringExtractor(extractFromEnd, []string{"", "[^ ]", ""}, 100); assert.Nil(t, err) {
+	if ex, err := newStringExtractor(extractFromEnd, []string{"", "[^ ]", ""}, 100); assert.NoError(t, err) {
 		lbl, txt := ex.Extract("Lorem ipsum dolor sit amet, consectetur adipiscing elit")
 		assert.Equal(t, "elit", lbl)
 		assert.Equal(t, "Lorem ipsum dolor sit amet, consectetur adipiscing ", txt)
 	}
-	if ex, err := newStringExtractor(extractFromEnd, []string{".", "[0-9]", ""}, 100); assert.Nil(t, err) {
+	if ex, err := newStringExtractor(extractFromEnd, []string{".", "[0-9]", ""}, 100); assert.NoError(t, err) {
 		{
 			num, fn := ex.Extract("error.log.123")
 			assert.Equal(t, "123", num)
@@ -30,7 +30,7 @@ func TestExtractor(t *testing.T) {
 			assert.Equal(t, "error.log.bz2", fn)
 		}
 	}
-	if ex, err := newStringExtractorSimple(extractFromStart, `([0-9a-z\]])`, 100); assert.Nil(t, err) {
+	if ex, err := newStringExtractorSimple(extractFromStart, `([0-9a-z\]])`, 100); assert.NoError(t, err) {
 		{
 			lbl, txt := ex.Extract("(x12]3)Foo")
 			assert.Equal(t, "x12]3", lbl)
@@ -47,17 +47,17 @@ func TestExtractor(t *testing.T) {
 func TestExtractorCompile(t *testing.T) {
 	{
 		parts, err := splitPattern(`\[*\] - `)
-		assert.Nil(t, err)
+		assert.NoError(t, err)
 		assert.Equal(t, []string{"[", "*", "] - "}, parts)
 	}
 	{
 		parts, err := splitPattern(`Foo\[Bar[0-9\]]:`)
-		assert.Nil(t, err)
+		assert.NoError(t, err)
 		assert.Equal(t, []string{"Foo[Bar", `[0-9\]]`, ":"}, parts)
 	}
 	{
 		tbl := make([]bool, 256)
-		assert.Nil(t, fillValidCharsByRangeExpression(tbl, "[a-z0-9]"))
+		assert.NoError(t, fillValidCharsByRangeExpression(tbl, "[a-z0-9]"))
 		assert.False(t, tbl[' '])
 		assert.False(t, tbl['0'-1])
 		assert.False(t, tbl['9'+1])
@@ -71,7 +71,7 @@ func TestExtractorCompile(t *testing.T) {
 	}
 	{
 		tbl := make([]bool, 256)
-		assert.Nil(t, fillValidCharsByRangeExpression(tbl, "[^A-Zxmz-]"))
+		assert.NoError(t, fillValidCharsByRangeExpression(tbl, "[^A-Zxmz-]"))
 		assert.True(t, tbl[' '])
 		assert.True(t, tbl['A'-1])
 		assert.True(t, tbl['Z'+1])

@@ -16,7 +16,7 @@ func TestExtractTransform(t *testing.T) {
 	iTimestamp := 3
 	{
 		c := &Config{}
-		assert.Nil(t, util.UnmarshalYamlString(`
+		assert.NoError(t, util.UnmarshalYamlString(`
 type: extract
 key: msgid
 pattern: ^((?P<folder>[^ /]+)/)?(?P<source>[^ ]*?)(\.(?P<timestamp>-?[0-9]+))?$
