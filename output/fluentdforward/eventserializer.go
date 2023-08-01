@@ -134,7 +134,7 @@ func (packer *eventSerializer) encodeRecord(record *base.LogRecord, buffer []byt
 				}
 				// encode rewritten field contents
 				actualLength := headRewriter.WriteFieldBody(value, record, buffer[position:])
-				if actualLength != reservedLengthPosition {
+				if actualLength != maxLength {
 					switch {
 					case maxLength < 65536: // use same length type as reserved, not actual
 						fastmsgpack.EncodeStringLen16(buffer, reservedLengthPosition, actualLength)
