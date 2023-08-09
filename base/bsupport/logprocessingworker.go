@@ -67,9 +67,6 @@ func (worker *LogProcessingWorker) onInput(buffer []*base.LogRecord) {
 			//	continue
 			//}
 			stream := output.SerializeRecord(record)
-			// TODO: decide whether to release once at the end or release here after per-output transform is implemented
-			// It will depend on whether records are duplicated for additional outputs, or the same record with all transforms run in place.
-			worker.deallocator.Release(record)
 			worker.procCounter.CountStream(i, stream)
 			maybeChunk := output.WriteStream(stream)
 			if maybeChunk != nil {
@@ -77,6 +74,7 @@ func (worker *LogProcessingWorker) onInput(buffer []*base.LogRecord) {
 				output.AcceptChunk(*maybeChunk)
 			}
 		}
+		worker.deallocator.Release(record)
 	}
 }
 
