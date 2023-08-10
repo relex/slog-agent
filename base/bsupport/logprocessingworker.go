@@ -10,7 +10,7 @@ import (
 
 // LogProcessingWorker is a worker for transformation, serialization and chunk making
 type LogProcessingWorker struct {
-	PipelineWorkerBase[[]*base.LogRecord]
+	PipelineWorkerBase[base.LogRecordBatch]
 	deallocator   *base.LogAllocator
 	procCounter   *base.LogProcessCounterSet
 	transformList []base.LogTransformFunc
@@ -28,7 +28,7 @@ type OutputInterface struct {
 
 // NewLogProcessingWorker creates LogProcessingWorker
 func NewLogProcessingWorker(parentLogger logger.Logger,
-	input <-chan []*base.LogRecord, deallocator *base.LogAllocator, procCounter *base.LogProcessCounterSet,
+	input <-chan base.LogRecordBatch, deallocator *base.LogAllocator, procCounter *base.LogProcessCounterSet,
 	transforms []base.LogTransformFunc, outputInterfaces []OutputInterface,
 ) *LogProcessingWorker {
 	worker := &LogProcessingWorker{
@@ -46,15 +46,22 @@ func NewLogProcessingWorker(parentLogger logger.Logger,
 	return worker
 }
 
-func (worker *LogProcessingWorker) onInput(buffer []*base.LogRecord) {
-	if len(buffer) == 0 {
+func (worker *LogProcessingWorker) onInput(batch base.LogRecordBatch) {
+	if len(batch.Records) == 0 {
 		return
 	}
-	for _, record := range buffer {
+
+	releaseRecord := worker.deallocator.Release
+	analyzingBatch := worker.shouldAnalyzeBatch(batch)
+	if analyzingBatch {
+		releaseRecord = func(record *base.LogRecord) {}
+	}
+
+	for _, record := range batch.Records {
 		icounter := worker.procCounter.SelectMetricKeySet(record)
 		if RunTransforms(record, worker.transformList) == base.DROP {
 			icounter.CountRecordDrop(record)
-			worker.deallocator.Release(record)
+			releaseRecord(record)
 			continue
 		}
 		icounter.CountRecordPass(record)
@@ -63,7 +70,7 @@ func (worker *LogProcessingWorker) onInput(buffer []*base.LogRecord) {
 			// TODO:
 			//if RunTransforms(record, output.transformList) == base.DROP {
 			//	icounter.CountOutputFilter(i, record)
-			//	worker.deallocator.Release(record)
+			//	releaseRecord(record)
 			//	continue
 			//}
 			stream := output.SerializeRecord(record)
@@ -74,7 +81,13 @@ func (worker *LogProcessingWorker) onInput(buffer []*base.LogRecord) {
 				output.AcceptChunk(*maybeChunk)
 			}
 		}
-		worker.deallocator.Release(record)
+		releaseRecord(record)
+	}
+
+	if analyzingBatch {
+		for _, record := range batch.Records {
+			releaseRecord(record)
+		}
 	}
 }
 
@@ -90,6 +103,11 @@ func (worker *LogProcessingWorker) onTick() {
 func (worker *LogProcessingWorker) onStop() {
 	worker.flushChunk()
 	worker.procCounter.UpdateMetrics()
+}
+
+func (worker *LogProcessingWorker) shouldAnalyzeBatch(batch base.LogRecordBatch) bool {
+	// TODO: determine whether to analyze this batch of log records
+	return false
 }
 
 func (worker *LogProcessingWorker) flushChunk() {

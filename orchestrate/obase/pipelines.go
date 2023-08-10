@@ -23,12 +23,12 @@ type outputWorkerSettings struct {
 //
 // Launched workers should start shutting down as soon as the input channel is closed and call onStopped at the end
 type PipelineStarter func(parentLogger logger.Logger, metricCreator promreg.MetricCreator,
-	input <-chan []*base.LogRecord, bufferID string, outputTag string, onStopped func())
+	input <-chan base.LogRecordBatch, bufferID string, outputTag string, onStopped func())
 
 // PrepareSequentialPipeline makes a starter for pipelines including transformer, serializer and output forwarder
 func PrepareSequentialPipeline(args bconfig.PipelineArgs) PipelineStarter {
 	return func(parentLogger logger.Logger, metricCreator promreg.MetricCreator,
-		input <-chan []*base.LogRecord, bufferID string, outputTag string, onStopped func(),
+		input <-chan base.LogRecordBatch, bufferID string, outputTag string, onStopped func(),
 	) {
 		outputSettingsSlice := lo.Map(args.OutputBufferPairs, func(pair bconfig.OutputBufferConfig, _ int) outputWorkerSettings {
 			outputLogger := parentLogger.WithField("output", pair.Name)
