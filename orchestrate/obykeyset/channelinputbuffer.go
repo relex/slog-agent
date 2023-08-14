@@ -45,16 +45,20 @@ func (cache *channelInputBuffer) Append(record *base.LogRecord) bool { // xx:inl
 // Flush flushes all pending logs to the channel
 func (cache *channelInputBuffer) Flush(dueToOverflow bool, now time.Time, parentLogger logger.Logger, loggingKey interface{}) {
 	pendingLogs := cache.PendingLogs
-	newLogBuffer := bsupport.CopyLogBuffer(pendingLogs)
+	newBatch := base.LogRecordBatch{
+		Records:  bsupport.CopyLogBuffer(pendingLogs),
+		Full:     dueToOverflow,
+		NumBytes: cache.PendingBytes,
+	}
 	cache.PendingLogs = pendingLogs[:0]
 	cache.PendingBytes = 0
 	cache.LastFlushTime = now
 
 	// Send with timeout; There is enough buffering to make on-demand timer allocations trivial.
 	select {
-	case cache.Channel <- base.LogRecordBatch{Records: newLogBuffer, Full: dueToOverflow}:
+	case cache.Channel <- newBatch:
 		// TODO: update metrics
 	case <-time.After(defs.IntermediateChannelTimeout):
-		parentLogger.Errorf("BUG: timeout flushing: %d records for %s. stack=%s", len(newLogBuffer), loggingKey, util.Stack())
+		parentLogger.Errorf("BUG: timeout flushing: %d records for %s. stack=%s", len(newBatch.Records), loggingKey, util.Stack())
 	}
 }

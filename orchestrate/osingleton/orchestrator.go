@@ -11,6 +11,7 @@ import (
 	"github.com/relex/slog-agent/defs"
 	"github.com/relex/slog-agent/orchestrate/obase"
 	"github.com/relex/slog-agent/util"
+	"github.com/samber/lo"
 )
 
 type singletonOrchestrator struct {
@@ -49,12 +50,16 @@ func (o *singletonOrchestrator) Shutdown() {
 
 // Accept accepts input logs from LogInput, the buffer is only usable within the function
 func (oc *singletonOrchestratorChild) Accept(buffer []*base.LogRecord) {
-	newLogBuffer := bsupport.CopyLogBuffer(buffer)
+	newBatch := base.LogRecordBatch{
+		Records:  bsupport.CopyLogBuffer(buffer),
+		Full:     true,
+		NumBytes: lo.SumBy(buffer, func(b *base.LogRecord) int { return b.RawLength }),
+	}
 	select {
-	case oc.inputChannel <- base.LogRecordBatch{Records: newLogBuffer, Full: true}:
+	case oc.inputChannel <- newBatch:
 		// TODO: update metrics
 	case <-time.After(defs.IntermediateChannelTimeout):
-		oc.logger.Errorf("BUG: timeout flushing: %d records. stack=%s", len(newLogBuffer), util.Stack())
+		oc.logger.Errorf("BUG: timeout flushing: %d records. stack=%s", len(newBatch.Records), util.Stack())
 	}
 }
 

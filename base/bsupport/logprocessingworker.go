@@ -13,8 +13,10 @@ type LogProcessingWorker struct {
 	PipelineWorkerBase[base.LogRecordBatch]
 	deallocator   *base.LogAllocator
 	procCounter   *base.LogProcessCounterSet
+	analyzer      base.LogAnalyzer
 	transformList []base.LogTransformFunc
 	outputList    []OutputInterface
+
 	lastChunkTime time.Time
 }
 
@@ -29,7 +31,7 @@ type OutputInterface struct {
 // NewLogProcessingWorker creates LogProcessingWorker
 func NewLogProcessingWorker(parentLogger logger.Logger,
 	input <-chan base.LogRecordBatch, deallocator *base.LogAllocator, procCounter *base.LogProcessCounterSet,
-	transforms []base.LogTransformFunc, outputInterfaces []OutputInterface,
+	analyzer base.LogAnalyzer, transforms []base.LogTransformFunc, outputInterfaces []OutputInterface,
 ) *LogProcessingWorker {
 	worker := &LogProcessingWorker{
 		PipelineWorkerBase: NewPipelineWorkerBase(
@@ -38,8 +40,10 @@ func NewLogProcessingWorker(parentLogger logger.Logger,
 		),
 		deallocator:   deallocator,
 		procCounter:   procCounter,
+		analyzer:      analyzer,
 		transformList: transforms,
 		outputList:    outputInterfaces,
+
 		lastChunkTime: time.Now(),
 	}
 	worker.InitInternal(worker.onInput, worker.onTick, worker.onStop)
@@ -50,16 +54,25 @@ func (worker *LogProcessingWorker) onInput(batch base.LogRecordBatch) {
 	if len(batch.Records) == 0 {
 		return
 	}
+	worker.lastChunkTime = batch.Records[0].Timestamp
 
 	releaseRecord := worker.deallocator.Release
-	analyzingBatch := worker.shouldAnalyzeBatch(batch)
+	analyzingBatch := worker.analyzer.ShouldAnalyze(batch)
 	if analyzingBatch {
 		releaseRecord = func(record *base.LogRecord) {}
 	}
 
+	var numCleanRecords int
+	var numCleanBytes int64
+
 	for _, record := range batch.Records {
 		icounter := worker.procCounter.SelectMetricKeySet(record)
-		if RunTransforms(record, worker.transformList) == base.DROP {
+		result := RunTransforms(record, worker.transformList)
+		if !record.Spam {
+			numCleanRecords++
+			numCleanBytes += int64(record.RawLength)
+		}
+		if result == base.DROP {
 			icounter.CountRecordDrop(record)
 			releaseRecord(record)
 			continue
@@ -85,29 +98,28 @@ func (worker *LogProcessingWorker) onInput(batch base.LogRecordBatch) {
 	}
 
 	if analyzingBatch {
+		worker.analyzer.Analyze(batch, numCleanRecords, numCleanBytes)
 		for _, record := range batch.Records {
 			releaseRecord(record)
 		}
+	} else {
+		worker.analyzer.TrackTraffic(numCleanRecords, numCleanBytes)
 	}
 }
 
 func (worker *LogProcessingWorker) onTick() {
-	// send buffered streams as a chunk if X seconds have passed
-	if time.Since(worker.lastChunkTime) < defs.IntermediateFlushInterval {
-		return
+	worker.analyzer.Tick()
+
+	// flush buffered streams only if one full second has passed
+	if time.Since(worker.lastChunkTime) >= defs.IntermediateFlushInterval {
+		worker.flushChunk()
 	}
-	worker.flushChunk()
 	worker.procCounter.UpdateMetrics()
 }
 
 func (worker *LogProcessingWorker) onStop() {
 	worker.flushChunk()
 	worker.procCounter.UpdateMetrics()
-}
-
-func (worker *LogProcessingWorker) shouldAnalyzeBatch(batch base.LogRecordBatch) bool {
-	// TODO: determine whether to analyze this batch of log records
-	return false
 }
 
 func (worker *LogProcessingWorker) flushChunk() {
