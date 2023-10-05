@@ -71,10 +71,10 @@ func (reloader *Reloader) initiateDownstreamReload() (CompleteReloadingFunc, err
 	}, nil
 }
 
-// GetMetricGatherer returns a metric gatherer containing default metrics and metrics from both input and pipeline(s)
+// GetMetricGatherer returns a metric gatherer containing default metrics and metrics from both input and pipeline(s).
 //
 // Unlike Loader's GetMetricGatherer which returns a composite Gatherer containing current metric factories, Reloader's
-// returns a GathererFunc which always gathers from the latest metric factories, if they've been recreated by reloading
+// returns a GathererFunc which always gathers from the latest metric factories, if they've been recreated by reloading.
 func (reloader *Reloader) GetMetricGatherer() prometheus.Gatherer {
 	return prometheus.GathererFunc(func() ([]*dto.MetricFamily, error) {
 		return reloader.Loader.GetMetricGatherer().Gather()
@@ -102,7 +102,7 @@ func checkConfigCompatibility(
 			return fmt.Errorf("inputs: failed to marshal new config: %w", err)
 		}
 		if oldInputs != newInputs {
-			return fmt.Errorf("inputs must not change: old=%s", oldInputs)
+			return fmt.Errorf("inputs must not change: old=%s new=%s", oldInputs, newInputs)
 		}
 	}
 	{
