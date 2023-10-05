@@ -32,6 +32,12 @@ suffix: ...
 			assert.Equal(t, "Hello...", record.Fields[0])
 		}
 		{
+			record := schema.NewTestRecord1(base.LogFields{"HelЛWorld"})
+			status := tf.Transform(record)
+			assert.Equal(t, base.PASS, status)
+			assert.Equal(t, "Hel...", record.Fields[0])
+		}
+		{
 			record := schema.NewTestRecord1(base.LogFields{"Foo"})
 			status := tf.Transform(record)
 			assert.Equal(t, base.PASS, status)

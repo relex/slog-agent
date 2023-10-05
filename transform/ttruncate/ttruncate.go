@@ -7,6 +7,7 @@ import (
 	"github.com/relex/gotils/logger"
 	"github.com/relex/slog-agent/base"
 	"github.com/relex/slog-agent/base/bconfig"
+	"github.com/relex/slog-agent/util"
 )
 
 // Config for truncateTransform
@@ -52,8 +53,9 @@ func (c *Config) VerifyConfig(schema base.LogSchema) error {
 func (tf *truncateTransform) Transform(record *base.LogRecord) base.FilterResult {
 	value := tf.keyLocator.Get(record.Fields)
 	if len(value) > tf.maxLength {
-		// FIXME: use zero-copy - Could paste suffix into the end and truncate the rest.
-		tf.keyLocator.Set(record.Fields, value[:tf.maxLength]+tf.suffix)
+		// FIXME: use zero-copy - paste suffix into the end and truncate the rest.
+		cutValue := util.CleanUTF8(value[:tf.maxLength])
+		tf.keyLocator.Set(record.Fields, cutValue+tf.suffix)
 	}
 	return base.PASS
 }
