@@ -8,7 +8,7 @@ import (
 	"github.com/relex/slog-agent/util"
 )
 
-// Unescaper is used to search and unescape characters like '\n', '\t' etc
+// Unescaper is used to search and unescape bytes like '\n', '\t' etc
 // Unescaper instances contain no buffer and may be copied or concurrently used.
 type Unescaper struct {
 	escapeChar       byte
@@ -60,15 +60,16 @@ func (e Unescaper) Run(src string) string {
 	return e.RunFromFirst(src, first)
 }
 
-// RunFromFirst unescapes the given string, starting from the position of first escape char
+// RunFromFirst unescapes the given string, starting from the position of first escape byte.
 func (e Unescaper) RunFromFirst(src string, first int) string {
 	dst := make([]byte, len(src))
 	dend := e.RunToBuffer(src, first, dst)
 	return util.StringFromBytes(dst[:dend])
 }
 
-// RunToBuffer unescapes the given string to destination buffer, starting from the position of first escape char
-// Returns the end / length in the destination buffer
+// RunToBuffer unescapes the given string to destination buffer, starting from the position of first escape byte.
+//
+// Returns the end / length in the destination buffer.
 func (e Unescaper) RunToBuffer(src string, first int, dst []byte) int {
 	si := first
 	di := copy(dst, src[:si])

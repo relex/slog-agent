@@ -43,7 +43,7 @@ func newLogRecord(maxFields int) *LogRecord {
 }
 
 // NewRecord creates new record of empty values
-func (alloc *LogAllocator) NewRecord(input []byte) (*LogRecord, string) {
+func (alloc *LogAllocator) NewRecord(input []byte) (*LogRecord, util.MutableString) {
 	// pooling speeds up 10% in agent benchmarks but minus 20% in pipeline benchmarks
 	record := alloc.recordPool.Get().(*LogRecord)
 	record._refCount += alloc.initialRefCount
@@ -53,6 +53,7 @@ func (alloc *LogAllocator) NewRecord(input []byte) (*LogRecord, string) {
 		n := copy(*backbuf, input)
 		return record, util.StringFromBytes((*backbuf)[:n])
 	}
+	// The length is too short to be worth using the pool.
 	return record, util.DeepCopyStringFromBytes(input)
 }
 

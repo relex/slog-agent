@@ -1,4 +1,4 @@
-// Package tunescape provides 'unescape' transform, which handles custom escape characters like those in JSON strings.
+// Package tunescape provides 'unescape' transform, which handles custom escape bytes like those in JSON strings.
 //
 // The transform equals to 'unescape' rewriter and should be avoided if possible to improve performance for large
 // messages/fields.
@@ -19,7 +19,7 @@ type Config struct {
 	Key            string `yaml:"key"`
 }
 
-// unescapeTransform unescapes special characters like those in JSON strings
+// unescapeTransform unescapes special bytes like those in JSON strings
 type unescapeTransform struct {
 	keyLocator base.LogFieldLocator
 }

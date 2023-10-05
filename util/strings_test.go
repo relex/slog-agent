@@ -25,4 +25,9 @@ func TestStrings(t *testing.T) {
 	orig[4] = 'O'
 	assert.Equal(t, []string{"HEllO", "world"}, ary1)
 	assert.Equal(t, []string{"HEllo", "world"}, ary2)
+
+	new3 := BytesFromString(new1)
+	new3[2] = 'X'
+	assert.Equal(t, "HEXlO", string(new3))
+	assert.Equal(t, "HEXlO", new1)
 }

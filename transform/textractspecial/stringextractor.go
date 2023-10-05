@@ -20,7 +20,7 @@ var patternUnescaper = stringunescape.NewUnescaper('\\', map[byte]byte{
 	'*': '*',
 })
 
-// stringExtractor is a fast alternative to string extraction by regular expression, using simple boundaries and table of valid characters
+// stringExtractor is a fast alternative to string extraction by regular expression, using simple boundaries and table of valid bytes
 type stringExtractor struct {
 	position   stringExtractorPosition
 	leftBound  string

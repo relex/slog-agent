@@ -41,7 +41,7 @@ func (c *Config) VerifyConfig(schema base.LogSchema) error {
 		return fmt.Errorf(".key is invalid: %w", err)
 	}
 	if c.MaxLength <= 0 {
-		return fmt.Errorf(".maxLength must larger than zero: %d", c.MaxLength)
+		return fmt.Errorf(".maxLength must be larger than zero: %d", c.MaxLength)
 	}
 	if len(c.Suffix) == 0 {
 		return fmt.Errorf(".suffix is unspecified")
@@ -52,6 +52,7 @@ func (c *Config) VerifyConfig(schema base.LogSchema) error {
 func (tf *truncateTransform) Transform(record *base.LogRecord) base.FilterResult {
 	value := tf.keyLocator.Get(record.Fields)
 	if len(value) > tf.maxLength {
+		// FIXME: use zero-copy - Could paste suffix into the end and truncate the rest.
 		tf.keyLocator.Set(record.Fields, value[:tf.maxLength]+tf.suffix)
 	}
 	return base.PASS

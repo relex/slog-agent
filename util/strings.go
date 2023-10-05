@@ -34,16 +34,27 @@ func DeepCopyStrings(strList []string) []string {
 	return destList
 }
 
-// StringFromBytes makes a string pointing to the contents of []byte
+// MutableString is a string backed by raw []byte, instead of in the immutable memory area like normal Go strings.
 //
-// There is no copying and the resulting string shares the same []byte contents
+// Its contents may be changed. But we cannot create a new type or string functions wouldn't work with it.
+type MutableString = string
+
+// StringFromBytes makes a string backed by a specified []byte.
 //
-// If data in the backing byte array is changed, the string contents would reflect the changes (NOT normal Go string behavior).
+// There is no copying and the resulting string shares the same []byte contents.
 //
-// DO NOT use this in tests
-func StringFromBytes(buf []byte) string {
+// If data in the backing slice is changed, the string contents would reflect the changes (NOT normal Go string behavior).
+//
+// DO NOT use this in tests.
+func StringFromBytes(buf []byte) MutableString {
 	// code from strings.Builder.String()
-	// GO_INTERNAL
-	// This works because reflect.StringHeader is identical to the front part of reflect.SliceHeader
-	return *(*string)(unsafe.Pointer(&buf))
+	return unsafe.String(unsafe.SliceData(buf), len(buf))
+}
+
+// BytesFromString makes a []byte pointing to the contents of a string.
+//
+// The string must come from StringFromBytes if the new []byte is to be modified, as normal Go strings have their data
+// allocated in the immutable memory area and any write operation would trigger panics.
+func BytesFromString(str MutableString) []byte {
+	return unsafe.Slice(unsafe.StringData(str), len(str))
 }

@@ -164,16 +164,6 @@ See [DESIGN](DESIGN.md)
 - [YAML v3](gopkg.in/yaml.v3) required for custom tags in configuration. `KnownFields` is still not working and it
   cannot check non-existent or misspelled YAML properties.
 
-#### Go upgrades
-
-Some of code is based on the internal behaviors of go runtime and marked as `GO_INTERNAL` in comments:
-
-- util/syncwaitgroup.go `PeekWaitGroup()`: peek the count number from `sync.WaitGroup`
-- util/strings.go `StringFromBytes()`: make string from mutable bytes without copying, like `strings.Builder` but
-  accepts mutable arrays (*dangerous*)
-
-They need to be re-checked for any major upgrade of go for compatibility
-
 ## Authors
 
 Special thanks to _Henrik Sjöström_ for his guiding on Go optimization, integration testing and invaluable suggestions

@@ -1,4 +1,4 @@
-// Package runescape provides 'unescape' rewriter, which handles custom escape characters like those in JSON strings.
+// Package runescape provides 'unescape' rewriter, which handles custom escape bytes like those in JSON strings.
 //
 // The rewriter equals to 'unescape' transform, except it's done in serialization stage with no extra string copy
 // needed, which is critical for large messages (e.g. error dumps).
@@ -7,6 +7,7 @@
 // unescaping.
 //
 // The 'unescape' rewriter serves as the last rewriter in the chain, in place of 'copy'
+//
 //nolint:revive
 package runescape
 
