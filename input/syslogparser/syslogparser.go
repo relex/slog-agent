@@ -21,7 +21,7 @@ const maxLoggingMessageSize = 200 // 200 bytes should be enough to include all k
 
 // syslogparser parses RFC 5424 text to log records
 //
-// NOT thread-safe due to caching
+// # NOT thread-safe due to caching
 //
 // TODO: parse or skip extradata/metadata properly
 type syslogParser struct {
@@ -163,6 +163,7 @@ func (parser *syslogParser) Parse(input []byte, timestamp time.Time) *base.LogRe
 		parser.onOverflow(input)
 		remaining = remaining[:defs.InputLogMaxMessageBytes]
 	}
+	remaining = util.CleanUTF8(remaining)
 	parser.fieldLogLocator.Set(fields, remaining)
 
 	// assume the message won't need un-escaping if there is a real newline
@@ -196,7 +197,7 @@ func (parser *syslogParser) onOverflow(rawLog []byte) {
 // nextFieldBySpace takes next field value separated by space
 // return (ok, value, remaining part not including space)
 // Ex: "a b c" will return (true, "a", "b c")
-func nextFieldBySpace(s string) (bool, string, string) {
+func nextFieldBySpace(s util.MutableString) (bool, util.MutableString, util.MutableString) {
 	end := strings.IndexByte(s, ' ')
 	if end == -1 {
 		return false, "", ""

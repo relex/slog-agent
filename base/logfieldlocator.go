@@ -1,5 +1,9 @@
 package base
 
+import (
+	"github.com/relex/slog-agent/util"
+)
+
 // LogFieldLocator is used to locate a named field in LogRecord, bound to a LogSchema
 type LogFieldLocator int
 
@@ -12,12 +16,12 @@ func (loc LogFieldLocator) Name(schema LogSchema) string { // xx:inline
 }
 
 // Get returns the field value or empty string
-func (loc LogFieldLocator) Get(fields []string) string { // xx:inline
+func (loc LogFieldLocator) Get(fields []string) util.MutableString { // xx:inline
 	return fields[loc]
 }
 
 // Set assigns the field value
-func (loc LogFieldLocator) Set(fields []string, value string) { // xx:inline
+func (loc LogFieldLocator) Set(fields []string, value util.MutableString) { // xx:inline
 	fields[loc] = value
 }
 

@@ -173,7 +173,8 @@ transformations:
                     match:
                       log: !!glob P[OU][ST]** params=**
                     then:
-                      - type: truncate            # truncate: Truncate oversized fields
+                      - type: truncate            # truncate: Truncate oversized fields by bytes.
+                                                  #   Truncation may break UTF-8 sequences and need "fixUTF8" later.
                         key: log                  # key: field to check & truncate
                         maxLen: 180               # maxLen: max length to preserve (before appending suffix)
                         suffix: ' ... (cut)'      # suffix: appended to the end. REQUIRED
@@ -253,6 +254,12 @@ transformations:
       hostname: $host
       service: $vhost
 
+  - type: fixUTF8                                 # fixUTF8: Replace invalid UTF-8 bytes with "_" (inline change)
+                                                  #
+                                                  # This is critical for fluentd output because fluentd lacks internal validation and
+                                                  # could cause invalid JSON being sent to upstream such as Datadog, which then misinterprets
+                                                  # the entire request JSON as an unstructured log message.
+    key: log
 
 # Multi-output: executed in the exact sequence here
 outputBufferPairs:
