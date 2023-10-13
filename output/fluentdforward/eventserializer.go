@@ -72,8 +72,8 @@ func NewEventSerializer(parentLogger logger.Logger, schema base.LogSchema, confi
 		fieldMasks:             fieldMasks,
 		envFieldLocators:       envFieldLocators,
 		fieldRewriters:         fieldRewriters,
-		serializedFieldKeys:    preSerializeStrings(fieldNames),
-		serializedEnvFieldKeys: preSerializeStrings(config.EnvironmentFields),
+		serializedFieldKeys:    serializeStrings(fieldNames),
+		serializedEnvFieldKeys: serializeStrings(config.EnvironmentFields),
 		buffer:                 make([]byte, 2*defs.InputLogMaxMessageBytes),
 	}, nil
 }
@@ -84,9 +84,10 @@ func (packer *eventSerializer) SerializeRecord(record *base.LogRecord) base.LogS
 	return packer.buffer[:length]
 }
 
-// encodeRecord encodes the given log record to buffer and returns the end position
-// DO NOT deduplicate the code below - they're required for go inlining to work! (as of v1.15)
-// Check with `disasm` command in go pprof to be sure
+// encodeRecord encodes the given log record to buffer and returns the end position.
+//
+// DO NOT deduplicate or extract the code below - they're required for go inlining to work! (as of v1.15).
+// Check with `disasm` command in go pprof to be sure.
 func (packer *eventSerializer) encodeRecord(record *base.LogRecord, buffer []byte) int {
 	// encode log records into chunks of [timestamp, field-map] in msgpack
 	fields := record.Fields[0:len(packer.fieldMasks)] // hide unnamed/reserved fields at the end
@@ -97,7 +98,7 @@ func (packer *eventSerializer) encodeRecord(record *base.LogRecord, buffer []byt
 	// root-array[0]: timestamp
 	position = EncodeEventTime(buffer, position, record.Timestamp)
 	// root-array[1]: field-map length
-	reservedRootMapLenPosition := position // space reserved, to be encoded later
+	reservedRootMapLenPosition := position // reserve space to be filled later
 	switch {
 	case len(fields)+1 < 16:
 		position = fastmsgpack.ReserveLen4(position)
@@ -136,7 +137,7 @@ func (packer *eventSerializer) encodeRecord(record *base.LogRecord, buffer []byt
 				actualLength := headRewriter.WriteFieldBody(value, record, buffer[position:])
 				if actualLength != maxLength {
 					switch {
-					case maxLength < 65536: // use same length type as reserved, not actual
+					case maxLength < 65536: // use the same length type as reserved
 						fastmsgpack.EncodeStringLen16(buffer, reservedLengthPosition, actualLength)
 					default:
 						fastmsgpack.EncodeStringLen32(buffer, reservedLengthPosition, actualLength)
@@ -144,6 +145,7 @@ func (packer *eventSerializer) encodeRecord(record *base.LogRecord, buffer []byt
 				}
 				position += actualLength
 			} else {
+				// no rewriter, just encode the raw field value directly
 				switch {
 				case len(value) < 16:
 					position = fastmsgpack.EncodeString4(buffer, position, value)
@@ -158,7 +160,7 @@ func (packer *eventSerializer) encodeRecord(record *base.LogRecord, buffer []byt
 	}
 	// update root map size
 	switch {
-	case len(fields)+1 < 16: // use same length type as reserved
+	case len(fields)+1 < 16: // use the same length type as reserved
 		fastmsgpack.EncodeMapLen4(buffer, reservedRootMapLenPosition, rootMapSize)
 	default:
 		fastmsgpack.EncodeMapLen16(buffer, reservedRootMapLenPosition, rootMapSize)
@@ -170,7 +172,7 @@ func (packer *eventSerializer) encodeRecord(record *base.LogRecord, buffer []byt
 		envFieldLocators := packer.envFieldLocators
 		serializedEnvFieldKeys := packer.serializedEnvFieldKeys
 
-		// encode length of environment map
+		// encode the length of environment map
 		switch {
 		case len(envFieldLocators) < 16:
 			position = fastmsgpack.EncodeMapLen4(buffer, position, len(envFieldLocators))
@@ -180,9 +182,9 @@ func (packer *eventSerializer) encodeRecord(record *base.LogRecord, buffer []byt
 
 		// root-array[1]: field-map["environment"] map key-value pairs
 		for i, loc := range envFieldLocators {
-			// encode key (pre-serialized)
+			// copy the key which is pre-serialized
 			position += copy(buffer[position:], serializedEnvFieldKeys[i])
-			// encode value
+			// encode the value
 			value := loc.Get(fields)
 			switch {
 			case len(value) < 16:
@@ -202,7 +204,8 @@ func (packer *eventSerializer) encodeRecord(record *base.LogRecord, buffer []byt
 	return position
 }
 
-func preSerializeStrings(strValues []string) []msgpackBlock {
+// serializeStrings serializes a slice of strings to a slice of msgpack blocks
+func serializeStrings(strValues []string) []msgpackBlock {
 	results := make([]msgpackBlock, len(strValues))
 
 	for index, key := range strValues {

@@ -11,15 +11,16 @@ import (
 	"golang.org/x/exp/slices"
 )
 
-// LogSchema defines the field names and mark fields which should belong to "environment"
-// In case of runtime schema update, only new fields should be appended at the end
+// LogSchema defines the field names and mark fields which should belong to "environment".
+//
+// In case of runtime schema update, only new fields should be appended at the end.
 type LogSchema struct {
 	fieldNames []string
 	maxFields  int
 	OnLocated  func(index int) // optional callback invoked after successful CreateFieldLocator calls
 }
 
-// MustNewLogSchema creates a new LogSchema or panic
+// MustNewLogSchema creates a new LogSchema or panic.
 func MustNewLogSchema(fieldNames []string) LogSchema {
 	schema, err := NewLogSchema(fieldNames, len(fieldNames))
 	if err != nil {
@@ -28,7 +29,7 @@ func MustNewLogSchema(fieldNames []string) LogSchema {
 	return schema
 }
 
-// NewLogSchema creates a new LogSchema with field names and environment field names
+// NewLogSchema creates a new LogSchema with field names and environment field names.
 func NewLogSchema(fieldNames []string, maxFields int) (LogSchema, error) {
 	if maxFields < len(fieldNames) {
 		return LogSchema{}, fmt.Errorf("maxFields (%d) must be equal or greater than the number of field names (%d)", maxFields, len(fieldNames))

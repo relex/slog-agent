@@ -18,19 +18,19 @@ type sinksByClientNumber [base.MaxClientNumber]base.BufferReceiverSink
 type addrsByClientNumber [base.MaxClientNumber]string
 
 // InitiateReloadingFunc initiates the reloading process and returns error if it cannot be continued (e.g. error in
-// new config)
+// new config).
 //
-// No reload would happen and there should be no side effect if the returned CompleteReloadingFunc is not called
+// No reload would happen and there should be no side effect if the returned CompleteReloadingFunc is not called.
 type InitiateReloadingFunc func() (CompleteReloadingFunc, error)
 
-// CompleteReloadingFunc completes the reloading process and launches the new downstream Orchestrator
+// CompleteReloadingFunc completes the reloading process and launches the new downstream Orchestrator.
 //
-// The resulting Orchestrator must be used to replace the existing one after this function is called
+// The resulting Orchestrator must be used to replace the existing one after this function is called.
 type CompleteReloadingFunc func() base.Orchestrator
 
-// ReloadableOrchestrator supports config reload by re-creating the downstream Orchestrator
+// ReloadableOrchestrator supports config reload by re-creating the downstream Orchestrator.
 //
-// The type is to be paired with Reloader, which provides the function to reload configuration file and create real Orchestrator(s)
+// The type is to be paired with Reloader, which provides the function to reload configuration file and create real Orchestrator(s).
 type ReloadableOrchestrator struct {
 	logger          logger.Logger
 	downstream      base.Orchestrator     // the real orchestrator
@@ -133,9 +133,9 @@ func (orc *ReloadableOrchestrator) reload() {
 	reloadSuccessCounter.Inc()
 }
 
-// ReloadableSink wraps Orchestrator's BufferReceiverSink to support reloading
+// ReloadableSink wraps Orchestrator's BufferReceiverSink to support reloading.
 //
-// Like BufferReceiverSink, a ReloadableSink runs in individual input goroutines (e.g. TCP connection handler)
+// Like BufferReceiverSink, a ReloadableSink runs in individual input goroutines (e.g. TCP connection handler).
 type ReloadableSink struct {
 	downstreamPtr   *base.BufferReceiverSink
 	downstreamMutex *xsync.RBMutex
