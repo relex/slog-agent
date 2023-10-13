@@ -6,6 +6,7 @@ func CleanUTF8(s string) string {
 	}
 	// correct encoding is https://en.wikipedia.org/wiki/UTF-8
 	// too much work; just cut everything after the last ASCII byte
+	// FIXME: get a library to clean up invalid sequences without costly copying or moving.
 	end := findLastEndOfASCII(s)
 	return s[:end]
 }

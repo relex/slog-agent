@@ -56,6 +56,7 @@ inputs:
                                                   #   <163>1 2019-10-15T15:50:46.866915+03:00 local my-app 123 fn - First line
                                                   #   second line
                                                   #   ...
+                                                  # non-ASCII bytes at the end are stripped to prevent invalid UTF-8.
                                                   #
     address: localhost:5140                       # address: 0.0.0.0:514 or 0.0.0.0:0 (port 0 to be assigned by OS. Real number is logged)
     levelMapping: [off, fatal, crit, error, warn, notice, info, debug]
@@ -174,7 +175,7 @@ transformations:
                       log: !!glob P[OU][ST]** params=**
                     then:
                       - type: truncate            # truncate: Truncate oversized fields by bytes.
-                                                  #   Truncation may break UTF-8 sequences and need "fixUTF8" later.
+                                                  #   non-ASCII bytes at the end are stripped to prevent invalid UTF-8.
                         key: log                  # key: field to check & truncate
                         maxLen: 180               # maxLen: max length to preserve (before appending suffix)
                         suffix: ' ... (cut)'      # suffix: appended to the end. REQUIRED
@@ -253,13 +254,6 @@ transformations:
       # ddtags: $app,test-$vhost                  # "ddtags" defaults to the orchestration tag if empty or undefined in schema
       hostname: $host
       service: $vhost
-
-  - type: fixUTF8                                 # fixUTF8: Replace invalid UTF-8 bytes with "_" (inline change)
-                                                  #
-                                                  # This is critical for fluentd output because fluentd lacks internal validation and
-                                                  # could cause invalid JSON being sent to upstream such as Datadog, which then misinterprets
-                                                  # the entire request JSON as an unstructured log message.
-    key: log
 
 # Multi-output: executed in the exact sequence here
 outputBufferPairs:
