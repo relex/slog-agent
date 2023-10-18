@@ -14,11 +14,10 @@ import (
 type LogAllocator struct {
 	recordPool      *sync.Pool         // pool of *LogRecord
 	backbufPools    util.BytesPoolBy2n // pools of the backing buffers of LogRecord(s), i.e. pools of raw input copies
-	initialRefCount int                // equal to the total amount of outputs
 }
 
 // NewLogAllocator creates LogAllocator linked to the given schema
-func NewLogAllocator(schema LogSchema, outputCount int) *LogAllocator {
+func NewLogAllocator(schema LogSchema) *LogAllocator {
 	maxFields := schema.GetMaxFields()
 	recordPool := &sync.Pool{}
 	recordPool.New = func() interface{} {
@@ -27,7 +26,6 @@ func NewLogAllocator(schema LogSchema, outputCount int) *LogAllocator {
 	return &LogAllocator{
 		recordPool:      recordPool,
 		backbufPools:    util.NewBytesPoolBy2n(),
-		initialRefCount: outputCount,
 	}
 }
 
@@ -46,7 +44,7 @@ func newLogRecord(maxFields int) *LogRecord {
 func (alloc *LogAllocator) NewRecord(input []byte) (*LogRecord, util.MutableString) {
 	// pooling speeds up 10% in agent benchmarks but minus 20% in pipeline benchmarks
 	record := alloc.recordPool.Get().(*LogRecord)
-	record._refCount += alloc.initialRefCount
+	record._refCount = 1
 	if len(input) > defs.InputLogMinMessageBytesToPool {
 		backbuf := alloc.backbufPools.Get(len(input))
 		record._backbuf = backbuf

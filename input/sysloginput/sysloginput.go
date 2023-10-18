@@ -117,7 +117,7 @@ func (cfg *Config) VerifyConfig(schema base.LogSchema) error {
 	if err := func() error {
 		dummyMetricFactory := promreg.NewMetricFactory("verify_", nil, nil)
 		dummyInputCounter := base.NewLogInputCounter(dummyMetricFactory)
-		dummyLogAllocator := base.NewLogAllocator(schema, 1)
+		dummyLogAllocator := base.NewLogAllocator(schema)
 		_, err := syslogparser.NewParser(logger.Root(), dummyLogAllocator, schema, cfg.LevelMapping, dummyInputCounter)
 		return err
 	}(); err != nil {

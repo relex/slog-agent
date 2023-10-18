@@ -16,13 +16,13 @@ import (
 //
 // A buffer is NOT thread-safe and it should be created for each of gorouting sending logs to a channel
 type channelInputBuffer struct {
-	Channel       chan<- []*base.LogRecord // point to channel in global map
-	PendingLogs   []*base.LogRecord        // locally-buffered log records to be sent to channel
+	Channel       chan<- base.LogRecordBatch // point to channel in global map
+	PendingLogs   []*base.LogRecord          // locally-buffered log records to be sent to channel
 	PendingBytes  int
 	LastFlushTime time.Time
 }
 
-func newInputBufferForChannel(ch chan<- []*base.LogRecord) *channelInputBuffer {
+func newInputBufferForChannel(ch chan<- base.LogRecordBatch) *channelInputBuffer {
 	return &channelInputBuffer{
 		Channel:       ch,
 		PendingLogs:   make([]*base.LogRecord, 0, defs.IntermediateBufferMaxNumLogs),
@@ -43,18 +43,22 @@ func (cache *channelInputBuffer) Append(record *base.LogRecord) bool { // xx:inl
 }
 
 // Flush flushes all pending logs to the channel
-func (cache *channelInputBuffer) Flush(now time.Time, parentLogger logger.Logger, loggingKey interface{}) {
+func (cache *channelInputBuffer) Flush(dueToOverflow bool, now time.Time, parentLogger logger.Logger, loggingKey interface{}) {
 	pendingLogs := cache.PendingLogs
-	reusableLogBuffer := bsupport.CopyLogBuffer(pendingLogs)
+	newBatch := base.LogRecordBatch{
+		Records:  bsupport.CopyLogBuffer(pendingLogs),
+		Full:     dueToOverflow,
+		NumBytes: cache.PendingBytes,
+	}
 	cache.PendingLogs = pendingLogs[:0]
 	cache.PendingBytes = 0
 	cache.LastFlushTime = now
 
 	// Send with timeout; There is enough buffering to make on-demand timer allocations trivial.
 	select {
-	case cache.Channel <- reusableLogBuffer:
+	case cache.Channel <- newBatch:
 		// TODO: update metrics
 	case <-time.After(defs.IntermediateChannelTimeout):
-		parentLogger.Errorf("BUG: timeout flushing: %d records for %s. stack=%s", len(reusableLogBuffer), loggingKey, util.Stack())
+		parentLogger.Errorf("BUG: timeout flushing: %d records for %s. stack=%s", len(newBatch.Records), loggingKey, util.Stack())
 	}
 }

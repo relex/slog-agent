@@ -10,11 +10,13 @@ import (
 
 // LogProcessingWorker is a worker for transformation, serialization and chunk making
 type LogProcessingWorker struct {
-	PipelineWorkerBase[[]*base.LogRecord]
+	PipelineWorkerBase[base.LogRecordBatch]
 	deallocator   *base.LogAllocator
 	procCounter   *base.LogProcessCounterSet
+	analyzer      base.LogAnalyzer
 	transformList []base.LogTransformFunc
 	outputList    []OutputInterface
+
 	lastChunkTime time.Time
 }
 
@@ -28,8 +30,8 @@ type OutputInterface struct {
 
 // NewLogProcessingWorker creates LogProcessingWorker
 func NewLogProcessingWorker(parentLogger logger.Logger,
-	input <-chan []*base.LogRecord, deallocator *base.LogAllocator, procCounter *base.LogProcessCounterSet,
-	transforms []base.LogTransformFunc, outputInterfaces []OutputInterface,
+	input <-chan base.LogRecordBatch, deallocator *base.LogAllocator, procCounter *base.LogProcessCounterSet,
+	analyzer base.LogAnalyzer, transforms []base.LogTransformFunc, outputInterfaces []OutputInterface,
 ) *LogProcessingWorker {
 	worker := &LogProcessingWorker{
 		PipelineWorkerBase: NewPipelineWorkerBase(
@@ -38,23 +40,41 @@ func NewLogProcessingWorker(parentLogger logger.Logger,
 		),
 		deallocator:   deallocator,
 		procCounter:   procCounter,
+		analyzer:      analyzer,
 		transformList: transforms,
 		outputList:    outputInterfaces,
+
 		lastChunkTime: time.Now(),
 	}
 	worker.InitInternal(worker.onInput, worker.onTick, worker.onStop)
 	return worker
 }
 
-func (worker *LogProcessingWorker) onInput(buffer []*base.LogRecord) {
-	if len(buffer) == 0 {
+func (worker *LogProcessingWorker) onInput(batch base.LogRecordBatch) {
+	if len(batch.Records) == 0 {
 		return
 	}
-	for _, record := range buffer {
+	worker.lastChunkTime = batch.Records[0].Timestamp
+
+	releaseRecord := worker.deallocator.Release
+	analyzingBatch := worker.analyzer.ShouldAnalyze(batch)
+	if analyzingBatch {
+		releaseRecord = func(record *base.LogRecord) {}
+	}
+
+	var numCleanRecords int
+	var numCleanBytes int64
+
+	for _, record := range batch.Records {
 		icounter := worker.procCounter.SelectMetricKeySet(record)
-		if RunTransforms(record, worker.transformList) == base.DROP {
+		result := RunTransforms(record, worker.transformList)
+		if !record.Spam {
+			numCleanRecords++
+			numCleanBytes += int64(record.RawLength)
+		}
+		if result == base.DROP {
 			icounter.CountRecordDrop(record)
-			worker.deallocator.Release(record)
+			releaseRecord(record)
 			continue
 		}
 		icounter.CountRecordPass(record)
@@ -63,13 +83,10 @@ func (worker *LogProcessingWorker) onInput(buffer []*base.LogRecord) {
 			// TODO:
 			//if RunTransforms(record, output.transformList) == base.DROP {
 			//	icounter.CountOutputFilter(i, record)
-			//	worker.deallocator.Release(record)
+			//	releaseRecord(record)
 			//	continue
 			//}
 			stream := output.SerializeRecord(record)
-			// TODO: decide whether to release once at the end or release here after per-output transform is implemented
-			// It will depend on whether records are duplicated for additional outputs, or the same record with all transforms run in place.
-			worker.deallocator.Release(record)
 			worker.procCounter.CountStream(i, stream)
 			maybeChunk := output.WriteStream(stream)
 			if maybeChunk != nil {
@@ -77,15 +94,26 @@ func (worker *LogProcessingWorker) onInput(buffer []*base.LogRecord) {
 				output.AcceptChunk(*maybeChunk)
 			}
 		}
+		releaseRecord(record)
+	}
+
+	if analyzingBatch {
+		worker.analyzer.Analyze(batch, numCleanRecords, numCleanBytes)
+		for _, record := range batch.Records {
+			releaseRecord(record)
+		}
+	} else {
+		worker.analyzer.TrackTraffic(numCleanRecords, numCleanBytes)
 	}
 }
 
 func (worker *LogProcessingWorker) onTick() {
-	// send buffered streams as a chunk if X seconds have passed
-	if time.Since(worker.lastChunkTime) < defs.IntermediateFlushInterval {
-		return
+	worker.analyzer.Tick()
+
+	// flush buffered streams only if one full second has passed
+	if time.Since(worker.lastChunkTime) >= defs.IntermediateFlushInterval {
+		worker.flushChunk()
 	}
-	worker.flushChunk()
 	worker.procCounter.UpdateMetrics()
 }
 

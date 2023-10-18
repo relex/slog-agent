@@ -39,7 +39,7 @@ func preparePipeline(configFile string, tagOverride string, metricCreator promre
 	}
 
 	inputConfig := conf.Inputs[0].Value // we support only one input for testing
-	allocator := base.NewLogAllocator(schema, len(conf.OutputBuffersPairs))
+	allocator := base.NewLogAllocator(schema)
 	inputCounter := base.NewLogInputCounter(metricCreator.AddOrGetPrefix("input_", nil, nil))
 
 	parser, perr := inputConfig.NewParser(logger.Root(), allocator, schema, inputCounter)

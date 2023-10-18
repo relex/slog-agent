@@ -19,7 +19,7 @@ func TestByKeySetOrchestrator(t *testing.T) {
 	schema := base.MustNewLogSchema([]string{"level", "app", "msg"})
 	collectedLogsByTag := make(map[string]*[]*base.LogRecord)
 	startPipeline := func(parentLogger logger.Logger, metricCreator promreg.MetricCreator,
-		input <-chan []*base.LogRecord, bufferID string, outputTag string, onStopped func()) {
+		input <-chan base.LogRecordBatch, bufferID string, outputTag string, onStopped func()) {
 
 		t.Logf("new worker %s: %s", outputTag, bufferID)
 		_, ok := collectedLogsByTag[outputTag]
@@ -28,9 +28,9 @@ func TestByKeySetOrchestrator(t *testing.T) {
 		collectedLogsByTag[outputTag] = &collectedLogs
 		go func() {
 			counter := metricCreator.AddOrGetCounter("mycounter", "", nil, nil)
-			for rec := range input {
-				collectedLogs = append(collectedLogs, rec...)
-				counter.Add(uint64(len(rec)))
+			for batch := range input {
+				collectedLogs = append(collectedLogs, batch.Records...)
+				counter.Add(uint64(len(batch.Records)))
 			}
 			onStopped()
 		}()

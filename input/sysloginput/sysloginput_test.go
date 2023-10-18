@@ -24,7 +24,7 @@ func TestSyslogTCPInputConfig(t *testing.T) {
 	testOversizedLogLine := "<163>1 2019-08-15T15:50:46.866916+03:00 local my-app 456 fn - Something" + strings.Repeat("x", defs.InputLogMaxMessageBytes) + "\n"
 
 	schema := syslogprotocol.RFC5424Schema
-	allocator := base.NewLogAllocator(schema, 1)
+	allocator := base.NewLogAllocator(schema)
 
 	selLevel := schema.MustCreateFieldLocator("level")
 	selLog := schema.MustCreateFieldLocator("log")

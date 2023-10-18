@@ -19,7 +19,7 @@ import (
 // A per-connection version has been tried and abandoned because a client may create a new connection after the old one dies, and both need to share info here
 type byKeySetOrchestrator struct {
 	logger         logger.Logger
-	workerMap      *localcachedmap.GlobalCachedMap[chan<- []*base.LogRecord, *channelInputBuffer] // append-only global map of merged keys => worker channel
+	workerMap      *localcachedmap.GlobalCachedMap[chan<- base.LogRecordBatch, *channelInputBuffer] // append-only global map of merged keys => worker channel
 	keyLocators    []base.LogFieldLocator
 	tagBuilder     *obase.TagBuilder // builder to construct tag from keys, used when protected by globalPipelineChannelMap's mutex
 	metricCreator  promreg.MetricCreator
@@ -32,8 +32,8 @@ type byKeySetOrchestrator struct {
 // It holds local buffer of pending logs to a set of global channels to backend workers, used by this input sink and flushes on demand
 type byKeySetOrchestratorSink struct {
 	logger          logger.Logger
-	workerMap       *localcachedmap.LocalCachedMap[chan<- []*base.LogRecord, *channelInputBuffer] // append-only locac cache of byKeySetOrchestrator.workerMap
-	keySetExtractor base.FieldSetExtractor                                                        // extractor to fetch keys from LogRecord(s)
+	workerMap       *localcachedmap.LocalCachedMap[chan<- base.LogRecordBatch, *channelInputBuffer] // append-only locac cache of byKeySetOrchestrator.workerMap
+	keySetExtractor base.FieldSetExtractor                                                          // extractor to fetch keys from LogRecord(s)
 }
 
 // NewOrchestrator creates an Orchestrator to distribute logs to different pipelines by unique combinations of key labels (key set)
@@ -68,7 +68,7 @@ func NewOrchestrator(parentLogger logger.Logger, schema base.LogSchema, keyField
 	}
 	o.workerMap = localcachedmap.NewGlobalMap(
 		o.newPipeline,
-		func(ch chan<- []*base.LogRecord) { close(ch) },
+		func(ch chan<- base.LogRecordBatch) { close(ch) },
 		newInputBufferForChannel,
 	)
 
@@ -103,10 +103,10 @@ func (o *byKeySetOrchestrator) Shutdown() {
 }
 
 // newPipeline creates channel and pipeline workers for a new key-set, must be protected by global mutex
-func (o *byKeySetOrchestrator) newPipeline(keys []string, onStopped func()) chan<- []*base.LogRecord {
+func (o *byKeySetOrchestrator) newPipeline(keys []string, onStopped func()) chan<- base.LogRecordBatch {
 	outputTag := o.tagBuilder.Build(keys)
 	workerID := strings.Join(keys, ",")
-	inputChannel := make(chan []*base.LogRecord, defs.IntermediateBufferedChannelSize)
+	inputChannel := make(chan base.LogRecordBatch, defs.IntermediateBufferedChannelSize)
 	pipelineLogger := o.logger.WithField(defs.LabelName, workerID)
 	pipelineLogger.Infof("new pipeline tag=%s", outputTag)
 	pipelineMetricCreator := o.metricCreator.AddOrGetPrefix(
@@ -127,7 +127,7 @@ func (oc *byKeySetOrchestratorSink) Accept(buffer []*base.LogRecord) {
 		tempKeySet := keySetExtractor.Extract(record)
 		cache := workerMap.GetOrCreate(tempKeySet, oc.onNewLinkToPipeline)
 		if cache.Append(record) {
-			cache.Flush(now, oc.logger, tempKeySet)
+			cache.Flush(true, now, oc.logger, tempKeySet)
 		}
 	}
 }
@@ -158,6 +158,6 @@ func (oc *byKeySetOrchestratorSink) flushAllLocalBuffers(forceAll bool) {
 		if !forceAll && now.Sub(cache.LastFlushTime) < defs.IntermediateFlushInterval {
 			return
 		}
-		cache.Flush(now, oc.logger, mergedKey)
+		cache.Flush(false, now, oc.logger, mergedKey)
 	})
 }

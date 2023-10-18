@@ -12,6 +12,7 @@ type LogRecord struct {
 	RawLength int       // Input length or approximated length of entire record, for statistics
 	Timestamp time.Time // Timestamp, might be zero until processed by a LogTransform
 	Unescaped bool      // Whether the main message field has been un-escaped. Multi-line logs start with true.
+	Spam      bool
 	_backbuf  *[]byte   // Backing buffer where initial field values come from, nil if buffer pooling isn't used
 	_refCount int       // reference count, + outputs_length for new, -1 for release (back to pool)
 }

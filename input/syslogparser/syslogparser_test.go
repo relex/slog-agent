@@ -14,7 +14,7 @@ import (
 
 func TestSyslogParser(t *testing.T) {
 	schema := syslogprotocol.RFC5424Schema
-	allocator := base.NewLogAllocator(schema, 1)
+	allocator := base.NewLogAllocator(schema)
 	const line1 = "<163>1 2019-08-15T15:50:46.866915+03:00 local1 my-app1 123 fn1 - Something"
 	const line2 = "<163>1 2020-09-17T16:51:47.867Z local2 my-app2 456 fn2 - Something else"
 	mfactory := promreg.NewMetricFactory("syslog_parser_", nil, nil)
