@@ -163,7 +163,9 @@ func (parser *syslogParser) Parse(input []byte, timestamp time.Time) *base.LogRe
 		parser.onOverflow(input)
 		remaining = remaining[:defs.InputLogMaxMessageBytes]
 	}
-	remaining = util.CleanUTF8(remaining)
+	if record.RawLength >= defs.InputLogMaxTotalBytes {
+		remaining = util.CleanUTF8(remaining)
+	}
 	parser.fieldLogLocator.Set(fields, remaining)
 
 	// assume the message won't need un-escaping if there is a real newline

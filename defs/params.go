@@ -5,27 +5,30 @@ import (
 )
 
 var (
-	// InputLogMaxMessageBytes defines the maximum length of a log message, if such a field exists (parser dependent)
+	// InputLogMaxTotalBytes defines the maximum length of a log from input.
+	InputLogMaxTotalBytes = InputLogMaxMessageBytes + 256
+
+	// InputLogMaxMessageBytes defines the maximum length of a log message, if such a field exists (parser dependent).
 	//
-	// If the limit is exceeded, the message should be truncated and may be recorded in metrics
+	// If the limit is exceeded, the message is truncated and recorded in metrics.
 	InputLogMaxMessageBytes = 1 * 1024 * 1024
 
-	// InputLogMinMessageBytesToPool defines the minimum length of a log message to start using object pooling
+	// InputLogMinTotalBytesToPool defines the minimum length of a log to start using object pooling.
 	//
-	// Only pool large buffers since sync.Pool takes time
-	InputLogMinMessageBytesToPool = 1024
+	// Only pool large buffers since sync.Pool takes time.
+	InputLogMinTotalBytesToPool = 1024
 
-	// InputFlushInterval defines how long to call flush from input if no log is received
+	// InputFlushInterval defines how long to call flush from input if no log is received.
 	//
-	// It's used to trigger flushing in all receivers, e.g. multiLineReader waiting for next line in a multi-line syslog message
+	// It's used to trigger flushing in all receivers, e.g. multiLineReader waiting for next line in a multi-line syslog message.
 	//
-	// The value affects the delay of logs, as they may not be processed until flush is called
+	// The value affects the delay of logs, as they may not be processed until flush is called.
 	InputFlushInterval = 500 * time.Millisecond
 
-	// ListenerLineBufferSize defines the buffer size in bytes to read one syslog line
+	// ListenerLineBufferSize defines the buffer size in bytes to receive incoming logs.
 	//
-	// If the size is insufficient to hold incoming line, listener switches to a dynamic buffer.
-	ListenerLineBufferSize = InputLogMaxMessageBytes * 4
+	// If the size is insufficient to hold one log, the rest of it is cut off.
+	ListenerLineBufferSize = InputLogMaxTotalBytes * 4
 
 	// IntermediateBufferMaxNumLogs defines the maximum numbers of log records to buffer at input before flushing through go channels
 	//

@@ -47,7 +47,7 @@ func (alloc *LogAllocator) NewRecord(input []byte) (*LogRecord, util.MutableStri
 	// pooling speeds up 10% in agent benchmarks but minus 20% in pipeline benchmarks
 	record := alloc.recordPool.Get().(*LogRecord)
 	record._refCount += alloc.initialRefCount
-	if len(input) > defs.InputLogMinMessageBytesToPool {
+	if len(input) > defs.InputLogMinTotalBytesToPool {
 		backbuf := alloc.backbufPools.Get(len(input))
 		record._backbuf = backbuf
 		n := copy(*backbuf, input)
