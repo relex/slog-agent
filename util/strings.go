@@ -2,6 +2,8 @@ package util
 
 import (
 	"unsafe"
+
+	"github.com/relex/gotils/logger"
 )
 
 // DeepCopyString copies the given string to a newly-allocated one
@@ -57,4 +59,12 @@ func StringFromBytes(buf []byte) MutableString {
 // allocated in the immutable memory area and any write operation would trigger panics.
 func BytesFromString(str MutableString) []byte {
 	return unsafe.Slice(unsafe.StringData(str), len(str))
+}
+
+func OverwriteNTruncate(main []byte, start int, tail string) []byte {
+	if len(main)-start < len(tail) {
+		logger.Errorf("BUG: attempting to overwrite '%s' at %d of: %s", tail, start, string(main))
+	}
+	n := copy(main[start:], tail)
+	return main[:start+n]
 }

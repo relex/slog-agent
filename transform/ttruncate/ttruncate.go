@@ -52,10 +52,15 @@ func (c *Config) VerifyConfig(schema base.LogSchema) error {
 
 func (tf *truncateTransform) Transform(record *base.LogRecord) base.FilterResult {
 	value := tf.keyLocator.Get(record.Fields)
-	if len(value) > tf.maxLength {
-		// FIXME: use zero-copy - paste suffix into the end and truncate the rest.
-		cutValue := util.CleanUTF8(value[:tf.maxLength])
-		tf.keyLocator.Set(record.Fields, cutValue+tf.suffix)
+	if len(value) > tf.maxLength+len(tf.suffix) {
+		valueB := util.BytesFromString(value)
+
+		// truncate and clean up before the maxLength in case of UTF-8 sequences cut in the middle
+		valueTrimmed := util.CleanUTF8(valueB[:tf.maxLength])
+		// paste suffix at the truncated end - NOT the maxLength as the actual length could be smaller due to UTF-8 cleanup
+		valueOverwritten := util.OverwriteNTruncate(valueB, len(valueTrimmed), tf.suffix)
+
+		tf.keyLocator.Set(record.Fields, util.StringFromBytes(valueOverwritten))
 	}
 	return base.PASS
 }
