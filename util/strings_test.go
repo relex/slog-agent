@@ -31,3 +31,9 @@ func TestStrings(t *testing.T) {
 	assert.Equal(t, "HEXlO", string(new3))
 	assert.Equal(t, "HEXlO", new1)
 }
+
+func TestStringOverwrite(t *testing.T) {
+	assert.Equal(t, "helloABC", string(OverwriteTail([]byte("helloWorld"), 5, "ABC")))
+	assert.Equal(t, "hell", string(OverwriteTail([]byte("helloABC"), 4, "")))
+	assert.Equal(t, "hel^-", string(OverwriteTail([]byte("hell."), 3, "^-^")))
+}

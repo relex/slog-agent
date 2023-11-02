@@ -1,17 +1,22 @@
 package util
 
-func CleanUTF8(s string) string {
-	if s == "" {
+import (
+	"strings"
+)
+
+func CleanUTF8(s []byte) []byte {
+	if len(s) == 0 {
 		return s
 	}
 	// correct encoding is https://en.wikipedia.org/wiki/UTF-8
 	// too much work; just cut everything after the last ASCII byte
 	// FIXME: get a library to clean up invalid sequences without costly copying or moving.
-	end := findLastEndOfASCII(s)
-	return s[:end]
+	endPos := findLastEndOfASCII(s)
+	uncleanTail := StringFromBytes(s[endPos:])
+	return OverwriteTail(s, endPos, strings.ToValidUTF8(uncleanTail, ""))
 }
 
-func findLastEndOfASCII(s string) int {
+func findLastEndOfASCII(s []byte) int {
 	n := len(s)
 	for i := n - 1; i >= 0; i-- {
 		b := s[i]

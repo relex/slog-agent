@@ -164,7 +164,9 @@ func (parser *syslogParser) Parse(input []byte, timestamp time.Time) *base.LogRe
 		remaining = remaining[:defs.InputLogMaxMessageBytes]
 	}
 	if record.RawLength >= defs.InputLogMaxTotalBytes {
-		remaining = util.CleanUTF8(remaining)
+		remaining = util.StringFromBytes(
+			util.CleanUTF8(util.BytesFromString(remaining)),
+		)
 	}
 	parser.fieldLogLocator.Set(fields, remaining)
 
