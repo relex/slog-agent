@@ -74,7 +74,7 @@ func NewEventSerializer(parentLogger logger.Logger, schema base.LogSchema, confi
 		fieldRewriters:         fieldRewriters,
 		serializedFieldKeys:    serializeStrings(fieldNames),
 		serializedEnvFieldKeys: serializeStrings(config.EnvironmentFields),
-		buffer:                 make([]byte, 2*defs.InputLogMaxTotalBytes),
+		buffer:                 make([]byte, 2*defs.InputLogMaxRecordBytes),
 	}, nil
 }
 

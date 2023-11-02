@@ -163,7 +163,7 @@ func (parser *syslogParser) Parse(input []byte, timestamp time.Time) *base.LogRe
 		parser.onOverflow(input)
 		remaining = remaining[:defs.InputLogMaxMessageBytes]
 	}
-	if record.RawLength >= defs.InputLogMaxTotalBytes {
+	if record.RawLength >= defs.InputLogMaxRecordBytes {
 		remaining = util.StringFromBytes(
 			util.CleanUTF8(util.BytesFromString(remaining)),
 		)

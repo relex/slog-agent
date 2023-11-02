@@ -5,18 +5,18 @@ import (
 )
 
 var (
-	// InputLogMaxTotalBytes defines the maximum length of a log from input.
-	InputLogMaxTotalBytes = InputLogMaxMessageBytes + 256
+	// InputLogMaxRecordBytes defines the maximum length of a log record from input.
+	InputLogMaxRecordBytes = InputLogMaxMessageBytes + 256
 
-	// InputLogMaxMessageBytes defines the maximum length of a log message, if such a field exists (parser dependent).
+	// InputLogMaxMessageBytes defines the maximum length of a log message, if such a field exists (protocol dependent).
 	//
 	// If the limit is exceeded, the message is truncated and recorded in metrics.
 	InputLogMaxMessageBytes = 1 * 1024 * 1024
 
-	// InputLogMinTotalBytesToPool defines the minimum length of a log to start using object pooling.
+	// InputLogMinRecordBytesToPool defines the minimum length of a log record to start using object pooling.
 	//
 	// Only pool large buffers since sync.Pool takes time.
-	InputLogMinTotalBytesToPool = 1024
+	InputLogMinRecordBytesToPool = 1024
 
 	// InputFlushInterval defines how long to call flush from input if no log is received.
 	//
@@ -28,7 +28,7 @@ var (
 	// ListenerLineBufferSize defines the buffer size in bytes to receive incoming logs.
 	//
 	// If the size is insufficient to hold one log, the rest of it is cut off.
-	ListenerLineBufferSize = InputLogMaxTotalBytes * 4
+	ListenerLineBufferSize = InputLogMaxRecordBytes * 4
 
 	// IntermediateBufferMaxNumLogs defines the maximum numbers of log records to buffer at input before flushing through go channels
 	//

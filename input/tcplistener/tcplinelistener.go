@@ -151,7 +151,7 @@ func (listener *tcpLineListener) runConnection(connLogger logger.Logger, conn *n
 	// short timeout for periodic flushing
 	connReader := listener.createConnectionReader(connLogger, conn)
 	mlineReader := newMultiLineReader(connReader.Read, listener.testRecord,
-		defs.ListenerLineBufferSize, defs.InputLogMaxTotalBytes, recvChan.Accept)
+		defs.ListenerLineBufferSize, defs.InputLogMaxRecordBytes, recvChan.Accept)
 
 	emptyTime := time.Time{}
 	prevDeadline := time.Time{}
