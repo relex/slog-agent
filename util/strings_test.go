@@ -33,7 +33,7 @@ func TestStrings(t *testing.T) {
 }
 
 func TestStringOverwrite(t *testing.T) {
-	assert.Equal(t, "helloABC", string(OverwriteTail([]byte("helloWorld"), 5, "ABC")))
-	assert.Equal(t, "hell", string(OverwriteTail([]byte("helloABC"), 4, "")))
-	assert.Equal(t, "hel^-", string(OverwriteTail([]byte("hell."), 3, "^-^")))
+	assert.Equal(t, "helloABC", string(OverwriteNTruncate([]byte("helloWorld"), 5, "ABC")))
+	assert.Equal(t, "hell", string(OverwriteNTruncate([]byte("helloABC"), 4, "")))
+	assert.Equal(t, "hel^-", string(OverwriteNTruncate([]byte("hell."), 3, "^-^")))
 }

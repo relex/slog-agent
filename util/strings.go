@@ -61,7 +61,7 @@ func BytesFromString(str MutableString) []byte {
 	return unsafe.Slice(unsafe.StringData(str), len(str))
 }
 
-func OverwriteTail(main []byte, start int, tail string) []byte {
+func OverwriteNTruncate(main []byte, start int, tail string) []byte {
 	if len(main)-start < len(tail) {
 		logger.Errorf("BUG: attempting to overwrite '%s' at %d of: %s", tail, start, string(main))
 	}

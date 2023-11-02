@@ -13,7 +13,7 @@ func CleanUTF8(s []byte) []byte {
 	// FIXME: get a library to clean up invalid sequences without costly copying or moving.
 	endPos := findLastEndOfASCII(s)
 	uncleanTail := StringFromBytes(s[endPos:])
-	return OverwriteTail(s, endPos, strings.ToValidUTF8(uncleanTail, ""))
+	return OverwriteNTruncate(s, endPos, strings.ToValidUTF8(uncleanTail, ""))
 }
 
 func findLastEndOfASCII(s []byte) int {
