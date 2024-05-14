@@ -56,7 +56,7 @@ func UnmarshalYamlFile(path string, output interface{}) error {
 // UnmarshalYamlReader loads and unmarshals YAML from IO reader to interface or pointer to struct
 func UnmarshalYamlReader(reader io.Reader, output interface{}) error {
 	decoder := yaml.NewDecoder(reader)
-	decoder.KnownFields(true)
+	decoder.KnownFields(true) // only works outside of custom unmarshalers
 	return decoder.Decode(output)
 }
 
