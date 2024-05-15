@@ -1,6 +1,7 @@
 package yamlinternal
 
 import (
+	"fmt"
 	"reflect"
 
 	_ "unsafe"
@@ -8,30 +9,52 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-type decoder struct{}
+// decoder is a copy from gopkg.in/yaml.v3/decode.go
+//
+// FIXME: Can we get the actual type definition of the returned valued from newDecoder()? Attempts resulted in "<invalid reflect.Value>"
+type decoder struct {
+	doc     *yaml.Node
+	aliases map[*yaml.Node]bool
+	terrors []string
 
-//go:linkname handleErr github.com/go-yaml/yaml.v3/handleErr
+	stringMapType  reflect.Type
+	generalMapType reflect.Type
+
+	knownFields bool
+	uniqueKeys  bool
+	decodeCount int
+	aliasCount  int
+	aliasDepth  int
+
+	mergedFields map[interface{}]bool
+}
+
+//go:linkname handleErr gopkg.in/yaml%2ev3.handleErr
 func handleErr(err *error)
 
-//go:linkname newDecoder gopkg.in/yaml.v3@v3.0.1/yaml.newDecoder
+//go:linkname newDecoder gopkg.in/yaml%2ev3.newDecoder
 func newDecoder() *decoder
 
-//go:linkname unmarshal gopkg.in/yaml.v3.(*decoder).unmarshal
+//go:linkname unmarshal gopkg.in/yaml%2ev3.(*decoder).unmarshal
 func unmarshal(d *decoder, n *yaml.Node, out reflect.Value) (good bool)
 
+// NodeDecodeKnownFields is yaml.Node.Decode with known fields set to true.
 func NodeDecodeKnownFields(node *yaml.Node, v interface{}) (err error) {
 	d := newDecoder()
+	d.knownFields = true
 	defer handleErr(&err)
 	out := reflect.ValueOf(v)
 	if out.Kind() == reflect.Ptr && !out.IsNil() {
 		out = out.Elem()
 	}
-	unmarshal(d, node, out)
+	good := unmarshal(d, node, out)
 
-	terrors := reflect.ValueOf(d).Elem().FieldByName("terrors").Interface().([]string)
+	if len(d.terrors) > 0 {
+		return &yaml.TypeError{Errors: d.terrors}
+	}
 
-	if len(terrors) > 0 {
-		return &yaml.TypeError{Errors: terrors}
+	if !good {
+		return fmt.Errorf("not good")
 	}
 	return nil
 }
