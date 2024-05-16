@@ -77,6 +77,7 @@ outputBufferPairs:
         upstream:
             address: %s
             tls: false
+            secret: Hi
             maxDuration: 500ms
 `
 
@@ -87,6 +88,11 @@ var sampleConf = assembleConfig(
 	sampleTransformationConf,
 	sampleOutputConf,
 )
+
+var serverConfig = server.Config{
+	Address: "localhost:0",
+	Secret:  "Hi",
+}
 
 func TestLoader(t *testing.T) {
 	logRecv, outBatchCh := receivers.NewMessageCollector(5 * time.Second)
@@ -147,9 +153,7 @@ func runTestEnv(t *testing.T, logReceiver receivers.Receiver, confYML string,
 	assert.NoError(t, confFileErr)
 	defer os.Remove(confFile.Name())
 
-	srvConf := server.Config{}
-	srvConf.Address = "localhost:0"
-	srv, srvAddr := server.LaunchServer(logger.WithField("test", t.Name()), srvConf, logReceiver)
+	srv, srvAddr := server.LaunchServer(logger.WithField("test", t.Name()), serverConfig, logReceiver)
 
 	_, writeErr := confFile.WriteString(fmt.Sprintf(confYML, bufDir, srvAddr.String()))
 	assert.NoError(t, writeErr)
