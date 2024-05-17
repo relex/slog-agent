@@ -6,6 +6,7 @@ import (
 
 	"github.com/relex/gotils/logger"
 	"github.com/relex/slog-agent/util"
+	"github.com/relex/slog-agent/util/yamlinternal"
 	"gopkg.in/yaml.v3"
 )
 
@@ -45,7 +46,7 @@ func (holder *ConfigHolder[C]) UnmarshalYAML(value *yaml.Node) error {
 	}
 	holder.Value = createFunc()
 
-	if err := value.Decode(holder.Value); err != nil {
+	if err := yamlinternal.NodeDecodeKnownFields(value, holder.Value); err != nil {
 		return util.NewYamlError(value, err.Error())
 	}
 	holder.Location = util.GetYamlLocation(value)

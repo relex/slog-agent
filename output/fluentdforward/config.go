@@ -129,10 +129,6 @@ func (cfg *Config) VerifyConfig(schema base.LogSchema) error {
 		return fmt.Errorf(".upstream.address is invalid: %w", err)
 	}
 
-	if cfg.Upstream.TLS && len(cfg.Upstream.Secret) == 0 {
-		return fmt.Errorf(".upstream.secret is unspecified when tls=true")
-	}
-
 	if cfg.Upstream.MaxDuration == 0 {
 		return fmt.Errorf(".upstream.maxDuration is unspecified")
 	}

@@ -50,18 +50,25 @@ func openForwardConnection(parentLogger logger.Logger, config UpstreamConfig) (b
 	}
 	connLogger.Info("connected to ", sock.RemoteAddr())
 
-	success, reason, herr := forwardprotocol.DoClientHandshake(sock, config.Secret, defs.ForwarderHandshakeTimeout)
-	if herr != nil {
-		if err := sock.Close(); err != nil && !util.IsNetworkClosed(err) {
-			connLogger.Warn("error closing connection: ", err)
+	if len(config.Secret) > 0 {
+		success, reason, protocolErr := forwardprotocol.DoClientHandshake(sock, config.Secret, defs.ForwarderHandshakeTimeout)
+
+		var authErr error
+		switch {
+		case protocolErr != nil:
+			authErr = fmt.Errorf("failed to handshake due to unexpected error: %w", protocolErr)
+		case !success:
+			authErr = fmt.Errorf("login rejected: %s", reason)
+		default:
+			authErr = nil
 		}
-		return nil, fmt.Errorf("failed to handshake due to error: %w", herr)
-	}
-	if !success {
-		if err := sock.Close(); err != nil && !util.IsNetworkClosed(err) {
-			connLogger.Warn("error closing connection: ", err)
+
+		if authErr != nil {
+			if err := sock.Close(); err != nil && !util.IsNetworkClosed(err) {
+				connLogger.Warn("error closing connection: ", err)
+			}
+			return nil, authErr
 		}
-		return nil, fmt.Errorf("failed to handshake due to authentication: %s", reason)
 	}
 
 	return &forwardConnection{
