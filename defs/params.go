@@ -2,6 +2,8 @@ package defs
 
 import (
 	"time"
+
+	"github.com/relex/gotils/logger"
 )
 
 var (
@@ -122,6 +124,7 @@ const (
 
 // EnableTestMode turns on test mode with very short timeout and minimal retry delay
 func EnableTestMode() {
+	logger.Info("Use test parameters with short timeouts")
 	ForwarderConnectionTimeout = 1 * time.Second
 	ForwarderHandshakeTimeout = 2 * time.Second
 	ForwarderBatchSendTimeoutBase = 3 * time.Second

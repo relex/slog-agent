@@ -20,11 +20,17 @@ var benchCmd = benchmarkCommandState{
 }
 
 func (cmd *benchmarkCommandState) runBenchmarkPipelineCommand(_ []string) {
-	defs.EnableTestMode()
+	// Need the default timeouts when outputs are real forwarders or Datadog clients
+	if cmd.Output != "" {
+		defs.EnableTestMode()
+	}
 	test.RunBenchmarkPipeline(cmd.Input, cmd.Output, cmd.Repeat, cmd.Config)
 }
 
 func (cmd *benchmarkCommandState) runBenchmarkAgentCommand(_ []string) {
-	defs.EnableTestMode()
+	// Need the default timeouts when outputs are real forwarders or Datadog clients
+	if cmd.Output != "" {
+		defs.EnableTestMode()
+	}
 	test.RunBenchmarkAgent(cmd.Input, cmd.Output, cmd.Repeat, cmd.Config)
 }

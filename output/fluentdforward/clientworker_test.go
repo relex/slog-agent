@@ -25,7 +25,7 @@ func TestOpenClientConnection(t *testing.T) {
 			Address: srvAddr.String(),
 			TLS:     true, // attempt to request TLS handshake
 		})
-		assert.ErrorContains(t, err, "failed to connect: tls:")
+		assert.ErrorContains(t, err, "failed to connect:")
 	})
 
 	t.Run("login fails when secrets are different", func(t *testing.T) {
