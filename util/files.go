@@ -3,6 +3,7 @@ package util
 import (
 	"os"
 	"path/filepath"
+	"sort"
 
 	"golang.org/x/sys/unix"
 )
@@ -31,6 +32,7 @@ func ListFiles(directoryOrFilePattern string) ([]string, error) {
 			pathList = append(pathList, input)
 		}
 	}
+	sort.Strings(pathList)
 	return pathList, nil
 }
 
