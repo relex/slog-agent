@@ -13,6 +13,16 @@ func TestExtractor(t *testing.T) {
 		assert.Equal(t, "Hello", lbl)
 		assert.Equal(t, "Message", txt)
 	}
+	if ex, err := newStringExtractor(extractFromStart, []string{"", "[ ]", ""}, 10); assert.NoError(t, err) {
+		lbl, txt := ex.Extract("     Message")
+		assert.Equal(t, "", lbl)
+		assert.Equal(t, "Message", txt)
+	}
+	if ex, err := newStringExtractor(extractFromStart, []string{"", "[ ]", ""}, 2); assert.NoError(t, err) {
+		lbl, txt := ex.Extract("     Message")
+		assert.Equal(t, "", lbl)
+		assert.Equal(t, "   Message", txt)
+	}
 	if ex, err := newStringExtractor(extractFromEnd, []string{"", "[^ ]", ""}, 100); assert.NoError(t, err) {
 		lbl, txt := ex.Extract("Lorem ipsum dolor sit amet, consectetur adipiscing elit")
 		assert.Equal(t, "elit", lbl)
@@ -29,6 +39,16 @@ func TestExtractor(t *testing.T) {
 			assert.Equal(t, "", num)
 			assert.Equal(t, "error.log.bz2", fn)
 		}
+	}
+	if ex, err := newStringExtractor(extractFromEnd, []string{"", "[ ]", ""}, 10); assert.NoError(t, err) {
+		lbl, txt := ex.Extract("Message     ")
+		assert.Equal(t, "", lbl)
+		assert.Equal(t, "Message", txt)
+	}
+	if ex, err := newStringExtractor(extractFromEnd, []string{"", "[ ]", ""}, 2); assert.NoError(t, err) {
+		lbl, txt := ex.Extract("Message     ")
+		assert.Equal(t, "", lbl)
+		assert.Equal(t, "Message   ", txt)
 	}
 	if ex, err := newStringExtractorSimple(extractFromStart, `([0-9a-z\]])`, 100); assert.NoError(t, err) {
 		{
