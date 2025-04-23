@@ -190,12 +190,19 @@ func extractLabelAtStart(text string, leftBoundary string, rightBoundary string,
 			return "", text
 		}
 		return trimControlCharsAndSpaces(tag), s[iend+len(rightBoundary):]
+	} else {
+		var maxS string
+		if len(s) > maxRange {
+			maxS = s[:maxRange]
+		} else {
+			maxS = s
+		}
+		tagEnd := matchValidCharsFromStart(maxS, validChars)
+		if tagEnd == 0 {
+			return "", text
+		}
+		return trimControlCharsAndSpaces(s[:tagEnd]), s[tagEnd:]
 	}
-	tagEnd := matchValidCharsFromStart(s, validChars)
-	if tagEnd == 0 {
-		return "", text
-	}
-	return trimControlCharsAndSpaces(s[:tagEnd]), s[tagEnd:]
 }
 
 // extractLabelAtEnd extracts for example "Bar" from "text...[Bar]" with given boundaries, search range and valid chars
@@ -233,12 +240,22 @@ func extractLabelAtEnd(text string, leftBoundary string, rightBoundary string, m
 			return "", text
 		}
 		return trimControlCharsAndSpaces(tag), s[:iend]
+	} else {
+		var offset int
+		var maxS string
+		if len(s) > maxRange {
+			offset = len(s) - maxRange
+			maxS = s[offset:]
+		} else {
+			offset = 0
+			maxS = s
+		}
+		tagBeg := offset + matchValidCharsFromEnd(maxS, validChars)
+		if tagBeg == len(s) {
+			return "", text
+		}
+		return trimControlCharsAndSpaces(s[tagBeg:]), s[:tagBeg]
 	}
-	tagBeg := matchValidCharsFromEnd(s, validChars)
-	if tagBeg == len(s) {
-		return "", text
-	}
-	return trimControlCharsAndSpaces(s[tagBeg:]), s[:tagBeg]
 }
 
 // matchValidCharsFromStart returns the end of substring from start which matches the given validChars
@@ -272,7 +289,7 @@ func trimControlCharsAndSpaces(s string) string {
 		istart++
 	}
 	iend := len(s) - 1
-	for iend >= 0 {
+	for iend >= istart {
 		if s[iend] > ' ' {
 			break
 		}
